@@ -691,6 +691,10 @@ static void test_info_message() {
   CHECK(build_info("n1", 5, "", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, std::string(49, 'x'), "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, std::string(48, 'x'), "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kOk);
+  // a name of 48 characters in Chinese (three bytes each) must fit the buffer the node publishes with: with 256 it did not, and Studio lost the link to the panel without a word
+  std::string chinese;
+  for (int i = 0; i < 48; ++i) chinese += "\xE5\x8C\x97";
+  CHECK(build_info("node-9", 123456789012ULL, chinese, "10.20.30", "255.255.255.255", 65535, out, sizeof out, length) == JsonResult::kOk && length < 512);
   CHECK(build_info("n1", 5, "\xC3\x28", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);   // broken UTF-8
   CHECK(build_info("n1", 5, "n", "v0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.2", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
