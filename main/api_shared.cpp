@@ -16,6 +16,7 @@ extern "C" {
 #include "esp_timer.h"
 }
 #include "clock_sync.hpp"
+#include "github_update.hpp"
 #include "core/json.hpp"
 #include "light_sensor.hpp"
 #include "mqtt_link.hpp"
@@ -99,7 +100,10 @@ std::uint32_t slot_used_bytes(const esp_partition_t* partition, SlotLength& cach
 }
 
 void write_flash(json::Writer& w) {
+  // what each slot holds is measured once, and again whenever a slot was written (an update, or a copy of the other slot)
   static SlotLength lengths[2];
+  static unsigned seen_generation = 0;
+  if (seen_generation != github_update::slot_generation()) { lengths[0] = SlotLength{}; lengths[1] = SlotLength{}; seen_generation = github_update::slot_generation(); }
   std::uint32_t total = 0;
   esp_flash_get_size(nullptr, &total);
   const esp_partition_t* running = esp_ota_get_running_partition();
