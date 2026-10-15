@@ -25,7 +25,7 @@
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** **成熟度：脚手架。** 与硬件无关的核心（LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户与会话、映射引脚逻辑、网络方案和消息序列化器，其输出被 ARMOR-COMMON 接受）已在计算机上测试（942 项检查），网页面板已在真实浏览器中对着模拟节点试用，固件镜像在 ESP-IDF 容器中可构建。**固件已在两个真实节点（Waveshare ESP32-S3-ETH）上运行：** 带首位管理员和登录的面板、保存在闪存中的设置、以太网连接、每个节点一个账户的代理连接、到达服务器和 Studio 的遥测、实时地图以及无线更新（来自面板、文件、GitHub 发布版和 Studio）都已在上面使用过，这些使用发现并修复了真实的故障。**尚未在真实节点上记录：** 雷达命令通道与厂商文档的对照、LD2461 和存在传感器的解码器（只与其手册中的示例一致）、桥接到网线的 Wi-Fi 接入点、光传感器、PoE 模块提供的电流、通过手机进行蓝牙配置，以及各浏览器如何处理面板自己生成的 HTTPS 证书。
+**诚实性检查 - 今天真正能运行的部分:** **成熟度：scaffolding。** 与硬件无关的核心（859 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其校验、引脚表、用户与会话、映射引脚逻辑、网络方案以及消息序列化器，其输出被 ARMOR-COMMON 接受）已在电脑上测试，**网页面板**已在真实浏览器中对着替身节点试用，**固件镜像**能在 ESP-IDF 5.4.2 容器中构建。**它从未在开发板上运行过**：没有从真实模块捕获过任何帧，以太网、Wi-Fi 桥接、光传感器和更新的代码都未经尝试，雷达命令通道既未对照厂商文档也未对照模块检查，面板的 HTTPS 证书由节点自己生成且未在真实浏览器中试过，LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块。
 
 ---
 
@@ -42,8 +42,6 @@
 * **LD2450 解码器、健康状态与配置：** 可重新同步的分帧器能在有噪声的数据流中找到帧；每个 30 字节的帧给出最多三个目标，成为契约轨迹；控制台和面板会按雷达说明它是在上报、静默还是数据混乱。面板还能读取模块版本、选择一个或三个目标并设置检测区域（这一协议尚未对照模块检查）。
 * **环境光与严格符合契约的消息：** 带自动量程的 VEML7700；遵循已发布模式的遥测、健康和信息 JSON，拒绝写入任何无效内容，带墙上时钟时间戳（SNTP）和 MQTT 遗嘱。没有雷达上报时会扣留遥测，绝不发出空的“一切正常”。
 * **一个镜像适用于所有开发板，像网络产品一样：** 固件相同，由 MAC 区分开发板（命名前为 `armor-` 加六位数字）；`adopt_node.py` 通过网络给刚刷好的节点分配管理员、代理身份和整个节点群共用的设置，设置码由其 MAC 计算得出，因此 5 个节点和 27 个节点工作量相同。**台架工具：** 通过 USB-C 刷写、用于开发面板的替身节点，以及把原始帧日志转换成测试夹具的转换器（[台架调试](docs/BENCH_BRINGUP.md)）。
-* **从 GitHub 或文件更新，带进度条：** 面板会跟随 GitHub 的重定向，校验固件旁发布的 SHA-256（`armor_radar.bin.sha256`），并以进度条显示下载和写入；节点以新镜像重启，若无法启动则自行回退。节点通过 websocket 提供雷达所见内容的实时地图。
-* **引脚与代理之间不会死锁：** 消息经由专用任务处理的队列发送，因此没有任务会在等待代理客户端时持有锁；若在代理丢失时把输出置于安全状态的任务停止，看门狗会重启开发板。
 
 ## 📂 仓库结构
 
@@ -74,7 +72,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 942 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 859 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -100,14 +98,12 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 * **ARMOR-RADAR** (本仓库) - 适用于 ESP32-S3 的现场节点固件，带三个雷达和自带网页面板
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太阳能逆变器与电池的协议，以及网关节点的消息
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 电气节点：电表、电网读数消息和开关规则
-* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - 报警节点与报警主机：防区、布防、延时、警笛和 PIN，有无服务器均可
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - 触摸面板：墙面屏幕上的系统状态、布防与确认，以及语音助手的所在
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - 本地网络：其设备、互联网以及变化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央协调器：遥测、报警、设备、太阳能读数和摄像头
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - 网页控制台：摄像头、雷达、报警、太阳能和 2D/3D 场地设计器
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - 带实时 2D/3D 雷达的 Android 操作员客户端
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 会解释决策且从不执行动作的视觉推理策略
-* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 上的摄像头区域、遮罩与检测规则
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 带无法伪造确认的离线语音意图
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - 外壳、电子器件和台架验收矩阵
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - 部署、CM5 测试台、备份与 TLS
