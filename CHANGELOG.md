@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.9] - No deadlock between the pins and the broker
+
+- **A message is never published while a lock of the node is held:** `mqtt_link::publish()` puts the message in a short queue (48, the oldest dropped first) and a task of its own hands it to the client. Before, a task that held a lock of its module and published could wait for the client's own lock while the client, running the handler of an incoming command, waited for that module lock: both for ever, with nothing to restart the board. The fall back of the outputs to their safe state when the broker is lost lives in the pins' task, which could be the one left waiting.
+- **The task watchdog restarts the board:** it panics after 10 s (it only printed before) and the tasks that guard the outputs now report to it.
+
 ## [0.5.8] - Waits that grow, Improv over the USB cable and the stack of each task
 
 - **Waits that grow between tries.** A Wi-Fi network that does not answer is tried again after 1 s, then 2, 4, 8... up to 30 s (a little scatter on every wait, so that many nodes that lost the same router do not all knock together), and the broker after 1 s growing to 60 s; a try that works starts the schedule over. Before, every retry was a fixed 3 s (Wi-Fi) or the client's fixed 10 s (broker).

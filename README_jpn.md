@@ -25,7 +25,7 @@
 
 ---
 
-**正直さのチェック - 今日動いているもの:** **成熟度：足場段階。** ハードウェアに依存しないコア（LD2450、LD2461、4 種類の在席センサーのデコーダー、LD2450 のコマンドチャネル、設定とそのチェック、ピン表、ユーザーとセッション、マップされたピンのロジック、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー）はコンピューター上でテストされ（925 項目）、Web パネルは実ブラウザーで模擬ノードに対して試され、ファームウェアイメージは ESP-IDF コンテナーでビルドできます。**ファームウェアは 2 台の実ノード（Waveshare ESP32-S3-ETH）で動いています：** 最初の管理者とログインを持つパネル、フラッシュに保存された設定、Ethernet 接続、ノードごとのアカウントによるブローカー接続、サーバーと Studio に届くテレメトリ、ライブマップ、そして無線更新（パネル、ファイル、GitHub のリリース、Studio から）が実際に使われ、その使用で実際の不具合が見つかって修正されました。**実ノードではまだ記録されていないもの：** メーカー資料に対するレーダーのコマンドチャネル、LD2461 と在席センサーのデコーダー（マニュアルの例とだけ一致）、ケーブルにブリッジされた Wi-Fi アクセスポイント、光センサー、PoE モジュールが供給する電流、スマートフォンからの Bluetooth 設定、そしてパネルが自作する HTTPS 証明書を各ブラウザーがどう扱うか。
+**正直さのチェック - 今日動いているもの:** **成熟度：足場段階。** ハードウェアに依存しないコア（LD2450、LD2461、4 種類の在席センサーのデコーダー、LD2450 のコマンドチャネル、設定とそのチェック、ピン表、ユーザーとセッション、マップされたピンのロジック、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー）はコンピューター上でテストされ（942 項目）、Web パネルは実ブラウザーで模擬ノードに対して試され、ファームウェアイメージは ESP-IDF コンテナーでビルドできます。**ファームウェアは 2 台の実ノード（Waveshare ESP32-S3-ETH）で動いています：** 最初の管理者とログインを持つパネル、フラッシュに保存された設定、Ethernet 接続、ノードごとのアカウントによるブローカー接続、サーバーと Studio に届くテレメトリ、ライブマップ、そして無線更新（パネル、ファイル、GitHub のリリース、Studio から）が実際に使われ、その使用で実際の不具合が見つかって修正されました。**実ノードではまだ記録されていないもの：** メーカー資料に対するレーダーのコマンドチャネル、LD2461 と在席センサーのデコーダー（マニュアルの例とだけ一致）、ケーブルにブリッジされた Wi-Fi アクセスポイント、光センサー、PoE モジュールが供給する電流、スマートフォンからの Bluetooth 設定、そしてパネルが自作する HTTPS 証明書を各ブラウザーがどう扱うか。
 
 ---
 
@@ -43,6 +43,7 @@
 * **周囲光と契約に厳密なメッセージ：** 自動レンジの VEML7700。公開スキーマに従い、無効なものは書き出さないテレメトリ・ヘルス・情報の JSON、壁時計のタイムスタンプ（SNTP）、MQTT の遺言。どのレーダーも報告していない間はテレメトリを控え、空の「異常なし」は決して送りません。
 * **ネットワーク製品のように、全ボード共通の 1 つのイメージ：** ファームウェアは同一で、MAC がボードを区別します（名前を付けるまでは `armor-` と 6 桁）。`adopt_node.py` は、書き込んだばかりのノードにネットワーク経由で管理者、ブローカーの ID、フリート共通の設定を与えます。セットアップコードは MAC から計算されるので、5 台でも 27 台でも作業は同じです。**ベンチツール：** USB-C での書き込み、パネル開発用の代役ノード、生フレームのログをテスト用フィクスチャに変換するコンバーター（[ベンチでの立ち上げ](docs/BENCH_BRINGUP.md)）。
 * **GitHub またはファイルからの更新、進捗バー付き：** パネルは GitHub のリダイレクトに従い、ファームウェアと並んで公開される SHA-256（`armor_radar.bin.sha256`）を確認し、ダウンロードと書き込みをバーで表示します。ノードは新しいイメージで再起動し、起動しない場合は自動で元に戻ります。レーダーが見ているもののライブマップは、ノードから websocket で配信されます。
+* **ピンとブローカーのデッドロックなし：** メッセージは専用タスクが処理するキューを通るため、ブローカーのクライアントを待つ間にロックを保持するタスクはなく、ブローカーを失ったときに出力を安全な状態にするタスクが止まるとウォッチドッグが基板を再起動します。
 
 ## 📂 リポジトリの構成
 
@@ -73,7 +74,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 925 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 942 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -106,6 +107,7 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web コンソール：カメラ、レーダー、アラーム、太陽光発電、2D/3D サイト設計
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - リアルタイム 2D/3D レーダー付きの Android オペレータークライアント
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 判断を説明し、決して動作しない視覚推論ポリシー
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 向けのカメラのゾーン、マスク、検知ルール
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 偽造できない確認を備えたオフライン音声インテント
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - 筐体、電子部品、ベンチ受け入れマトリクス
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - デプロイ、CM5 テストベンチ、バックアップ、TLS

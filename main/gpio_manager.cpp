@@ -15,6 +15,7 @@ extern "C" {
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_task_wdt.h"
 }
 #include "core/gpio_logic.hpp"
 #include "entropy.hpp"
@@ -192,7 +193,9 @@ bool read_millivolts(Pin& pin, int& mv) {
 
 void poll_task(void*) {
   std::uint64_t last_link_check = 0;
+  esp_task_wdt_add(nullptr);   // the fall back of the outputs to their safe state lives here: a task that hangs unseen would never apply it
   for (;;) {
+    esp_task_wdt_reset();
     const std::uint64_t now = now_ms();
     {
       std::lock_guard<std::mutex> guard(g_lock);

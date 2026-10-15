@@ -10,6 +10,8 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 # A wired node that stops answering must recover by itself: the task watchdog resets a stuck task.
 CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+CONFIG_ESP_TASK_WDT_PANIC=y
 # The board-specific options (the W5500 Ethernet controller, the bridge) are in sdkconfig.board.s3-eth; tools/build_node.sh adds the one of the board.
 
 # The board has 16 MB of flash: two application slots for over-the-air updates (partitions.csv), and the boot loader goes back to the
