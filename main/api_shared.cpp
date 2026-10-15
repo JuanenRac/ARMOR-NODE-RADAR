@@ -20,6 +20,7 @@ extern "C" {
 #include "light_sensor.hpp"
 #include "mqtt_link.hpp"
 #include "network.hpp"
+#include "task_health.hpp"
 #include "node_store.hpp"
 #include "radar_manager.hpp"
 #include "web_server.hpp"
@@ -137,6 +138,8 @@ std::string status_json() {
   const float lux = light_lux();
   const web::TlsStatus tls = web::tls_status();
   w.key("web").begin_object().field("mode", tls.mode).field("https", tls.running).field("cert_sha256", tls.fingerprint).end_object();
+  w.key("tasks").raw(taskhealth::json());
+  taskhealth::warn_if_low();
   w.key("lux");
   if (lux >= 0.0f) w.number(lux, 1); else w.null();
   w.key("radars").begin_array();

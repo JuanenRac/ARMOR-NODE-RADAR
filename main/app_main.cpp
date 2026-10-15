@@ -29,6 +29,7 @@ extern "C" {
 }
 #include "ble_provision.hpp"
 #include "clock_sync.hpp"
+#include "improv_serial.hpp"
 #include "core/network_plan.hpp"
 #include "gpio_manager.hpp"
 #include "light_sensor.hpp"
@@ -120,6 +121,7 @@ extern "C" void app_main() {
     armor::network::arm_rescue(armor::netplan::plan_network(settings, true, armor::store::setup_code(), armor::store::mac_tail(), armor::store::mac_sum()), 90);
   }
   armor::clocksync::start(settings);
+  armor::improv_serial::start();   // Improv Wi-Fi over the USB cable (ESP Web Tools)
   const bool panel_ok = network_ok && armor::web::start(settings);
   armor::mqtt_link::start(settings);
   armor::ble_provision::start(settings, setup);   // only when the settings say so: Bluetooth stays unused otherwise

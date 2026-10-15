@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## [0.5.8] - Waits that grow, Improv over the USB cable and the stack of each task
+
+- **Waits that grow between tries.** A Wi-Fi network that does not answer is tried again after 1 s, then 2, 4, 8... up to 30 s (a little scatter on every wait, so that many nodes that lost the same router do not all knock together), and the broker after 1 s growing to 60 s; a try that works starts the schedule over. Before, every retry was a fixed 3 s (Wi-Fi) or the client's fixed 10 s (broker).
+- **Improv Wi-Fi over the USB cable.** A web page that speaks the Improv standard (ESP Web Tools) can give the node its Wi-Fi network through the same USB socket the log comes out of: the node answers its state, identifies itself, describes the device and takes the SSID and password (checked and stored through the same settings document the panel and the Bluetooth set-up use), then restarts to join. A packet is only acted upon whole and with a right checksum. The packets are tested on a computer; the USB side has never run on a board.
+- **The stack each task has left**, in the status (`tasks`: the least room ever left, smallest first, with a `low` flag under 512 bytes) and as a warning in the log, once per task, before a near overflow becomes a crash.
+
 ## [0.5.7] - The update from GitHub installs the image of its own board
 
 - **The GitHub update picks the image built for the node's board** (`armor_radar-<board>.bin`, with its `.sha256`). It used to download `armor_radar.bin`, the s3-eth image, whatever the board was - the release notes warned not to use it on a Wi-Fi board. A release from before the naming still serves the s3-eth board with the plain `armor_radar.bin`; a Wi-Fi board never takes an image that is not its own.
