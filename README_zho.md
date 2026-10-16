@@ -21,20 +21,31 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-FFB020.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** **成熟度：scaffolding。** 与硬件无关的核心（859 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其校验、引脚表、用户与会话、映射引脚逻辑、网络方案以及消息序列化器，其输出被 ARMOR-COMMON 接受）已在电脑上测试，**网页面板**已在真实浏览器中对着替身节点试用，**固件镜像**能在 ESP-IDF 5.4.2 容器中构建。**它从未在开发板上运行过**：没有从真实模块捕获过任何帧，以太网、Wi-Fi 桥接、光传感器和更新的代码都未经尝试，雷达命令通道既未对照厂商文档也未对照模块检查，面板的 HTTPS 证书由节点自己生成且未在真实浏览器中试过，LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块。
+**诚实性检查 - 今天真正能运行的部分:** 雷达节点是目前唯一真正存在的硬件节点：它的固件运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告，其网页面板和无线更新也在该板上使用。与硬件无关的核心（5 个测试程序中的 947 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户和会话、网络方案、ARMOR-COMMON 接受其输出的消息序列化器，以及版本和签名检查）在计算机上测试，**网页面板**已在真实浏览器中对照替身节点验证，**固件镜像**可在 ESP-IDF 5.4 容器中构建。**尚未**证明的是：LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块；更新的签名检查和带 PIN 的蓝牙配对已在计算机上用真实签名验证，但尚未在板上验证；雷达命令通道没有对照真实模块检查；面板的 HTTPS 证书（由节点自己生成）没有在所有浏览器中试过。
 
 ---
+
+## 📋 速览
+
+| | |
+|---|---|
+| 版本 | `0.6.6` |
+| 成熟度 | 成熟 |
+| 测试 | 947 checks in 5 programs (`ctest`) |
+| 技术栈 | ESP-IDF C++ |
+| 真实硬件 | 运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告 |
 
 ## 🎯 概述
 
 * **两种开发板，一套固件：** Waveshare ESP32-S3-ETH（以太网，默认）和不带以太网的 ESP32-S3-WROOM-1 N16R8（仅 Wi-Fi：设置时会询问要加入的 Wi-Fi 网络，节点始终保留自己的网络）。镜像在构建时选择（`tools/build_node.sh generic s3-eth` 或 `generic s3-wifi`）；引脚表和接入方式随开发板而定，面板会隐藏开发板没有的功能，镜像只适用于对应的开发板。两者都能构建并已在电脑上测试，但都没在开发板上运行过。
 * **两个 270 度节点：** 每块 Waveshare ESP32-S3-ETH 在其三个 UART 上读取最多三个 LD2450 雷达，彼此相隔 75 度安装，通过有线以太网（W5500）使用 DHCP 或固定地址，由 PoE 或 USB 供电。Studio 的 *Add a 270° node* 会创建已与节点关联的三个雷达。
-* **每个节点自带网页面板，** 外观与 Studio 一致，支持七种语言，内嵌于固件：概览、网络、Wi-Fi、代理、雷达、引脚、用户、固件更新和日志。没有用户的节点会开启 Wi-Fi `ARMOR-SETUP-xxxxxx`，并用设置码创建第一个管理员；密码使用加盐 PBKDF2，会话是随机令牌，所有设置都保存在节点的闪存中，因此一个镜像适用于所有节点，且不会把任何密码编译进去（[面板](docs/NODE_PANEL.md)）。
+* **每个节点自带网页面板，** 外观与 Studio 一致，支持八种语言，内嵌于固件：概览、网络、Wi-Fi、代理、雷达、引脚、用户、固件更新和日志。没有用户的节点会开启 Wi-Fi `ARMOR-SETUP-xxxxxx`，并用设置码创建第一个管理员；密码使用加盐 PBKDF2，会话是随机令牌，所有设置都保存在节点的闪存中，因此一个镜像适用于所有节点，且不会把任何密码编译进去（[面板](docs/NODE_PANEL.md)）。
 * **多个节点组成一个 Wi-Fi：** 每个节点可提供接到其以太网口的接入点；给节点设置相同的名称和密码，信道设为自动（按 MAC 取 1、6 或 11），手机和 Wi-Fi 传感器就会看到一个网络和一个 DHCP 服务器。这不是无线 mesh：每个节点仍保留自己的网线。节点也可以改为加入路由器的 Wi-Fi（可搜索网络），没有网线的节点可通过 Android 应用用**蓝牙**配置。
 * **为服务器提供引脚：** 任何空闲引脚都可成为输入、输出（代理丢失时有安全状态）、PWM 或模拟读数，并显示为服务器的一个设备，因此继电器或触点无需新固件。开发板的保留引脚永远不会被提供。
 * **通过面板进行带回滚的空中更新（OTA）**（16 MB 闪存上有两个槽位），以及从 Studio 到每个节点面板的**链接**，地址来自节点发布的信息。
@@ -43,6 +54,12 @@
 * **LD2450 解码器、健康状态与配置：** 可重新同步的分帧器能在有噪声的数据流中找到帧；每个 30 字节的帧给出最多三个目标，成为契约轨迹；控制台和面板会按雷达说明它是在上报、静默还是数据混乱。面板还能读取模块版本、选择一个或三个目标并设置检测区域（这一协议尚未对照模块检查）。
 * **环境光与严格符合契约的消息：** 带自动量程的 VEML7700；遵循已发布模式的遥测、健康和信息 JSON，拒绝写入任何无效内容，带墙上时钟时间戳（SNTP）和 MQTT 遗嘱。没有雷达上报时会扣留遥测，绝不发出空的“一切正常”。
 * **一个镜像适用于所有开发板，像网络产品一样：** 固件相同，由 MAC 区分开发板（命名前为 `armor-` 加六位数字）；`adopt_node.py` 通过网络给刚刷好的节点分配管理员、代理身份和整个节点群共用的设置，设置码由其 MAC 计算得出，因此 5 个节点和 27 个节点工作量相同。**台架工具：** 通过 USB-C 刷写、用于开发面板的替身节点，以及把原始帧日志转换成测试夹具的转换器（[台架调试](docs/BENCH_BRINGUP.md)）。
+* **签名的无线更新：**节点只会从 GitHub 安装 SHA-256 匹配且带有维护者有效 Ed25519 签名的镜像（公钥在固件中，私钥从不离开维护者）；管理员在面板中手动上传的文件仍然被接受。面板的页面和消息有八种语言。
+* **带 PIN 的蓝牙配对：**六位 PIN 由设置码派生，打印在 USB 控制台上并向管理员显示在面板中；手机必须输入它才能写入节点的设置。
+
+## 🧩 在 A.R.M.O.R. 中的角色
+
+ARMOR-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存在传感器，并通过 MQTT 或 HTTP 向 [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) 发布轨迹、光照和健康状态；[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) 把它们画在场地平面图上，[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) 把它们与摄像头对照权衡。它的固件与其他节点共用一个基础（面板、蓝牙设置、签名更新、登录和时钟都来自 [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) 的固件基础），所以在一个节点上学到的对所有节点都适用。
 
 ## 📂 仓库结构
 
@@ -61,7 +78,7 @@ ARMOR-RADAR/
 │   ├── board_ethernet.cpp, light_sensor.cpp, tls_cert.cpp, log_buffer.cpp, entropy.cpp
 │   ├── Kconfig.projbuild   the first settings of a build
 │   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
-├── panel/                  index.html, app.js, text.js (7 languages), style.css
+├── panel/                  index.html, app.js, text.js (8 languages), style.css
 ├── tests/                  test_core.cpp, test_node.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
 ├── tools/                  build_node.sh, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py
 ├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
@@ -71,9 +88,11 @@ ARMOR-RADAR/
 
 ## 🛠️ 开发环境
 
+**环境要求:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 859 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -99,12 +118,14 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 * **ARMOR-RADAR** (本仓库) - 适用于 ESP32-S3 的现场节点固件，带三个雷达和自带网页面板
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太阳能逆变器与电池的协议，以及网关节点的消息
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 电气节点：电表、电网读数消息和开关规则
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - 报警节点与报警主机：防区、布防、延时、警笛和 PIN，有无服务器均可
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - 触摸面板：墙面屏幕上的系统状态、布防与确认，以及语音助手的所在
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - 本地网络：其设备、互联网以及变化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央协调器：遥测、报警、设备、太阳能读数和摄像头
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - 网页控制台：摄像头、雷达、报警、太阳能和 2D/3D 场地设计器
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - 带实时 2D/3D 雷达的 Android 操作员客户端
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 会解释决策且从不执行动作的视觉推理策略
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 上的摄像头区域、遮罩与检测规则
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 带无法伪造确认的离线语音意图
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - 外壳、电子器件和台架验收矩阵
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - 部署、CM5 测试台、备份与 TLS

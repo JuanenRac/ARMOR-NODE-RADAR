@@ -21,20 +21,31 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-FFB020.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** **成熟度：scaffolding。** ハードウェア非依存のコア（859 件のチェック：LD2450、LD2461、4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検証、ピン表、ユーザーとセッション、割り当てピンのロジック、ネットワーク計画、そして ARMOR-COMMON が受け入れる出力を持つメッセージシリアライザー）はコンピューターでテスト済みで、**Web パネル**は代役ノードに対して実際のブラウザーで試し、**ファームウェアイメージ**は ESP-IDF 5.4.2 コンテナーでビルドできます。**ボード上で動いたことはありません**：実モジュールからフレームを取得したことはなく、イーサネット、Wi-Fi ブリッジ、光センサー、更新のコードは未試験で、レーダーのコマンドチャネルはメーカー文書とも実モジュールとも照合しておらず、パネルの HTTPS 証明書はノード自身が作るため実ブラウザーでは未試験で、LD2461 と人感センサーのデコーダーは各マニュアルの例としか一致せず、実モジュールはありません。
+**正直さのチェック - 今日動いているもの:** レーダーノードはハードウェアとして実在する唯一のノードです。そのファームウェアはレーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作して CM5 テストベンチに報告し、Web パネルと無線アップデートもその基板で使われています。ハードウェアに依存しないコア（5 つのテストプログラムで 947 項目：LD2450・LD2461 と 4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検査、ピン表、ユーザーとセッション、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー、バージョンと署名の検査）はコンピューター上でテストされ、**Web パネル**は代替ノードに対して実際のブラウザーで動かし、**ファームウェアイメージ**は ESP-IDF 5.4 コンテナーでビルドできます。**まだ**証明されていないもの：LD2461 と人感センサーのデコーダーはマニュアルの計算例にしか一致せず、実モジュールがありません。アップデートの署名検査と PIN 付き Bluetooth ペアリングは実際の署名でコンピューター上で証明済みですが、基板上ではまだです。レーダーのコマンドチャネルはモジュールで確認していません。パネルの HTTPS 証明書（ノード自身が作る）はすべてのブラウザーで試していません。
 
 ---
+
+## 📋 ひと目で
+
+| | |
+|---|---|
+| バージョン | `0.6.6` |
+| 成熟度 | 確立 |
+| テスト | 947 checks in 5 programs (`ctest`) |
+| 技術 | ESP-IDF C++ |
+| 実機での確認 | レーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作し、CM5 テストベンチに報告 |
 
 ## 🎯 概要
 
 * **2 種類のボード、1 つのファームウェア：** Waveshare ESP32-S3-ETH（Ethernet、標準）と、Ethernet のない ESP32-S3-WROOM-1 N16R8（Wi-Fi のみ：セットアップで参加する Wi-Fi ネットワークを尋ね、ノードは常に独自のネットワークも保ちます）。イメージはビルド時に選びます（`tools/build_node.sh generic s3-eth` または `generic s3-wifi`）。ピン表とアクセス方法はボードに従い、パネルはボードにないものを隠し、イメージは対応するボード専用です。どちらもビルドでき、コンピューター上でテスト済みですが、実機では動かしていません。
 * **270 度のノードが 2 つ：** 各 Waveshare ESP32-S3-ETH は 3 本の UART で最大 3 基の LD2450 レーダーを読み取ります。レーダーは 75 度ずつずらして取り付け、有線イーサネット（W5500）で DHCP または固定アドレス、給電は PoE か USB です。Studio の *Add a 270° node* は、ノードに割り当て済みの 3 基のレーダーを作成します。
-* **すべてのノードに Web パネル：** Studio と同じ見た目で 7 言語に対応し、ファームウェアに組み込まれています。概要、ネットワーク、Wi-Fi、ブローカー、レーダー、ピン、ユーザー、ファームウェア更新、ログ。ユーザーのいないノードは Wi-Fi `ARMOR-SETUP-xxxxxx` を開き、セットアップコードで最初の管理者を作成します。パスワードはソルト付き PBKDF2、セッションはランダムなトークン、すべての設定はノードのフラッシュにあるので、1 つのイメージがすべてのノードに使え、パスワードはコンパイルされません（[パネル](docs/NODE_PANEL.md)）。
+* **すべてのノードに Web パネル：** Studio と同じ見た目で 8 言語に対応し、ファームウェアに組み込まれています。概要、ネットワーク、Wi-Fi、ブローカー、レーダー、ピン、ユーザー、ファームウェア更新、ログ。ユーザーのいないノードは Wi-Fi `ARMOR-SETUP-xxxxxx` を開き、セットアップコードで最初の管理者を作成します。パスワードはソルト付き PBKDF2、セッションはランダムなトークン、すべての設定はノードのフラッシュにあるので、1 つのイメージがすべてのノードに使え、パスワードはコンパイルされません（[パネル](docs/NODE_PANEL.md)）。
 * **複数のノードで 1 つの Wi-Fi：** 各ノードはイーサネットポートにつながるアクセスポイントを提供できます。同じ名前とパスワードにしてチャネルを自動（MAC により 1、6、11）にすると、スマートフォンと Wi-Fi センサーには 1 つの DHCP サーバーを持つ 1 つのネットワークに見えます。無線メッシュではなく、各ノードはケーブルを保ちます。代わりにルーターの Wi-Fi に参加でき（ネットワーク検索付き）、ケーブルのないノードは Android アプリから **Bluetooth** で設定できます。
 * **サーバー用のピン：** 空いているピンは入力、出力（ブローカーを失ったときの安全な状態付き）、PWM、アナログ読み取りになり、サーバーのデバイスとして現れるので、リレーや接点に新しいファームウェアは要りません。ボードの予約ピンは提示されません。
 * **ロールバック付きのオーバーザエア更新**をパネルから行えます（16 MB のフラッシュに 2 スロット）。また Studio から各ノードのパネルへ、ノードが公開するアドレスを使う**リンク**があります。
@@ -43,6 +54,12 @@
 * **LD2450 のデコーダー、状態、設定：** 再同期するフレーム検出器がノイズの多いストリームからフレームを見つけ、30 バイトの各フレームから最大 3 つのターゲットが契約のトラックになります。コンソールとパネルはレーダーごとに、報告中か、沈黙か、文字化けかを示します。パネルはモジュールのバージョンを読み、1 つまたは 3 つのターゲットを選び、検出ゾーンを設定することもできます（モジュールでは未検証のプロトコル）。
 * **周囲光と契約に厳密なメッセージ：** 自動レンジの VEML7700。公開スキーマに従い、無効なものは書き出さないテレメトリ・ヘルス・情報の JSON、壁時計のタイムスタンプ（SNTP）、MQTT の遺言。どのレーダーも報告していない間はテレメトリを控え、空の「異常なし」は決して送りません。
 * **ネットワーク製品のように、全ボード共通の 1 つのイメージ：** ファームウェアは同一で、MAC がボードを区別します（名前を付けるまでは `armor-` と 6 桁）。`adopt_node.py` は、書き込んだばかりのノードにネットワーク経由で管理者、ブローカーの ID、フリート共通の設定を与えます。セットアップコードは MAC から計算されるので、5 台でも 27 台でも作業は同じです。**ベンチツール：** USB-C での書き込み、パネル開発用の代役ノード、生フレームのログをテスト用フィクスチャに変換するコンバーター（[ベンチでの立ち上げ](docs/BENCH_BRINGUP.md)）。
+* **署名付きの無線アップデート：**ノードが GitHub からインストールするのは、SHA-256 が一致し、管理者の有効な Ed25519 署名を持つイメージだけです（公開鍵はファームウェア内、秘密鍵は管理者の手元から出ません）。管理者がパネルで手動アップロードしたファイルは引き続き受け付けます。パネルのページとメッセージは 8 言語です。
+* **PIN 付きの Bluetooth ペアリング：**6 桁の PIN は設定コードから導出され、USB コンソールに表示され、管理者にはパネルにも表示されます。スマートフォンはこれを入力して初めてノードの設定を書き込めます。
+
+## 🧩 A.R.M.O.R. での役割
+
+ARMOR-RADAR は境界の目です。各ノードは最大 3 台のレーダーまたは人感センサーを読み取り、軌跡・照度・状態を MQTT または HTTP で [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) に送ります。[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) はそれをサイト図に描き、[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) はカメラと照らし合わせます。ファームウェアは他のノードと土台を共有し（パネル、Bluetooth 設定、署名付きアップデート、サインイン、時計は [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) のファームウェア基盤から）、1 つのノードで覚えたことがすべてに通用します。
 
 ## 📂 リポジトリの構成
 
@@ -61,7 +78,7 @@ ARMOR-RADAR/
 │   ├── board_ethernet.cpp, light_sensor.cpp, tls_cert.cpp, log_buffer.cpp, entropy.cpp
 │   ├── Kconfig.projbuild   the first settings of a build
 │   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
-├── panel/                  index.html, app.js, text.js (7 languages), style.css
+├── panel/                  index.html, app.js, text.js (8 languages), style.css
 ├── tests/                  test_core.cpp, test_node.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
 ├── tools/                  build_node.sh, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py
 ├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
@@ -71,9 +88,11 @@ ARMOR-RADAR/
 
 ## 🛠️ 開発環境
 
+**必要なもの:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 859 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -99,12 +118,14 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 * **ARMOR-RADAR** (このリポジトリ) - ESP32-S3 用フィールドノードのファームウェア。レーダー 3 基と独自の Web パネル付き
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太陽光インバーターとバッテリーのプロトコル、およびゲートウェイノードのメッセージ
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 電気ノード：電力量計、電力網の計測メッセージ、開閉のルール
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - 警報ノードと警報盤：警戒区域、警戒セット、遅延、サイレン、PIN。サーバーがあってもなくても
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - タッチパネル：壁面ディスプレイでのシステム状態表示、警戒・確認操作、音声アシスタントの拠点
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - ローカルネットワーク：機器、インターネット、そして変化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央コーディネーター：テレメトリ、アラーム、デバイス、太陽光の測定値、カメラ
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web コンソール：カメラ、レーダー、アラーム、太陽光発電、2D/3D サイト設計
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - リアルタイム 2D/3D レーダー付きの Android オペレータークライアント
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 判断を説明し、決して動作しない視覚推論ポリシー
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 向けのカメラのゾーン、マスク、検知ルール
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 偽造できない確認を備えたオフライン音声インテント
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - 筐体、電子部品、ベンチ受け入れマトリクス
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - デプロイ、CM5 テストベンチ、バックアップ、TLS

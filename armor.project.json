@@ -13,7 +13,7 @@
     "I2C"
   ],
   "deployment_target": "ESP32-S3-ETH-PoE",
-  "maturity": "functional",
+  "maturity": "established",
   "family": "Field Nodes",
   "parent": "ARMOR-COMMON",
   "native_version": "0.6.6",

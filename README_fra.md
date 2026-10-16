@@ -21,20 +21,31 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-FFB020.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** **Maturité : scaffolding.** Le cœur indépendant du matériel (859 contrôles : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs vérifications, la table des broches, les utilisateurs et sessions, la logique des broches associées, le plan réseau et le sérialiseur de messages, dont la sortie est acceptée par ARMOR-COMMON) est testé sur ordinateur, le **panneau web** a été essayé dans un vrai navigateur face à un nœud simulé, et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.4.2. **Il n'a jamais tourné sur une carte** : aucune trame n'a été capturée depuis un vrai module, le code Ethernet, pont Wi-Fi, capteur de lumière et mise à jour est inessayé, le canal de commande des radars n'est vérifié ni face au document du fabricant ni face à un module, le certificat HTTPS du panneau est fabriqué par le nœud lui-même et inessayé dans un vrai navigateur, et les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples de leurs manuels, sans module réel.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (947 vérifications dans 5 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.4. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
 
 ---
+
+## 📋 En un coup d'œil
+
+| | |
+|---|---|
+| Version | `0.6.6` |
+| Maturité | Établi |
+| Tests | 947 checks in 5 programs (`ctest`) |
+| Technologie | ESP-IDF C++ |
+| Sur matériel réel | Tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar, en rapportant au banc de test CM5 |
 
 ## 🎯 Présentation
 
 * **Deux cartes, un firmware :** la Waveshare ESP32-S3-ETH (Ethernet, par défaut) et une ESP32-S3-WROOM-1 N16R8 sans Ethernet (Wi-Fi seul : sa configuration demande le réseau Wi-Fi à rejoindre et le nœud garde toujours son propre réseau). L'image se choisit à la compilation (`tools/build_node.sh generic s3-eth` ou `generic s3-wifi`) ; la table des broches et l'accès suivent la carte, le panneau masque ce que la carte n'a pas, et une image ne vaut que pour sa carte. Les deux compilent et sont testées sur ordinateur ; aucune n'a tourné sur une carte.
 * **Deux nœuds de 270 degrés :** chaque Waveshare ESP32-S3-ETH lit jusqu'à trois radars LD2450 sur ses trois UART, montés à 75 degrés l'un de l'autre, par Ethernet filaire (W5500) en DHCP ou adresse fixe, alimenté en PoE ou USB. *Add a 270° node* de Studio crée les trois radars déjà associés au nœud.
-* **Un panneau web sur chaque nœud,** à l'apparence de Studio et en sept langues, intégré au firmware : vue d'ensemble, réseau, Wi-Fi, broker, radars, broches, utilisateurs, mise à jour du firmware et journal. Un nœud sans utilisateur ouvre le Wi-Fi `ARMOR-SETUP-xxxxxx` et crée son premier administrateur avec un code d'installation ; les mots de passe sont en PBKDF2 salé, les sessions sont des jetons aléatoires et tous les réglages sont dans la flash du nœud, si bien qu'une image sert tous les nœuds et qu'aucun mot de passe n'est compilé ([le panneau](docs/NODE_PANEL.md)).
+* **Un panneau web sur chaque nœud,** à l'apparence de Studio et en huit langues, intégré au firmware : vue d'ensemble, réseau, Wi-Fi, broker, radars, broches, utilisateurs, mise à jour du firmware et journal. Un nœud sans utilisateur ouvre le Wi-Fi `ARMOR-SETUP-xxxxxx` et crée son premier administrateur avec un code d'installation ; les mots de passe sont en PBKDF2 salé, les sessions sont des jetons aléatoires et tous les réglages sont dans la flash du nœud, si bien qu'une image sert tous les nœuds et qu'aucun mot de passe n'est compilé ([le panneau](docs/NODE_PANEL.md)).
 * **Un seul Wi-Fi à partir de plusieurs nœuds :** chaque nœud peut offrir un point d'accès relié à son port Ethernet ; avec le même nom et mot de passe et le canal en automatique (1, 6 ou 11 selon la MAC), téléphones et capteurs Wi-Fi voient un seul réseau avec un seul serveur DHCP. Ce n'est pas un maillage radio : chaque nœud garde son câble. Un nœud peut aussi rejoindre le Wi-Fi d'un routeur (avec recherche de réseaux), et un nœud sans câble peut être configuré en **Bluetooth** depuis l'application Android.
 * **Broches pour le serveur :** toute broche libre devient une entrée, une sortie (avec un état sûr si le broker est perdu), du PWM ou une lecture analogique, et apparaît comme un appareil du serveur : un relais ou un contact n'exige aucun nouveau firmware. Les broches réservées de la carte ne sont jamais proposées.
 * **Mises à jour par radio (OTA) avec retour arrière** depuis le panneau (deux emplacements sur la flash de 16 Mo), et un **lien depuis Studio** vers le panneau de chaque nœud, à partir de l'adresse que le nœud publie.
@@ -43,6 +54,12 @@
 * **Décodeur, santé et configuration du LD2450 :** un découpeur qui se resynchronise trouve les trames dans un flux bruité ; chaque trame de 30 octets donne jusqu'à trois cibles qui deviennent des pistes du contrat ; la console et le panneau indiquent par radar s'il émet, se tait ou envoie des données illisibles. Le panneau peut aussi lire la version du module, choisir une ou trois cibles et définir des zones de détection (un protocole non vérifié face à un module).
 * **Lumière ambiante et messages conformes au contrat :** le VEML7700 avec plage automatique ; JSON de télémétrie, de santé et d'information qui suit les schémas publiés et refuse d'écrire quoi que ce soit d'invalide, avec des horodatages d'horloge murale (SNTP) et un testament MQTT. La télémétrie est retenue tant qu'aucun radar n'émet, jamais un « tout est calme » vide.
 * **Une image pour toutes les cartes, comme un produit réseau :** le firmware est le même et l'adresse MAC distingue les cartes (`armor-` et six chiffres jusqu'au nommage) ; `adopt_node.py` donne à un nœud fraîchement flashé son administrateur, son identité de broker et les réglages communs de la flotte par le réseau, avec un code d'installation calculé depuis sa MAC : 5 nœuds ou 27, c'est le même travail. **Outils de banc :** flashage par USB-C, un nœud simulé pour travailler sur le panneau et un convertisseur d'un journal de trames brutes en jeu de test ([mise en service sur banc](docs/BENCH_BRINGUP.md)).
+* **Mises à jour par radio signées :** le nœud n'installe depuis GitHub qu'une image dont le SHA-256 correspond et qui porte une signature Ed25519 valide du responsable (la clé publique est dans le firmware, la privée ne quitte jamais le responsable) ; un fichier envoyé à la main par un administrateur dans le panneau reste accepté. Les pages et messages du panneau sont en huit langues.
+* **Appairage Bluetooth avec un PIN :** le PIN à six chiffres est dérivé du code de configuration, imprimé sur la console USB et montré à un administrateur dans le panneau ; le téléphone doit le saisir avant de pouvoir écrire les réglages du nœud.
+
+## 🧩 Rôle dans A.R.M.O.R.
+
+ARMOR-RADAR est l'œil du périmètre. Chaque nœud lit jusqu'à trois radars ou capteurs de présence et publie pistes, lumière et santé vers [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) en MQTT ou HTTP ; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) les dessine sur le plan du site et [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) les pèse face aux caméras. Son firmware partage une base avec les autres nœuds (le panneau, la configuration Bluetooth, les mises à jour signées, la connexion et l'horloge viennent de la base firmware d'[ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), si bien que ce qu'on apprend sur un nœud vaut pour tous.
 
 ## 📂 Structure du dépôt
 
@@ -61,7 +78,7 @@ ARMOR-RADAR/
 │   ├── board_ethernet.cpp, light_sensor.cpp, tls_cert.cpp, log_buffer.cpp, entropy.cpp
 │   ├── Kconfig.projbuild   the first settings of a build
 │   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
-├── panel/                  index.html, app.js, text.js (7 languages), style.css
+├── panel/                  index.html, app.js, text.js (8 languages), style.css
 ├── tests/                  test_core.cpp, test_node.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
 ├── tools/                  build_node.sh, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py
 ├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
@@ -71,9 +88,11 @@ ARMOR-RADAR/
 
 ## 🛠️ Environnement de développement
 
+**Prérequis:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 859 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -99,12 +118,14 @@ Les tests sur ordinateur demandent un compilateur C++17 (Linux, WSL, MSYS2). Voi
 * **ARMOR-RADAR** (ce dépôt) - Firmware du nœud de terrain pour ESP32-S3 avec trois radars et son propre panneau web
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protocoles des onduleurs et batteries solaires et messages d'un nœud passerelle
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Nœud électrique : compteurs, le message des mesures du réseau et les règles de commutation
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Nœud et centrale d'alarme : zones, armement, temporisations, sirène et PIN, avec ou sans le serveur
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Panneau tactile : l'état du système sur un écran mural, armer et acquitter, et la maison de l'assistant vocal
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - Le réseau local : ses appareils, internet et ce qui change
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Coordinateur central : télémétrie, alarmes, appareils, relevés solaires et caméras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Console web : caméras, radar, alarmes, énergie solaire et concepteur de site 2D/3D
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - Client Android de l'opérateur avec radar 2D/3D en direct
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - Politique d'inférence visuelle qui explique ses décisions et n'agit jamais
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Zones de caméra, masques et règles de détection pour la Jetson Orin NX
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - Intentions vocales hors ligne avec une confirmation impossible à falsifier
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - Boîtiers, électronique et matrice d'acceptation sur banc
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - Déploiement, banc d'essai CM5, sauvegarde et TLS

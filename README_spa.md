@@ -21,20 +21,31 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Maturity-scaffolding-FFB020.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Comprobación de honestidad - qué funciona hoy:** **Madurez: scaffolding.** El núcleo independiente del hardware (859 comprobaciones: los decodificadores del LD2450, del LD2461 y de cuatro sensores de presencia, el canal de comandos del LD2450, los ajustes y sus comprobaciones, la tabla de pines, usuarios y sesiones, la lógica de los pines asignados, el plan de red y el serializador de mensajes, cuya salida acepta ARMOR-COMMON) se prueba en el ordenador, el **panel web** se ejercitó en un navegador real contra un nodo simulado, y la **imagen del firmware compila** en el contenedor de ESP-IDF 5.4.2. **Nunca se ha ejecutado en una placa**: no se ha capturado ninguna trama de un módulo real, el código de Ethernet, del puente Wi-Fi, del sensor de luz y de actualización no se ha probado, el canal de comandos del radar no está comprobado con el documento del fabricante ni con un módulo, el certificado HTTPS del panel lo crea el propio nodo y no se ha probado en un navegador real, y los decodificadores del LD2461 y de los sensores de presencia solo coinciden con los ejemplos resueltos de sus manuales, sin ningún módulo detrás.
+**Comprobación de honestidad - qué funciona hoy:** El nodo radar es el único nodo que existe como hardware: su firmware corre en una placa real Waveshare ESP32-S3-ETH con un radar y reporta al banco de pruebas de la CM5, y su panel web y las actualizaciones por aire se usan en ella. El núcleo independiente del hardware (947 comprobaciones en 5 programas de test: los decodificadores del LD2450, el LD2461 y cuatro sensores de presencia, el canal de órdenes del LD2450, los ajustes y sus comprobaciones, la tabla de pines, usuarios y sesiones, el plan de red, el serializador de mensajes cuya salida acepta ARMOR-COMMON, y las comprobaciones de versión y firma) se prueba en un ordenador, el **panel web** se ejercitó en un navegador real contra un nodo de pega y la **imagen del firmware compila** en el contenedor ESP-IDF 5.4. Lo que **todavía no** está probado: los decodificadores del LD2461 y de los sensores de presencia solo coinciden con los ejemplos resueltos de sus manuales, sin un módulo detrás; la comprobación de firma de las actualizaciones y el emparejamiento Bluetooth con PIN están probados en ordenador con firmas reales pero aún no en la placa; el canal de órdenes del radar no se ha contrastado con un módulo; y el certificado HTTPS del panel (lo hace el propio nodo) no se ha probado en todos los navegadores.
 
 ---
+
+## 📋 De un vistazo
+
+| | |
+|---|---|
+| Versión | `0.6.6` |
+| Madurez | Establecido |
+| Tests | 947 checks in 5 programs (`ctest`) |
+| Tecnología | ESP-IDF C++ |
+| En hardware real | Corre en una placa real Waveshare ESP32-S3-ETH con un radar, reportando al banco de pruebas de la CM5 |
 
 ## 🎯 Descripción general
 
 * **Dos placas, un firmware:** la Waveshare ESP32-S3-ETH (Ethernet, la de serie) y una ESP32-S3-WROOM-1 N16R8 sin Ethernet (solo Wi-Fi: su configuración pide la red Wi-Fi a la que unirse y siempre conserva su propia red). La imagen se elige al compilar (`tools/build_node.sh generic s3-eth` o `generic s3-wifi`); la tabla de pines y la forma de acceso siguen a la placa, el panel oculta lo que la placa no tiene y una imagen es solo para su placa. Ambas compilan y tienen tests en el ordenador; ninguna ha funcionado en una placa.
 * **Dos nodos de 270 grados:** cada Waveshare ESP32-S3-ETH lee hasta tres radares LD2450 en sus tres UART, montados con 75 grados de separación, por Ethernet cableada (W5500) con DHCP o dirección fija, alimentada por PoE o USB. *Añadir un nodo de 270°* en Studio crea los tres radares ya asignados al nodo.
-* **Un panel web en cada nodo,** con el aspecto de Studio y sus siete idiomas, integrado en el firmware: resumen, red, Wi-Fi, broker, radares, pines, usuarios, actualización del firmware y registro. Un nodo sin usuarios abre el Wi-Fi `ARMOR-SETUP-xxxxxx` y crea su primer administrador con un código de configuración; las contraseñas usan PBKDF2 con sal, las sesiones son tokens aleatorios y todos los ajustes viven en la flash del nodo, así que una imagen sirve para todos los nodos y no se compila ninguna contraseña ([el panel](docs/NODE_PANEL.md)).
+* **Un panel web en cada nodo,** con el aspecto de Studio y sus ocho idiomas, integrado en el firmware: resumen, red, Wi-Fi, broker, radares, pines, usuarios, actualización del firmware y registro. Un nodo sin usuarios abre el Wi-Fi `ARMOR-SETUP-xxxxxx` y crea su primer administrador con un código de configuración; las contraseñas usan PBKDF2 con sal, las sesiones son tokens aleatorios y todos los ajustes viven en la flash del nodo, así que una imagen sirve para todos los nodos y no se compila ninguna contraseña ([el panel](docs/NODE_PANEL.md)).
 * **Un solo Wi-Fi desde muchos nodos:** cada nodo puede ofrecer un punto de acceso unido a su puerto Ethernet; dales el mismo nombre y contraseña y el canal en automático (1, 6 u 11 según la MAC) y los móviles y sensores Wi-Fi ven una red con un servidor DHCP. No es una malla por radio: cada nodo conserva su cable. Un nodo puede en cambio unirse al Wi-Fi de un router (con búsqueda de redes), y uno sin cable se puede configurar por **Bluetooth** desde la app de Android.
 * **Pines para el servidor:** cualquier pin libre pasa a ser una entrada, una salida (con estado seguro si se pierde el broker), PWM o una lectura analógica, y aparece como dispositivo del servidor, así que un relé o un contacto no necesita firmware nuevo. Los pines reservados de la placa nunca se ofrecen.
 * **Actualizaciones por el aire con vuelta atrás** desde el panel (dos ranuras en la flash de 16 MB), y un **enlace desde Studio** al panel de cada nodo, a partir de la dirección que el nodo publica.
@@ -43,37 +54,45 @@
 * **Decodificador LD2450, salud y configuración:** un delimitador que se resincroniza encuentra tramas en un flujo ruidoso; cada trama de 30 bytes da hasta tres objetivos que pasan a ser pistas del contrato; la consola y el panel dicen por radar si informa, está en silencio o llega ininteligible. El panel también puede leer la versión del módulo, elegir uno o tres objetivos y fijar zonas de detección (un protocolo sin comprobar con un módulo).
 * **Luz ambiente y mensajes exactos al contrato:** el VEML7700 con rango automático; JSON de telemetría, salud e información que sigue los esquemas publicados y se niega a escribir algo inválido, con marcas de tiempo reales (SNTP) y un last will de MQTT. La telemetría se retiene mientras ningún radar informa, nunca un «todo despejado» vacío.
 * **Una imagen para todas las placas, como un producto de red:** el firmware es el mismo y la MAC distingue las placas (`armor-` y seis dígitos hasta que se le da nombre); `adopt_node.py` da a un nodo recién grabado su administrador, su identidad en el broker y los ajustes comunes de la flota por la red, con un código de configuración calculado desde su MAC, así que 5 nodos o 27 dan el mismo trabajo. **Herramientas de banco:** grabación por USB-C, un nodo simulado para trabajar en el panel y un conversor de un registro de tramas en bruto a un fixture de pruebas ([puesta en marcha](docs/BENCH_BRINGUP.md)).
+* **Actualizaciones por aire firmadas:** el nodo solo instala desde GitHub una imagen cuyo SHA-256 coincide y que lleva una firma Ed25519 válida del responsable (la clave pública está en el firmware, la privada nunca sale del responsable); un archivo subido a mano por un administrador en el panel se sigue aceptando. Las páginas y mensajes del panel están en ocho idiomas.
+* **Emparejamiento Bluetooth con PIN:** el PIN de seis cifras se deriva del código de configuración, se imprime en la consola USB y se muestra a un administrador en el panel; el móvil tiene que escribirlo antes de poder cambiar los ajustes del nodo.
+
+## 🧩 Papel en A.R.M.O.R.
+
+ARMOR-RADAR son los ojos del perímetro. Cada nodo lee hasta tres radares o sensores de presencia y publica pistas, luz y salud a [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) por MQTT o HTTP; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) las dibuja en el plano del sitio y [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) las sopesa frente a las cámaras. Su firmware comparte una base con los demás nodos (el panel, la configuración por Bluetooth, las actualizaciones firmadas, el acceso y el reloj vienen de la base de firmware de [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), así que lo que aprendes en un nodo vale en todos.
 
 ## 📂 Estructura del repositorio
 
 ```text
 ARMOR-RADAR/
 ├── main/
-│   ├── app_main.cpp        arranque: ajustes, radares, pines, red, panel, broker, Bluetooth
-│   ├── node_store.cpp      ajustes y usuarios en la flash
-│   ├── network.cpp         Ethernet, punto de acceso Wi-Fi y puente, estación
-│   ├── web_server.cpp      el panel y su API JSON, acceso, actualización
-│   ├── api_shared.cpp      las operaciones que comparten el panel y el Bluetooth (estado, ajustes, búsqueda de Wi-Fi)
-│   ├── ble_provision.cpp   configuración desde el móvil por Bluetooth (NimBLE)
-│   ├── radar_manager.cpp   UART, tramas, salud, canal de comandos (armor_radar.cpp, radar_tracks.hpp)
-│   ├── gpio_manager.cpp    los pines asignados para el servidor
-│   ├── mqtt_link.cpp       hora, salud, telemetría, información, temas de pines
+│   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
+│   ├── node_store.cpp      settings and users in flash
+│   ├── network.cpp         Ethernet, Wi-Fi access point and bridge, station
+│   ├── web_server.cpp      the panel and its JSON API, login, update
+│   ├── api_shared.cpp      the operations the panel and Bluetooth share (status, settings, Wi-Fi scan)
+│   ├── ble_provision.cpp   configuration from a phone over Bluetooth (NimBLE)
+│   ├── radar_manager.cpp   UARTs, frames, health, command channel (armor_radar.cpp, radar_tracks.hpp)
+│   ├── gpio_manager.cpp    the pins mapped for the server
+│   ├── mqtt_link.cpp       clock, health, telemetry, information, pin topics
 │   ├── board_ethernet.cpp, light_sensor.cpp, tls_cert.cpp, log_buffer.cpp, entropy.cpp
-│   ├── Kconfig.projbuild   los primeros ajustes de una compilación
+│   ├── Kconfig.projbuild   the first settings of a build
 │   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
-├── panel/                  index.html, app.js, text.js (7 idiomas), style.css
+├── panel/                  index.html, app.js, text.js (8 languages), style.css
 ├── tests/                  test_core.cpp, test_node.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
 ├── tools/                  build_node.sh, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py
-├── secrets/                node.conf.example, fleet.example.json (los reales están fuera de git)
+├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
 ├── partitions.csv, sdkconfig.defaults, sdkconfig.board.*
 └── docs/                   BENCH_BRINGUP.md, NODE_PANEL.md, BLE_PROVISIONING.md, SENSORS.md, HARDWARE_BOUNDARY.md
 ```
 
 ## 🛠️ Entorno de desarrollo
 
+**Requisitos:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 859 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
@@ -99,12 +118,14 @@ Los tests en el ordenador necesitan cualquier compilador C++17 (Linux, WSL, MSYS
 * **ARMOR-RADAR** (este repositorio) - Firmware del nodo de campo para ESP32-S3 con tres radares y su propio panel web
 * **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protocolos de inversores y baterías solares y los mensajes de un nodo pasarela
 * **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Nodo eléctrico: contadores, el mensaje de las lecturas de la red y las reglas para maniobrar
+* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Nodo y central de alarma: zonas, armado, retardos, sirena y PIN, con el servidor o sin él
 * **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Panel táctil: el estado del sistema en una pantalla de pared, armar y reconocer alarmas, y el hogar del asistente de voz
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - La red local: sus dispositivos, internet y lo que cambia
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Coordinador central: telemetría, alarmas, dispositivos, lecturas solares y cámaras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Consola web: cámaras, radar, alarmas, energía solar y el diseñador de sitio 2D/3D
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - Cliente Android del operador con radar 2D/3D en vivo
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - Política de inferencia visual que explica sus decisiones y nunca actúa
+* **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Zonas de cámara, máscaras y reglas de detección para la Jetson Orin NX
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - Intenciones de voz sin conexión con una confirmación imposible de falsificar
 * **[ARMOR-HARDWARE](https://github.com/JuanenRac/ARMOR-HARDWARE)** - Cajas, electrónica y la matriz de aceptación en banco
 * **[ARMOR-DEVOPS](https://github.com/JuanenRac/ARMOR-DEVOPS)** - Despliegue, el banco de pruebas de la CM5, copias de seguridad y TLS
