@@ -11,7 +11,8 @@
   <a href="README_ita.md">🇮🇹 Italiano</a> |
   <a href="README_deu.md">🇩🇪 Deutsch</a> |
   <a href="README_zho.md">🇨🇳 简体中文</a> |
-  🇯🇵 <b>日本語</b>
+  🇯🇵 <b>日本語</b> |
+  <a href="README_por.md">🇵🇹 Português</a>
 </p>
 
 ### フィールドノードのファームウェア（Waveshare ESP32-S3-ETH、レーダーまたは人感センサー 3 基、イーサネットと Wi-Fi）。独自の Web パネルと、コンピューターでテスト済みのコア付き

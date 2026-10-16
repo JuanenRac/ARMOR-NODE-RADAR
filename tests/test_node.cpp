@@ -507,6 +507,13 @@ static void test_sessions() {
   table.create(token, "admin", auth::Role::kAdmin, 5000);
   table.end(token);
   CHECK(table.touch(token, 5001) == nullptr);
+  // `alive` looks without refreshing: a long-lived connection uses it to let go of a session that ended
+  table.create(token, "admin", auth::Role::kAdmin, 6000);
+  CHECK(table.alive(token, 7000) && !table.alive("short", 7000) && !table.alive(std::string(32, 'z'), 7000));
+  CHECK(!table.alive(token, 6000 + auth::kSessionIdleMs + 1));
+  CHECK(table.alive(token, 6000 + auth::kSessionIdleMs));   // and it does not refresh the session
+  table.end(token);
+  CHECK(!table.alive(token, 7000));
   // ending a user's sessions
   table.create(std::string(32, 'c'), "viewer", auth::Role::kViewer, 100);
   table.create(std::string(32, 'd'), "viewer", auth::Role::kViewer, 100);
