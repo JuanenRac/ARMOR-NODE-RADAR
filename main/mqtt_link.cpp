@@ -20,6 +20,7 @@ extern "C" {
 #include "mqtt_client.h"
 }
 #include "core/gpio_logic.hpp"
+#include "core/mqtt_tls.hpp"
 #include "node_store.hpp"
 #include "esp_app_desc.h"
 #include "core/radar_calibration.hpp"
@@ -215,10 +216,20 @@ void start_client(const config::Broker& broker) {
   config.session.last_will.msg_len = static_cast<int>(g_will_length);
   config.session.last_will.qos = 1;
   config.session.last_will.retain = 0;
+  // Encrypted link (off unless the owner turned it on in the panel): only the authority stored in the settings is trusted, the certificate of the broker must be signed by it and must vouch for
+  // the name or the address in the URL (the client checks the host name: skip_cert_common_name_check stays off). g_settings is never changed after start(), so the text outlives the client.
+  if (g_settings.mqtt.tls && !g_settings.mqtt.ca_pem.empty() && mqtt_tls::uri_is_tls(broker.uri)) {
+    config.broker.verification.certificate = g_settings.mqtt.ca_pem.c_str();
+    config.broker.verification.certificate_len = g_settings.mqtt.ca_pem.size() + 1;
+    config.broker.verification.use_global_ca_store = false;
+    config.broker.verification.skip_cert_common_name_check = false;
+    config.task.stack_size = 8192;   // the handshake runs in the client's task and needs more than the default
+  } else {
 #ifdef ARMOR_MQTT_HAS_CA  // certs/ca.pem exists: main/CMakeLists.txt embeds it
-  extern const char ca_pem_start[] asm("_binary_ca_pem_start");
-  config.broker.verification.certificate = ca_pem_start;
+    extern const char ca_pem_start[] asm("_binary_ca_pem_start");
+    config.broker.verification.certificate = ca_pem_start;
 #endif
+  }
   esp_mqtt_client_handle_t client = esp_mqtt_client_init(&config);
   ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, on_mqtt, nullptr));
   { std::lock_guard<std::mutex> guard(g_client_lock); g_client = client; }   // before it starts: its first events may publish
@@ -276,6 +287,8 @@ void link_task(void*) {
   // The last will carries the node's time at connection (the time since it started when its clock is not set yet); the server always applies an offline message, whatever its timestamp.
   if (armor::build_health(g_settings.node_id, wall_clock_ms(), false, g_will, sizeof g_will, g_will_length) != armor::JsonResult::kOk) vTaskDelete(nullptr);
 
+  // The certificate of the broker has dates: with the encryption on, the node waits (two minutes at most) for its clock before it connects, or a clock still at 1970 would refuse every certificate.
+  if (g_settings.mqtt.tls) for (int waited = 0; waited < 120 && !clock_is_set(); ++waited) vTaskDelay(pdMS_TO_TICKS(1000));
   start_client(current_broker(g_settings, g_broker_index));
   xTaskCreate(heartbeat_task, "heartbeat", 4096, nullptr, 4, nullptr);
   xTaskCreate(telemetry_task, "telemetry", 5120, nullptr, 4, nullptr);
