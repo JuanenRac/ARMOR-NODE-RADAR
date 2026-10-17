@@ -54,6 +54,7 @@ void setup_reminder_task(void*) {
   }
 }
 
+#if CONFIG_ARMOR_BOOT_FACTORY_RESET
 // Holding the BOOT button for 8 seconds in the first 30 after power-up erases the settings and the users: the node is back in setup.
 // (Skipped when the operator mapped GPIO 0 as one of the node's own pins.)
 void boot_button_task(void*) {
@@ -76,6 +77,7 @@ void boot_button_task(void*) {
   }
   vTaskDelete(nullptr);
 }
+#endif
 
 // A freshly installed firmware is on probation: once the panel is up and has stayed up for a while, it is confirmed; if the panel could
 // not start, the boot loader is told to go back to the previous image now.
@@ -142,8 +144,10 @@ extern "C" void app_main() {
   if (settings.auto_restart_hours > 0) armor::web::restart_after(static_cast<unsigned>(settings.auto_restart_hours) * 3600u * 1000u);
 
   if (setup) xTaskCreate(setup_reminder_task, "setup-hint", 3072, nullptr, 2, nullptr);
+#if CONFIG_ARMOR_BOOT_FACTORY_RESET
   bool button_is_a_pin = false;
   for (const armor::config::MappedPin& pin : settings.pins) if (pin.gpio == 0 && pin.mode != armor::config::PinMode::kDisabled) button_is_a_pin = true;
   if (!button_is_a_pin) xTaskCreate(boot_button_task, "boot-button", 3072, nullptr, 2, nullptr);
+#endif
   xTaskCreate(confirm_firmware_task, "confirm", 3072, panel_ok ? reinterpret_cast<void*>(1) : nullptr, 2, nullptr);
 }
