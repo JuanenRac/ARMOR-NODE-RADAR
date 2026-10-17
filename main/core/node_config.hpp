@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "board_pins.hpp"
+#include "admin_sources.hpp"
 #include "json.hpp"
 #include "net_text.hpp"
 #include "node_id.hpp"
@@ -171,6 +172,7 @@ struct Settings {
   std::vector<MappedPin> pins;
   BleMode ble = BleMode::kSetup;
   WebMode web = WebMode::kBoth;
+  std::string admin_sources;   // the networks that may use the panel; empty = the private ranges of a house (see admin_sources.hpp)
   std::string language = "en";
   // A periodic, unconditional restart (disconnect_before_restart() then esp_restart()), independent of any fault: 0 means never. One of
   // {0, 1, 2, 3, 4, 6, 12, 24, 48} hours (auto_restart_hours_is_valid()).
@@ -470,6 +472,11 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   }
   if (const json::Value* web = document.get("web"); web != nullptr && web->is_object()) {
     if (!read_choice<WebMode>(*web, "mode", {{"http", WebMode::kHttp}, {"both", WebMode::kBoth}, {"https", WebMode::kHttps}}, s.web)) bad(problems, "web.mode", "invalid");
+    if (web->get("admin_sources") != nullptr) {
+      std::string sources = s.admin_sources;
+      read_text(*web, "admin_sources", sources, adminsrc::kMaxText, "web.admin_sources", problems);
+      if (!adminsrc::valid_list(sources)) bad(problems, "web.admin_sources", "invalid"); else s.admin_sources = sources;
+    }
   }
   if (const json::Value* ui = document.get("ui"); ui != nullptr && ui->is_object()) read_text(*ui, "language", s.language, 4, "ui.language", problems);
   if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) read_int(*system, "auto_restart_hours", s.auto_restart_hours, 0, 48, "system.auto_restart_hours", problems);
@@ -697,7 +704,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   }
   w.end_array();
   w.key("ble").begin_object().field("mode", to_text(s.ble)).end_object();
-  w.key("web").begin_object().field("mode", to_text(s.web)).end_object();
+  w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).end_object();

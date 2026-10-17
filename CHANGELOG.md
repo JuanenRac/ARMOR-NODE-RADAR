@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here.
 
+## [0.6.8] - Only the house may use the panel, wrong passwords counted per person, and a panel that works behind the server's proxy
+
+- **The panel answers only the house.** A new setting, *Networks that may use this panel* (`web.admin_sources`), says which addresses may sign in or change anything: empty means the private ranges of a house (10/8, 172.16/12, 192.168/16, link-local, loopback and 100.64/10, where Tailscale lives), otherwise the list of addresses and networks you write (`192.168.1.0/24, 10.66.0.0/24`). Any other address is told `outside_network`, except the public look at the node's identity, so a port opened by mistake on the router does not let the Internet try passwords here. A list that would shut out the person who is saving it is refused (`would_lock_out`).
+- **Wrong passwords are counted for the person too**, not only for the address: five wrong passwords for a name slow that name down from any address (and, behind the server's proxy, where every request has the server's address, one mistyped name no longer stops everybody).
+- **The panel works behind the server's proxy:** its page, its style, its script, its calls and the firmware upload use relative paths, so the same panel opens at `http://node/` and at `https://house/api/v1/nodes/<id>/panel/` (the Bluetooth and map sockets keep their own paths).
+- **The fingerprint of the node's certificate is public:** `GET /api/v1/session` carries `cert_sha256`, which is what the server pins before it opens the panel of an HTTPS node; the panel already shows it in the web card so that it can be compared by hand.
+- The new setting, its hint and the two new refusals are in the panel in the eight languages. Tests: 955 checks in the host test programs (new ones cover the list of networks, the key of a person and the setting).
+
 ## [0.6.7] - A broker connection that cannot deadlock, a rescue network that cannot hold the node for ever and signed updates that bind the board
 
 - **The connection to the broker no longer deadlocks on a reconnection.** The handler of the "connected" event sent the node's information through the module's own lock while the telemetry task, holding that lock, waited for the client's: each waiting for the other, the node went on answering its panel and stopped publishing. The handler now sends through the client that raised the event.

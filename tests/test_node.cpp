@@ -977,6 +977,12 @@ static void test_web_policy() {
   CHECK(base.web == config::WebMode::kBoth);
   CHECK(config::load(R"({"web":{"mode":"https"}})", base, out, problems) && out.web == config::WebMode::kHttps);
   problems.clear();
+  CHECK(config::load("{\"web\":{\"admin_sources\":\"192.168.1.0/24, 10.66.0.0/24\"}}", base, out, problems) && out.admin_sources == "192.168.1.0/24, 10.66.0.0/24");
+  problems.clear();
+  CHECK(!config::load("{\"web\":{\"admin_sources\":\"not a network\"}}", base, out, problems) && !problems.empty() && problems[0].path == "web.admin_sources");
+  problems.clear();
+  CHECK(config::load("{}", base, out, problems) && out.admin_sources.empty());
+  problems.clear();
   CHECK(config::load(R"({"web":{"mode":"http"}})", base, out, problems) && out.web == config::WebMode::kHttp);
   problems.clear();
   CHECK(!config::load(R"({"web":{"mode":"ftp"}})", base, out, problems) && has_problem(problems, "web.mode", "invalid"));
