@@ -21,13 +21,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.6.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** レーダーノードはハードウェアとして実在する唯一のノードです。そのファームウェアはレーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作して CM5 テストベンチに報告し、Web パネルと無線アップデートもその基板で使われています。ハードウェアに依存しないコア（5 つのテストプログラムで 947 項目：LD2450・LD2461 と 4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検査、ピン表、ユーザーとセッション、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー、バージョンと署名の検査）はコンピューター上でテストされ、**Web パネル**は代替ノードに対して実際のブラウザーで動かし、**ファームウェアイメージ**は ESP-IDF 5.4 コンテナーでビルドできます。**まだ**証明されていないもの：LD2461 と人感センサーのデコーダーはマニュアルの計算例にしか一致せず、実モジュールがありません。アップデートの署名検査と PIN 付き Bluetooth ペアリングは実際の署名でコンピューター上で証明済みですが、基板上ではまだです。レーダーのコマンドチャネルはモジュールで確認していません。パネルの HTTPS 証明書（ノード自身が作る）はすべてのブラウザーで試していません。
+**正直さのチェック - 今日動いているもの:** レーダーノードはハードウェアとして実在する唯一のノードです。そのファームウェアはレーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作して CM5 テストベンチに報告し、Web パネルと無線アップデートもその基板で使われています。ハードウェアに依存しないコア（5 つのテストプログラムで 950 項目：LD2450・LD2461 と 4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検査、ピン表、ユーザーとセッション、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー、バージョンと署名の検査）はコンピューター上でテストされ、**Web パネル**は代替ノードに対して実際のブラウザーで動かし、**ファームウェアイメージ**は ESP-IDF 5.4 コンテナーでビルドできます。**まだ**証明されていないもの：LD2461 と人感センサーのデコーダーはマニュアルの計算例にしか一致せず、実モジュールがありません。アップデートの署名検査と PIN 付き Bluetooth ペアリングは実際の署名でコンピューター上で証明済みですが、基板上ではまだです。レーダーのコマンドチャネルはモジュールで確認していません。パネルの HTTPS 証明書（ノード自身が作る）はすべてのブラウザーで試していません。
 
 ---
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| バージョン | `0.6.6` |
+| バージョン | `0.6.7` |
 | 成熟度 | 確立 |
-| テスト | 947 checks in 5 programs (`ctest`) |
+| テスト | 950 checks in 5 programs (`ctest`) |
 | 技術 | ESP-IDF C++ |
 | 実機での確認 | レーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作し、CM5 テストベンチに報告 |
 
@@ -68,7 +68,7 @@
 
 ## 🧩 A.R.M.O.R. での役割
 
-ARMOR-RADAR は境界の目です。各ノードは最大 3 台のレーダーまたは人感センサーを読み取り、軌跡・照度・状態を MQTT または HTTP で [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) に送ります。[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) はそれをサイト図に描き、[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) はカメラと照らし合わせます。ファームウェアは他のノードと土台を共有し（パネル、Bluetooth 設定、署名付きアップデート、サインイン、時計は [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) のファームウェア基盤から）、1 つのノードで覚えたことがすべてに通用します。
+ARMOR-RADAR は境界の目です。各ノードは最大 3 台のレーダーまたは人感センサーを読み取り、軌跡・照度・状態を MQTT で [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) に送ります。[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) はそれをサイト図に描き、[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) はカメラと照らし合わせます。ファームウェアは他のノードと土台を共有し（パネル、Bluetooth 設定、署名付きアップデート、サインイン、時計は [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) のファームウェア基盤から）、1 つのノードで覚えたことがすべてに通用します。
 
 ## 📂 リポジトリの構成
 
@@ -101,7 +101,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 950 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings

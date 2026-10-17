@@ -26,7 +26,8 @@ static void test_semver() {
   CHECK(!is_newer("0.4.5", "0.4.5") && !is_newer("0.4.4", "0.4.5") && !is_newer("0.9.9", "0.10.0"));
   CHECK(!is_newer("0.4.6-rc1", "0.4.5"));   // a pre-release is never offered
   CHECK(!is_newer("not-a-version", "0.4.5") && !is_newer("0.4.6", "also-not-a-version"));
-  CHECK(!parse("").ok && !parse("1.2").ok && !parse("1.2.3.4").ok && !parse("1.2.x").ok && !parse("v").ok && !parse("..").ok);
+  CHECK(!parse("").ok && !parse("1.2").ok && !parse("1.2.3.4.5").ok && !parse("1.2.x").ok && !parse("v").ok && !parse("..").ok);
+  CHECK(parse("1.2.3.4").ok && parse("1.2.3.4").build == 4 && is_newer("0.8.0.1", "0.8.0.0") && is_newer("0.8.0.0", "0.7.9") && !is_newer("0.8.0", "0.8.0.0"));   // four numbers from 0.8.0 on
   CHECK(parse("v2.10.3").ok && parse("v2.10.3").major == 2 && parse("v2.10.3").minor == 10 && parse("v2.10.3").patch == 3);
 }
 

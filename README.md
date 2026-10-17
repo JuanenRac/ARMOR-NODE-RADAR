@@ -21,13 +21,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.6.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what runs today:** The radar node is the one node that exists as hardware: its firmware runs on a real Waveshare ESP32-S3-ETH board with a radar and reports to the CM5 test bench, and its web panel and over-the-air updates are in use on it. The hardware-independent core (947 checks in 5 test programs: the decoders of the LD2450, the LD2461 and four presence sensors, the LD2450 command channel, the settings and their checks, the pin table, users and sessions, the network plan, the message serialiser whose output ARMOR-COMMON accepts, and the release and signature checks) is tested on a computer, the **web panel** is exercised in a real browser against a stand-in node, and the **firmware image builds** in the ESP-IDF 5.4 container. What is **not** proven yet: the LD2461 and presence-sensor decoders match only the worked examples of their manuals, with no module behind them; the signature check of the updates and the Bluetooth PIN pairing are proven on a computer with real signatures but not yet on the board; the radar command channel is unchecked against a module; and the panel's HTTPS certificate (made by the node itself) is untried in every browser.
+**Honesty check - what runs today:** The radar node is the one node that exists as hardware: its firmware runs on a real Waveshare ESP32-S3-ETH board with a radar and reports to the CM5 test bench, and its web panel and over-the-air updates are in use on it. The hardware-independent core (950 checks in 5 test programs: the decoders of the LD2450, the LD2461 and four presence sensors, the LD2450 command channel, the settings and their checks, the pin table, users and sessions, the network plan, the message serialiser whose output ARMOR-COMMON accepts, and the release and signature checks) is tested on a computer, the **web panel** is exercised in a real browser against a stand-in node, and the **firmware image builds** in the ESP-IDF 5.4 container. What is **not** proven yet: the LD2461 and presence-sensor decoders match only the worked examples of their manuals, with no module behind them; the signature check of the updates and the Bluetooth PIN pairing are proven on a computer with real signatures but not yet on the board; the radar command channel is unchecked against a module; and the panel's HTTPS certificate (made by the node itself) is untried in every browser.
 
 ---
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| Version | `0.6.6` |
+| Version | `0.6.7` |
 | Maturity | Established |
-| Tests | 947 checks in 5 programs (`ctest`) |
+| Tests | 950 checks in 5 programs (`ctest`) |
 | Stack | ESP-IDF C++ |
 | On real hardware | Runs on a real Waveshare ESP32-S3-ETH board with a radar, reporting to the CM5 test bench |
 
@@ -68,7 +68,7 @@ Captured at 1920×1080 on a test bench, with sample data and no real installatio
 
 ## 🧩 Role in A.R.M.O.R.
 
-ARMOR-RADAR is the eyes of the perimeter. Each node reads up to three radars or presence sensors and publishes tracks, light and health to [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) over MQTT or HTTP; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) draws them on the site plan and [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) weighs them against the cameras. Its firmware shares a base with the other nodes (the panel, Bluetooth set-up, signed updates, sign-in and the clock come from the firmware base of [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), so what you learn on one node holds on all of them.
+ARMOR-RADAR is the eyes of the perimeter. Each node reads up to three radars or presence sensors and publishes tracks, light and health to [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) over MQTT; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) draws them on the site plan and [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) weighs them against the cameras. Its firmware shares a base with the other nodes (the panel, Bluetooth set-up, signed updates, sign-in and the clock come from the firmware base of [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), so what you learn on one node holds on all of them.
 
 ## 📂 Repository Structure
 
@@ -101,7 +101,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 950 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings

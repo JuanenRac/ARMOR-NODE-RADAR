@@ -71,8 +71,8 @@ static void test_json() {
   CHECK(!json::parse(deep, v));
   CHECK(!json::parse(std::string(json::kMaxText + 1, ' ') + "1", v));
 
-  // the first of a repeated name wins, and a non-object has no members
-  CHECK(json::parse(R"({"a":1,"a":2})", v) && v.number_or("a", 0) == 1);
+  // a repeated name is refused (two readers must not see two different documents), and a non-object has no members
+  CHECK(!json::parse(R"({"a":1,"a":2})", v));
   CHECK(json::parse("5", v) && v.get("a") == nullptr);
 
   // writer
@@ -203,7 +203,13 @@ static void test_settings_partial_update_and_secrets() {
   config::Problems problems;
   // a partial document changes only what it names, and a missing or empty password keeps the stored one
   CHECK(config::load(R"({"mqtt":{"uri":"mqtts://broker.example.com:8883","password":""},"ui":{"language":"es"}})", base, out, problems));
-  CHECK(out.mqtt.uri == "mqtts://broker.example.com:8883" && out.mqtt.password == "secret-password" && out.mqtt.username == base.mqtt.username && out.language == "es");
+  CHECK(out.mqtt.uri == "mqtts://broker.example.com:8883" && out.mqtt.password.empty() && out.mqtt.username == base.mqtt.username && out.language == "es");   // another host: the old password does not go along
+  problems.clear();
+  CHECK(config::load(R"({"mqtt":{"uri":"mqtts://broker.example.com:8883","password":"typed-here"}})", base, out, problems) && out.mqtt.password == "typed-here");
+  problems.clear();
+  config::Settings same_host = base;
+  same_host.mqtt.uri = "mqtt://broker.example.com:1883";
+  CHECK(config::load(R"({"mqtt":{"uri":"mqtts://BROKER.example.com:8883"}})", same_host, out, problems) && out.mqtt.password == "secret-password");   // the same host (scheme and port aside) keeps it
   problems.clear();
   CHECK(config::load(R"({"mqtt":{"password":"a-new-password"}})", base, out, problems) && out.mqtt.password == "a-new-password");
   problems.clear();

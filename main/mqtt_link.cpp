@@ -88,7 +88,9 @@ config::Broker current_broker(const config::Settings& s, int index) {
 }
 int broker_count(const config::Settings& s) { return 1 + static_cast<int>(s.mqtt.backup.size()); }
 
-void publish_info();
+// `direct` is the client of the event that is being handled: the handler runs with the client's own lock taken, so from there the message goes to THAT client and never through g_client_lock
+// (another task holding g_client_lock while it waits for the client's lock would wait for this handler, which would be waiting for g_client_lock: a deadlock on every reconnection).
+void publish_info(esp_mqtt_client_handle_t direct = nullptr);
 void start_client(const config::Broker& broker);
 
 void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
@@ -101,7 +103,7 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
       if (!filter.empty()) esp_mqtt_client_subscribe(event->client, filter.c_str(), 1);
       pins::publish_all();
       radar::publish_presence_now();
-      publish_info();
+      publish_info(event->client);
       break;
     }
     case MQTT_EVENT_DISCONNECTED:
@@ -132,7 +134,7 @@ void publish_health(bool online) {
 }
 
 // Tells the server where this node's own web panel is, so Studio can link to it. Sent when the node connects and every minute.
-void publish_info() {
+void publish_info(esp_mqtt_client_handle_t direct) {
   if (!g_connected) return;
   const network::Status net = network::status();
   if (!net.has_ip) return;
@@ -142,7 +144,8 @@ void publish_info() {
   if (!armor::build_topic(g_settings.node_id, "info", topic, sizeof topic)) return;
   const config::Settings current = store::settings();   // the name may have been changed in the panel since the start
   if (armor::build_info(g_settings.node_id, wall_clock_ms(), current.node_name, esp_app_get_description()->version, net.ip, 80, payload, sizeof payload, length) != armor::JsonResult::kOk) return;
-  client_publish(topic, payload, static_cast<int>(length), 1);
+  if (direct != nullptr) esp_mqtt_client_publish(direct, topic, payload, static_cast<int>(length), 1, 0);
+  else client_publish(topic, payload, static_cast<int>(length), 1);
 }
 
 void publish_telemetry() {

@@ -20,9 +20,9 @@ it by name or by service.
 
 ## Security
 
-* Writing needs an **encrypted link**: LE Secure Connections, pairing "just works", no bonding is kept. The node asks the phone to pair as soon as it
-  connects, so Android shows its pairing dialog once per connection. This stops someone listening to the air. It does **not** stop someone who is present
-  while the phone pairs (an active man in the middle), because "just works" has no way to check who is on the other end.
+* Writing needs an **encrypted, authenticated link**: LE Secure Connections with a six-digit passkey (printed on the node's USB console; an administrator can read it in the panel), no
+  bonding is kept. The node asks the phone to pair as soon as it connects, so Android shows its pairing dialog once per connection and asks for the digits. This stops someone listening to
+  the air and, because the passkey must be known, someone who is present while the phone pairs (an active man in the middle).
 * On top of the link, every operation except `hello` needs the **set-up code** (a node with no user) or a **login** (a node with users), and changing
   anything needs an administrator. The set-up code is the one the node shows on its USB console, or the one derived from the fleet secret and the node's
   MAC (`tools/adopt_node.py` computes it, and the app can when it is given the secret).
@@ -91,5 +91,5 @@ and then `reboot`. `wifi.scan` gives the app the list of networks to choose from
 
 * The radio side (NimBLE) builds, and the framing, the operations and their access rules are tested on a computer (`tests/test_node.cpp`); the node runs on real boards,
   but no phone has yet been recorded talking to its Bluetooth channel.
-* The "just works" pairing is the weakest part; a passkey pairing would need the node to show the passkey (it has no display), so it is not offered.
+* The passkey is derived from the set-up code and is the same at every pairing of the node (a random one for each pairing would be better and is not done yet); five failed pairings close the door for five minutes.
 * The set-up code and the passwords are sent inside the encrypted link; a phone that pairs with an impostor node would send them to it.

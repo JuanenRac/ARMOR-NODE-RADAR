@@ -21,3 +21,9 @@ add_test(NAME node COMMAND test_node)
 add_test(NAME release COMMAND test_release)
 add_test(NAME sensors COMMAND test_sensors)
 add_test(NAME board_wifi COMMAND test_board_wifi)
+
+# the panel's texts: eight languages in every row and a text for every error the firmware can answer with
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+  add_test(NAME panel_text COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_panel_text.py)
+endif()

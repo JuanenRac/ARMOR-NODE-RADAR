@@ -246,6 +246,16 @@ inline void read_text(const json::Value& parent, const char* name, std::string& 
 }
 
 // A secret: absent or empty keeps the stored one; "<name>_clear": true erases it.
+// The host of a broker address ("mqtt://host:1883/path" -> "host"), lower case.
+inline std::string broker_host(const std::string& uri) {
+  const std::size_t scheme = uri.find("://");
+  std::string rest = scheme == std::string::npos ? uri : uri.substr(scheme + 3);
+  const std::size_t end = rest.find_first_of(":/");
+  if (end != std::string::npos) rest.resize(end);
+  for (char& c : rest) if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+  return rest;
+}
+
 inline void read_secret(const json::Value& parent, const char* name, std::string& target, const std::string& path, Problems& problems) {
   if (parent.bool_or(std::string(name) + "_clear", false)) { target.clear(); return; }
   const json::Value* member = parent.get(name);
@@ -343,8 +353,12 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   }
   if (const json::Value* mqtt = document.get("mqtt"); mqtt != nullptr && mqtt->is_object()) {
     read_bool(*mqtt, "enabled", s.mqtt.enabled, "mqtt.enabled", problems);
+    const std::string stored_broker_host = broker_host(s.mqtt.uri);
     read_text(*mqtt, "uri", s.mqtt.uri, 160, "mqtt.uri", problems);
     read_text(*mqtt, "username", s.mqtt.username, 64, "mqtt.username", problems);
+    // The stored password follows the broker it was made for: pointing the node at another host without typing a password does not send the old one there (a stolen session could
+    // otherwise read it out by naming a broker of its own).
+    if (broker_host(s.mqtt.uri) != stored_broker_host) s.mqtt.password.clear();
     read_secret(*mqtt, "password", s.mqtt.password, "mqtt.password", problems);
     read_int(*mqtt, "heartbeat_s", s.mqtt.heartbeat_s, 2, 300, "mqtt.heartbeat_s", problems);
     read_int(*mqtt, "telemetry_ms", s.mqtt.telemetry_ms, 200, 5000, "mqtt.telemetry_ms", problems);

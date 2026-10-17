@@ -456,6 +456,13 @@ static void test_radar_calibration() {
   Track same_sensor[2] = {{1, 1, 1000, 1000, 0}, {1, 2, 1010, 1000, 0}};
   CHECK(merge_overlap(same_sensor, 2, 300) == 2);   // one radar's own two targets are never "the same person"
 
+  // three radars on one person far away: the average does not overflow sixteen bits
+  Track three[3] = {{1, 1, 12000, 12000, 0}, {2, 1, 12010, 12000, 0}, {3, 1, 11990, 12000, 0}};
+  CHECK(merge_overlap(three, 3, 300) == 1 && three[0].x_mm == 12000 && three[0].y_mm == 12000);
+  // two people seen by the second radar near one seen by the first are two people: only the nearer one joins the group
+  Track crowd[3] = {{1, 1, 1000, 1000, 0}, {2, 1, 1100, 1000, 0}, {2, 2, 1050, 1000, 0}};
+  CHECK(merge_overlap(crowd, 3, 300) == 2);
+
   Track off[2] = {{1, 1, 1000, 1000, 0}, {2, 1, 1010, 1000, 0}};
   CHECK(merge_overlap(off, 2, 0) == 2);   // threshold 0: fusion is off, nothing merges
 }
@@ -470,7 +477,7 @@ static void test_semver() {
   CHECK(!is_newer("0.4.6-rc1", "0.4.5"));   // a pre-release is never offered
   CHECK(!is_newer("not-a-version", "0.4.5"));
   CHECK(!is_newer("0.4.6", "also-not-a-version"));
-  CHECK(!parse("").ok && !parse("1.2").ok && !parse("1.2.3.4").ok && !parse("1.2.x").ok);
+  CHECK(!parse("").ok && !parse("1.2").ok && !parse("1.2.3.4.5").ok && !parse("1.2.x").ok);
   CHECK(parse("v2.10.3").ok && parse("v2.10.3").major == 2 && parse("v2.10.3").minor == 10 && parse("v2.10.3").patch == 3);
 }
 

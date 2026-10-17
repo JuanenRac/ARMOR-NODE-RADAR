@@ -58,7 +58,16 @@ int g_sta_attempts = 0;
 // on a bench: the rescue network vanished right after signing in to the panel).
 std::atomic<bool> g_rescue_open{false};
 std::atomic<int> g_ap_clients{0};
+std::atomic<std::int64_t> g_pause_since_us{0};
 constexpr std::int64_t kStationPauseUs = 10 * 1000 * 1000;
+constexpr std::int64_t kStationMaxPauseUs = 10LL * 60 * 1000 * 1000;   // a phone left on the rescue network holds the station back for ten minutes at most
+
+bool station_should_wait() {
+  if (!(g_rescue_open && g_ap_clients > 0)) { g_pause_since_us = 0; return false; }
+  const std::int64_t now = esp_timer_get_time();
+  if (g_pause_since_us == 0) g_pause_since_us = now;
+  return now - g_pause_since_us <= kStationMaxPauseUs;
+}
 constexpr int kStaAttemptsBeforeSwitch = 4;
 
 config::Network station_network(const config::Settings& s, int index) {
@@ -138,7 +147,7 @@ void on_eth_event(void*, esp_event_base_t, int32_t event_id, void*) {
 #endif
 
 void reconnect_station(void*) {
-  if (g_rescue_open && g_ap_clients > 0) { esp_timer_start_once(g_reconnect_timer, kStationPauseUs); return; }
+  if (station_should_wait()) { esp_timer_start_once(g_reconnect_timer, kStationPauseUs); return; }
   esp_wifi_connect();
 }
 
@@ -252,7 +261,7 @@ void on_wifi_event(void*, esp_event_base_t, int32_t event_id, void* data) {
         ssid = g_status.sta_ssid;
         total = station_network_count(g_settings);
       }
-      if (g_rescue_open && g_ap_clients > 0 && g_reconnect_timer != nullptr) {   // someone is using the rescue network: no scanning now
+      if (g_reconnect_timer != nullptr && station_should_wait()) {   // someone is using the rescue network: no scanning now (for ten minutes at most)
         esp_timer_start_once(g_reconnect_timer, kStationPauseUs);
         break;
       }
@@ -435,7 +444,7 @@ bool start(const config::Settings& s, const netplan::Plan& plan) {
   g_status.ap_ssid = plan.ap.ssid;
   g_status.ap_channel = plan.ap.enabled ? plan.ap.channel : 0;
   std::uint8_t mac[6]{};
-  esp_read_mac(mac, board::kHasEthernet ? ESP_MAC_ETH : ESP_MAC_WIFI_STA);
+  esp_read_mac(mac, ESP_MAC_ETH);   // the one the set-up code and the access point name are made from, on both boards (the panel and the adoption tools quote it)
   g_status.mac = mac_text(mac);
 
   ESP_ERROR_CHECK(esp_netif_init());

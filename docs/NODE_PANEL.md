@@ -2,7 +2,7 @@
 
 Every node serves its own panel on port 80, from the address it has (or from its own set-up Wi-Fi). It looks like ARMOR-STUDIO
 (same colours, the menu on the left), speaks the eight languages of the project, and is embedded in the firmware, so it needs no
-Internet and a firmware update updates it too. The panel runs on two real nodes (login, settings, firmware update, live map); it was also exercised against a
+Internet and a firmware update updates it too. The panel has run on two real nodes (login, settings, firmware update, live map); it was also exercised against a
 stand-in node (`tools/panel_mock.mjs`) in a real browser, and the node side is tested on a computer for its logic.
 
 ## First start: set-up
@@ -101,21 +101,23 @@ checks the image (its own hash and its project name) before it changes the boot 
 goes back to the previous version by itself if the new one does not bring its panel up and stay up for thirty seconds. The flash holds
 two application slots (`partitions.csv`). The *Firmware slots* card of the same page lists both slots with their versions and boots the other one at the next restart (to go back to the previous version, or forward to the one just installed; an administrator, with a confirmation, and never an empty slot or a firmware of another project). The first flash of a board is still USB (`tools\flash.bat`).
 
-*Firmware and log → Search GitHub* installs the newest release of the repository by itself. A release is installed only if it carries two files: `armor_radar.bin`
-(the application image, not the merged one) and `armor_radar.bin.sha256` (its SHA-256 in hex, the line `sha256sum armor_radar.bin` writes). The node downloads the
-image, hashes it while it comes in and, when the hash is not the one published, throws it away without touching the boot partition; a release without that file is not
-offered. The upload by hand does not need it.
+*Firmware and log → Search GitHub* installs the newest release of the repository by itself. A release is installed only if it carries, for the node's board, three files:
+`armor_radar-<board>.bin` (the application image, not the merged one), `armor_radar-<board>.bin.sha256` (its SHA-256 in hex) and `armor_radar-<board>.bin.sig2` (the signature of a
+statement that names the project, the board, the version and the hash). The node downloads the image, hashes it while it comes in and throws it away, without touching the boot
+partition, when the hash is not the published one, when the signature does not verify with the maintainer's public key (which is in the firmware), when the version in the image
+is not the release's or is not newer than the one that runs, or when the address is not the repository's own release address; a release without those files is not offered. The
+upload by hand needs none of it (it is the administrator's own act).
 
 ## Security notes
 
 * Passwords are stored as PBKDF2-HMAC-SHA256 with a random salt (10 000 rounds); sessions are random tokens in an `HttpOnly`,
   `SameSite=Strict` cookie that ends after 30 minutes without use, and every request that changes something must carry a header a web
   page from another site cannot add. Five wrong passwords from one address lock it for 30 seconds, doubling up to five minutes.
-* The panel speaks **plain HTTP**: on a network you do not trust the password crosses it in clear. HTTPS on the node (a certificate made
-  on the board) is not done. The broker connection is plain MQTT unless a CA certificate is embedded (`certs/ca.pem`, `mqtts://`).
+* The panel is served over **HTTP and HTTPS** (a self-signed certificate made on the board, so the browser asks once). Over plain HTTP the
+  password crosses the network in clear: use HTTPS on a network you do not trust. The broker connection is plain MQTT unless a CA certificate is embedded (`certs/ca.pem`, `mqtts://`).
 * The set-up code appears in the node's log (and so in the panel's log) until the node restarts after set-up; it is useless once a user exists.
 * A node with an access point is a way into the network it is joined to. Use a strong Wi-Fi password.
-* The random numbers come from the chip's generator with the converter's noise source enabled for the moment they are made.
+* The random numbers come from the chip's generator; while the radio is on it is a true random source by itself, and the converter's noise source is used only at the first start, before any radio.
 
 ## Working on the panel without a board
 

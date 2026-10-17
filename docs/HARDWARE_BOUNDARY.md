@@ -82,7 +82,7 @@ the server's day/night decisions. It also withholds it while no radar is reporti
 
 * The identity of a node is a setting (`armor-` and six digits of its MAC until it is changed); every node needs its own identity and broker ACL.
 * Message timestamps are wall-clock milliseconds from SNTP, not uptime: the server ignores a message older than the last one it accepted from a
-  node, so an uptime clock would silence a rebooted node for as long as it had run before. The node publishes nothing until its clock is set.
+  node, so an uptime clock would silence a rebooted node for as long as it had run before. Before its clock is set the node still publishes, with the time since it started, and the server stamps what it receives with its own time.
 * The MQTT last will announces `online: false` on the node's health topic if it disappears. Its timestamp cannot be newer than the node's last
   message, so the server always applies an offline message and never lets it move the stored time backwards.
 * An output pin whose safe state is set falls back to it when the broker has been unreachable for the time chosen; it stays there until the server

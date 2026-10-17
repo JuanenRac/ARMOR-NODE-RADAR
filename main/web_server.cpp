@@ -2,7 +2,7 @@
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // One dispatcher serves /api/v1/*: it checks the session, reads a bounded body, calls the handler for the method and path and answers
-// JSON. Errors are short codes ({"error":"invalid"}), never sentences: the panel translates them into the seven languages.
+// JSON. Errors are short codes ({"error":"invalid"}), never sentences: the panel translates them into the eight languages.
 // The panel itself (index.html, app.js, style.css) is embedded compressed in the firmware, so an update of the firmware updates it too.
 #include "web_server.hpp"
 
@@ -14,6 +14,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 extern "C" {
 #include "esp_app_desc.h"
 #include "esp_heap_caps.h"
@@ -91,6 +92,7 @@ const char* status_line(int code) {
     case 401: return "401 Unauthorized";
     case 403: return "403 Forbidden";
     case 404: return "404 Not Found";
+    case 408: return "408 Request Timeout";
     case 409: return "409 Conflict";
     case 413: return "413 Payload Too Large";
     case 422: return "422 Unprocessable Entity";
@@ -608,13 +610,14 @@ const char* result_code(auth::Result result) {
     case auth::Result::kTooMany: return "too_many_users";
     case auth::Result::kLastAdmin: return "last_admin";
     case auth::Result::kWrongPassword: return "wrong_password";
+    case auth::Result::kStorage: return "storage";
   }
   return "error";
 }
 
 esp_err_t answer_user_result(httpd_req_t* r, auth::Result result) {
   if (result == auth::Result::kOk) return send_ok(r);
-  return send_error(r, result == auth::Result::kNotFound ? 404 : (result == auth::Result::kExists || result == auth::Result::kLastAdmin) ? 409 : 422, result_code(result));
+  return send_error(r, result == auth::Result::kStorage ? 500 : result == auth::Result::kNotFound ? 404 : (result == auth::Result::kExists || result == auth::Result::kLastAdmin) ? 409 : 422, result_code(result));
 }
 
 esp_err_t get_users(httpd_req_t* r) {
@@ -766,6 +769,9 @@ esp_err_t post_ota(httpd_req_t* r) {
   if (!require(r, who, true, true)) return ESP_OK;
   const std::size_t total = r->content_len;
   if (total < 100 * 1024 || total > kMaxFirmware) return send_error(r, 413, "bad_size");
+  // One writer of the slot at a time: an installation from GitHub, a copy of the slot or another upload would write the same flash.
+  if (!github_update::begin_manual_write()) return send_error(r, 409, "ota_busy");
+  struct Release { ~Release() { github_update::end_manual_write(); } } release;
   const esp_partition_t* target = esp_ota_get_next_update_partition(nullptr);
   if (target == nullptr) return send_error(r, 500, "no_partition");
   esp_ota_handle_t handle = 0;
@@ -773,12 +779,13 @@ esp_err_t post_ota(httpd_req_t* r) {
   mbedtls_sha256_context sha;
   mbedtls_sha256_init(&sha);
   mbedtls_sha256_starts(&sha, 0);
-  static std::uint8_t chunk[2048];
+  std::vector<std::uint8_t> chunk_buffer(2048);   // of its own: the two servers (80 and 443) run in different tasks
+  std::uint8_t* const chunk = chunk_buffer.data();
   std::size_t got = 0;
   bool first = true;
   std::int64_t last_chunk_us = esp_timer_get_time();
   while (got < total) {
-    const int n = httpd_req_recv(r, reinterpret_cast<char*>(chunk), sizeof chunk < total - got ? sizeof chunk : total - got);
+    const int n = httpd_req_recv(r, reinterpret_cast<char*>(chunk), chunk_buffer.size() < total - got ? chunk_buffer.size() : total - got);
     if (n == HTTPD_SOCK_ERR_TIMEOUT) { if (esp_timer_get_time() - last_chunk_us > 15000000) { esp_ota_abort(handle); mbedtls_sha256_free(&sha); return send_error(r, 408, "upload_stalled"); } continue; }
     last_chunk_us = esp_timer_get_time();
     if (n <= 0) { esp_ota_abort(handle); mbedtls_sha256_free(&sha); return send_error(r, 400, "upload_interrupted"); }

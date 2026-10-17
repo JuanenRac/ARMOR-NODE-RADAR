@@ -57,3 +57,6 @@ CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
 CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
 CONFIG_BT_NIMBLE_NVS_PERSIST=n
 CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247
+
+# The task list of the panel and the early warning of a stack running low need the kernel's trace facility
+CONFIG_FREERTOS_USE_TRACE_FACILITY=y

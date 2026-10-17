@@ -59,24 +59,26 @@ inline std::size_t merge_overlap(Track* tracks, std::size_t count, int threshold
   std::size_t kept = 0;
   for (std::size_t i = 0; i < count; ++i) {
     if (merged[i]) continue;
-    Track sum = tracks[i];
+    // the sum is kept in doubles (three radars at 12 m would overflow sixteen bits), and a group takes at most one track of each radar: two people seen by the second radar near one
+    // seen by the first are two people, not one
+    double sum_x = tracks[i].x_mm, sum_y = tracks[i].y_mm, sum_speed = tracks[i].speed_mm_s;
+    unsigned radars_in_group = 1u << (tracks[i].sensor_id & 7);
     int votes = 1;
     for (std::size_t j = i + 1; j < count; ++j) {
-      if (merged[j] || tracks[j].sensor_id == tracks[i].sensor_id) continue;   // only a different radar can be "the same person"
+      if (merged[j] || tracks[j].sensor_id == tracks[i].sensor_id || (radars_in_group & (1u << (tracks[j].sensor_id & 7))) != 0) continue;   // only a different radar can be "the same person"
       const double dx = static_cast<double>(tracks[j].x_mm) - static_cast<double>(tracks[i].x_mm);
       const double dy = static_cast<double>(tracks[j].y_mm) - static_cast<double>(tracks[i].y_mm);
       if (std::sqrt(dx * dx + dy * dy) > static_cast<double>(threshold_mm)) continue;
-      sum.x_mm = detail::clamp_mm(static_cast<double>(sum.x_mm) + static_cast<double>(tracks[j].x_mm));
-      sum.y_mm = detail::clamp_mm(static_cast<double>(sum.y_mm) + static_cast<double>(tracks[j].y_mm));
-      sum.speed_mm_s = static_cast<std::int16_t>(sum.speed_mm_s + tracks[j].speed_mm_s);
+      sum_x += tracks[j].x_mm; sum_y += tracks[j].y_mm; sum_speed += tracks[j].speed_mm_s;
+      radars_in_group |= 1u << (tracks[j].sensor_id & 7);
       merged[j] = true;
       ++votes;
     }
-    Track average = sum;
+    Track average = tracks[i];
     if (votes > 1) {
-      average.x_mm = static_cast<std::int16_t>(sum.x_mm / votes);
-      average.y_mm = static_cast<std::int16_t>(sum.y_mm / votes);
-      average.speed_mm_s = static_cast<std::int16_t>(sum.speed_mm_s / votes);
+      average.x_mm = detail::clamp_mm(sum_x / votes);
+      average.y_mm = detail::clamp_mm(sum_y / votes);
+      average.speed_mm_s = detail::clamp_mm(sum_speed / votes);
     }
     tracks[kept++] = average;
   }

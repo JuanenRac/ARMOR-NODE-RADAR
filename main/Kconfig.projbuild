@@ -129,7 +129,7 @@ config ARMOR_NTP_SERVER
     string "NTP server (message timestamps are wall-clock time)"
     default "pool.ntp.org"
     help
-        The node publishes nothing until its clock is set. On a network without Internet access, point this at
+        Until its clock is set the node still publishes, with the time since it started, and the server stamps what it receives with its own time. On a network without Internet access, point this at
         a machine on the LAN that serves NTP (the CM5, a router).
 config ARMOR_HEARTBEAT_S
     int "Health heartbeat interval in seconds"

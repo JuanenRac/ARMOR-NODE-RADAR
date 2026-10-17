@@ -1,5 +1,5 @@
 /* ARMOR-RADAR node panel - the pages. Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
-   text.js (the seven languages) is joined in front of this file when the panel is packed, so LANGS and L exist here.
+   text.js (the eight languages) is joined in front of this file when the panel is packed, so LANGS and L exist here.
    No framework and no inline style: the panel is served with a strict content-security policy. */
 "use strict";
 
@@ -54,7 +54,7 @@ async function api(method, path, body) {
   return { ok: response.ok, status: response.status, data };
 }
 
-const errorText = code => (L["e_" + code] ? t("e_" + code) : String(code || "?"));
+const errorText = code => (L["e_" + code] ? t("e_" + code) : /^http_\d{3}$/.test(String(code)) ? t("e_http") + " " + String(code).slice(5) : String(code || "?"));
 const problemText = code => (L["p_" + code] ? t("p_" + code) : String(code));
 
 function pickLanguage(preferred) {
@@ -535,8 +535,8 @@ async function persistRadar(index, patch) {
 
 // What each model can be told (the node answers "unsupported" to the rest) and how its serial port starts.
 const SENSOR_MODELS = [
-  { id: "ld2450", label: "HLK-LD2450", tracker: true, baud: 256000, cmds: ["read_info", "single", "multi", "bluetooth", "restart", "factory", "zones"] },
-  { id: "ld2461", label: "HLK-LD2461", tracker: true, baud: 9600, cmds: ["read_info", "factory", "zones"] },
+  { id: "ld2450", label: "HLK-LD2450", tracker: true, fov: 60, range_mm: 6000, baud: 256000, cmds: ["read_info", "single", "multi", "bluetooth", "restart", "factory", "zones"] },
+  { id: "ld2461", label: "HLK-LD2461", tracker: true, fov: 45, range_mm: 8000, baud: 9600, cmds: ["read_info", "factory", "zones"] },
   { id: "ld2410", label: "HLK-LD2410B / LD2410C", tracker: false, baud: 256000, cmds: ["read_info", "bluetooth", "restart", "factory"] },
   { id: "ld2412", label: "HLK-LD2412", tracker: false, baud: 115200, cmds: ["read_info", "bluetooth", "restart", "factory"] },
   { id: "ld2410s", label: "HLK-LD2410S", tracker: false, baud: 115200, cmds: [] },
@@ -945,7 +945,7 @@ function drawRadarMap(canvas) {
     if (!radar.enabled) return;
     const ox = cx + radar.offset_x_mm * pxPerMm, oy = cy - radar.offset_y_mm * pxPerMm;
     // yaw turns the radar counter-clockwise on the shared plane (the same rotation the node applies to its targets); on a canvas, angles run clockwise
-    const heading = (-90 - radar.yaw_deg) * Math.PI / 180, half = RADAR_HALF_FOV * Math.PI / 180, reach = RADAR_RANGE_MM * pxPerMm;
+    const model = modelOf(radar.model), heading = (-90 - radar.yaw_deg) * Math.PI / 180, half = (model.fov || RADAR_HALF_FOV) * Math.PI / 180, reach = Math.min(model.range_mm || RADAR_RANGE_MM, RADAR_RANGE_MM) * pxPerMm;   // the cone of the radar's own model, up to the outer ring
     ctx.fillStyle = RADAR_COLORS[i] + "26";
     ctx.beginPath(); ctx.moveTo(ox, oy); ctx.arc(ox, oy, reach, heading - half, heading + half); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = RADAR_COLORS[i] + "88"; ctx.stroke();
@@ -1087,6 +1087,6 @@ async function start() {
 
 window.addEventListener("hashchange", () => {
   const id = location.hash.replace("#/", "");
-  if (PAGES.some(p => p.id === id) && S.session && S.session.authenticated) { S.page = id; if (id === "update") refreshLog(); render(); }
+  if (PAGES.some(p => p.id === id) && S.session && S.session.authenticated) { if (S.page === "map" && id !== "map") closeMapSocket(); S.page = id; if (id === "update") refreshLog(); render(); }
 });
 start();

@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## [0.6.7] - A broker connection that cannot deadlock, a rescue network that cannot hold the node for ever and signed updates that bind the board
+
+- **The connection to the broker no longer deadlocks on a reconnection.** The handler of the "connected" event sent the node's information through the module's own lock while the telemetry task, holding that lock, waited for the client's: each waiting for the other, the node went on answering its panel and stopped publishing. The handler now sends through the client that raised the event.
+- **A phone left on the rescue network no longer holds the node back for ever:** the node waits at most ten minutes before it tries its Wi-Fi again.
+- **The identity MAC is the same everywhere:** on the Wi-Fi board the panel and the adoption tools quoted another MAC than the one the set-up code and the name of the set-up network are made from; they now quote the same.
+- **Improv over USB on a board with a cable** now also tells the node to use the Wi-Fi it was given (before, it answered *provisioned* and went on using the cable).
+- **One writer of the firmware slot at a time:** the upload by hand is refused while an installation from GitHub or a copy of the slot is running, and it no longer uses a buffer shared by the two servers.
+- **Two radars' targets are fused better:** the sum no longer overflows with three radars far away, and a group takes at most one target of each radar (two people seen by the second radar near one seen by the first stay two).
+- **The broker's password goes with the broker:** pointing the node at another host without typing a password no longer sends the stored one there.
+- The task list of the panel and the early warning of a task running out of stack work (the kernel's trace facility was not turned on).
+- The map closes its socket when you leave it with the *back* button, and draws the cone of each radar's own model.
+- HTTP answers 408 with its own status line, a user change that could not be written is told as a storage error, the panel tells every error the node can answer with in the eight languages (a test fails when a new one has no text) and the comments say eight languages.
+- The documents say what the node does today: updates need the signed files of the board, the panel speaks HTTPS too, the Bluetooth pairing has a passkey, the node publishes before it has a clock, and the node has run on real boards. The README does not claim MQTT or HTTP delivery (the node publishes over MQTT) and lists all the host test programs.
+- Tests: 950 checks in five programs plus the panel texts; the old checks of repeated names and four-number versions are brought to what the shared code does now, and new ones cover the fusion and the broker password.
+- Shared with the other nodes (from ARMOR-COMMON's firmware base): updates are signed for the project, the board, the version and the hash (a node refuses an older image, another board's image and an address that is not the repository's), the pairing of Bluetooth closes after repeated failures, the random generator keeps away from the converter, a user write is all-or-nothing, a repeated key in a JSON document is refused and four-number firmware versions are understood.
+
 ## [0.6.6] - The Bluetooth PIN in the panel
 
 - **Signed firmware:** a node installs from GitHub only a firmware whose signature verifies. Each release carries, next to the image and its SHA-256, an Ed25519 signature of that hash (`<image>.sig`); the node downloads the image, hashes it and installs it only when the hash is the published one and the signature verifies with the public key of the releases, which is in the firmware (the private key never leaves the maintainer's computer). A release without a signature, or with a wrong one, is refused and nothing changes.

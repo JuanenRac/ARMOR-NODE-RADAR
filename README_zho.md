@@ -21,13 +21,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.6.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.6.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分:** 雷达节点是目前唯一真正存在的硬件节点：它的固件运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告，其网页面板和无线更新也在该板上使用。与硬件无关的核心（5 个测试程序中的 947 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户和会话、网络方案、ARMOR-COMMON 接受其输出的消息序列化器，以及版本和签名检查）在计算机上测试，**网页面板**已在真实浏览器中对照替身节点验证，**固件镜像**可在 ESP-IDF 5.4 容器中构建。**尚未**证明的是：LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块；更新的签名检查和带 PIN 的蓝牙配对已在计算机上用真实签名验证，但尚未在板上验证；雷达命令通道没有对照真实模块检查；面板的 HTTPS 证书（由节点自己生成）没有在所有浏览器中试过。
+**诚实性检查 - 今天真正能运行的部分:** 雷达节点是目前唯一真正存在的硬件节点：它的固件运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告，其网页面板和无线更新也在该板上使用。与硬件无关的核心（5 个测试程序中的 950 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户和会话、网络方案、ARMOR-COMMON 接受其输出的消息序列化器，以及版本和签名检查）在计算机上测试，**网页面板**已在真实浏览器中对照替身节点验证，**固件镜像**可在 ESP-IDF 5.4 容器中构建。**尚未**证明的是：LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块；更新的签名检查和带 PIN 的蓝牙配对已在计算机上用真实签名验证，但尚未在板上验证；雷达命令通道没有对照真实模块检查；面板的 HTTPS 证书（由节点自己生成）没有在所有浏览器中试过。
 
 ---
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| 版本 | `0.6.6` |
+| 版本 | `0.6.7` |
 | 成熟度 | 成熟 |
-| 测试 | 947 checks in 5 programs (`ctest`) |
+| 测试 | 950 checks in 5 programs (`ctest`) |
 | 技术栈 | ESP-IDF C++ |
 | 真实硬件 | 运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告 |
 
@@ -68,7 +68,7 @@
 
 ## 🧩 在 A.R.M.O.R. 中的角色
 
-ARMOR-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存在传感器，并通过 MQTT 或 HTTP 向 [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) 发布轨迹、光照和健康状态；[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) 把它们画在场地平面图上，[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) 把它们与摄像头对照权衡。它的固件与其他节点共用一个基础（面板、蓝牙设置、签名更新、登录和时钟都来自 [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) 的固件基础），所以在一个节点上学到的对所有节点都适用。
+ARMOR-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存在传感器，并通过 MQTT 向 [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) 发布轨迹、光照和健康状态；[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) 把它们画在场地平面图上，[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) 把它们与摄像头对照权衡。它的固件与其他节点共用一个基础（面板、蓝牙设置、签名更新、登录和时钟都来自 [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) 的固件基础），所以在一个节点上学到的对所有节点都适用。
 
 ## 📂 仓库结构
 
@@ -101,7 +101,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi   # 947 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 950 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
