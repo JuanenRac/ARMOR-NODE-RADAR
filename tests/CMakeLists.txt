@@ -11,10 +11,15 @@ add_executable(test_node test_node.cpp)
 add_executable(test_release test_release.cpp)
 add_executable(test_mqtt_tls test_mqtt_tls.cpp)
 add_executable(test_sensors test_sensors.cpp)
+add_executable(test_logic test_logic.cpp)
 # the s3-wifi board profile (an ESP32-S3-WROOM-1 N16R8 with no Ethernet): the same core headers compiled for the other board
 add_executable(test_board_wifi test_board_wifi.cpp)
 target_compile_definitions(test_board_wifi PRIVATE ARMOR_BOARD_S3_WIFI=1)
 add_executable(emit_samples emit_samples.cpp)
+
+# rules shared with the other nodes (ARMOR-COMMON/firmware_base/tests)
+add_executable(test_base test_base.cpp)
+add_executable(test_shared test_shared.cpp)
 
 enable_testing()
 add_test(NAME core COMMAND test_core)
@@ -22,7 +27,10 @@ add_test(NAME node COMMAND test_node)
 add_test(NAME release COMMAND test_release)
 add_test(NAME mqtt_tls COMMAND test_mqtt_tls)
 add_test(NAME sensors COMMAND test_sensors)
+add_test(NAME logic COMMAND test_logic)
 add_test(NAME board_wifi COMMAND test_board_wifi)
+add_test(NAME base COMMAND test_base)
+add_test(NAME shared COMMAND test_shared)
 
 # the panel's texts: eight languages in every row and a text for every error the firmware can answer with
 find_package(Python3 COMPONENTS Interpreter)
