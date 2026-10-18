@@ -15,22 +15,12 @@
 
 static int failures = 0;
 static int checks = 0;
-static int known_gaps = 0;
 #define CHECK(condition)                                                              \
   do {                                                                                \
     ++checks;                                                                         \
     if (!(condition)) {                                                               \
       ++failures;                                                                     \
       std::printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #condition);                \
-    }                                                                                 \
-  } while (0)
-// A behaviour that is wanted and not there yet: it is reported, and it does not fail the run; when the behaviour arrives the check passes and the report goes away.
-#define KNOWN_GAP(condition)                                                          \
-  do {                                                                                \
-    ++checks;                                                                         \
-    if (!(condition)) {                                                               \
-      ++known_gaps;                                                                   \
-      std::printf("KNOWN GAP %s:%d  %s\n", __FILE__, __LINE__, #condition);           \
     }                                                                                 \
   } while (0)
 
@@ -269,7 +259,7 @@ static void test_password_follows_its_broker() {
   // ... but pointing a slot at another host must not carry the password along, as for the main broker
   t = s;
   CHECK(read(t, "{\"mqtt\":{\"backup\":[{\"uri\":\"mqtt://elsewhere.example\",\"username\":\"u1\"}]}}").empty());
-  KNOWN_GAP(t.mqtt.backup.size() == 1 && t.mqtt.backup[0].password.empty());
+  CHECK(t.mqtt.backup.size() == 1 && t.mqtt.backup[0].password.empty());
 }
 
 // ---- the limits of the climate and light checks ---------------------------------------------------------------------------------------------------
@@ -304,6 +294,6 @@ int main() {
   test_broker_host();
   test_password_follows_its_broker();
   test_climate_limits();
-  std::printf("%d checks, %d failures, %d known gaps\n", checks, failures, known_gaps);
+  std::printf("%d checks, %d failures\n", checks, failures);
   return failures == 0 ? 0 : 1;
 }
