@@ -21,6 +21,7 @@ extern "C" {
 }
 #include "core/gpio_logic.hpp"
 #include "core/mqtt_tls.hpp"
+#include "node_health.hpp"
 #include "node_store.hpp"
 #include "esp_app_desc.h"
 #include "core/radar_calibration.hpp"
@@ -99,6 +100,7 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
   switch (event_id) {
     case MQTT_EVENT_CONNECTED: {
       g_connected = true;
+      node_health::note_broker_connected();   // the health report counts how often the broker was reached
       ESP_LOGI(kTag, "MQTT connected to %s", current_broker(g_settings, g_broker_index).uri.c_str());
       const std::string filter = gpio::command_filter(g_settings.node_id);
       if (!filter.empty()) esp_mqtt_client_subscribe(event->client, filter.c_str(), 1);
