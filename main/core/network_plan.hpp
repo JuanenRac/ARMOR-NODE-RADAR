@@ -70,7 +70,7 @@ inline Plan plan_network(const config::Settings& s, bool setup_mode, std::string
     ap.max_clients = 4;
   } else if (s.ap.enabled) {
     ap.enabled = true;
-    ap.bridged = wired && s.ap.bridge;
+    ap.bridged = wired && s.ap.bridge && s.ap.security != config::WifiSecurity::kOpen;   // an open network is never joined to the cabled one: anybody in range would be on the LAN
     ap.ssid = s.ap.ssid;
     ap.password = s.ap.password;
     ap.security = s.ap.security;

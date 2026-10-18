@@ -651,6 +651,10 @@ static void test_network_plan() {
   CHECK(plan.layout == netplan::Layout::kEthernetBridgedAp && plan.ap.bridged && plan.ap.ssid == "ARMOR" && plan.ap.channel == 6 && plan.ap.country == "ES");
   plan = netplan::plan_network(s, false, "", "a1b2c3", 2);
   CHECK(plan.ap.channel == 11);   // the same SSID on a different channel on the next node
+  s.ap.security = config::WifiSecurity::kOpen; s.ap.password.clear();
+  plan = netplan::plan_network(s, false, "", "a1b2c3", 1);
+  CHECK(plan.layout == netplan::Layout::kEthernetWithAp && !plan.ap.bridged);   // an open access point keeps its own network
+  s.ap.security = config::WifiSecurity::kWpa2; s.ap.password = "wifi-secret-1";
   s.ap.channel = 4;
   CHECK(netplan::plan_network(s, false, "", "a1b2c3", 2).ap.channel == 4);
   s.ap.bridge = false;
