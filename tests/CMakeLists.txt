@@ -20,6 +20,7 @@ add_executable(emit_samples emit_samples.cpp)
 # rules shared with the other nodes (ARMOR-COMMON/firmware_base/tests)
 add_executable(test_base test_base.cpp)
 add_executable(test_shared test_shared.cpp)
+add_executable(test_control test_control.cpp)
 
 enable_testing()
 add_test(NAME core COMMAND test_core)
@@ -31,6 +32,7 @@ add_test(NAME logic COMMAND test_logic)
 add_test(NAME board_wifi COMMAND test_board_wifi)
 add_test(NAME base COMMAND test_base)
 add_test(NAME shared COMMAND test_shared)
+add_test(NAME control COMMAND test_control ${CMAKE_CURRENT_SOURCE_DIR}/../../ARMOR-COMMON/conformance)
 
 # the panel's texts: eight languages in every row and a text for every error the firmware can answer with
 find_package(Python3 COMPONENTS Interpreter)

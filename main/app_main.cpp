@@ -36,6 +36,7 @@ extern "C" {
 #include "log_buffer.hpp"
 #include "mqtt_link.hpp"
 #include "node_health.hpp"
+#include "node_control.hpp"
 #include "network.hpp"
 #include "node_store.hpp"
 #include "radar_manager.hpp"
@@ -121,6 +122,16 @@ extern "C" void app_main() {
   const armor::config::Problems problems = armor::config::validate(settings);
   for (const armor::config::Problem& problem : problems) ESP_LOGE(kTag, "settings problem: %s (%s)", problem.path.c_str(), problem.code.c_str());
 
+  // What the server can order (armor/control/<node>/...: restart, pause, standby, identify, diagnostics, maintenance; two steps with a one-time token the node gives, never a factory reset). A node
+  // that was put in standby boots straight into it, so this comes BEFORE the radars start: while the node is paused or in standby it publishes no targets and no presence. It listens from the
+  // broker's first connection, so it is set up before the link starts.
+  if (!setup && settings.mqtt.enabled) {
+    armor::node_control::Options control;
+    control.node_id = settings.node_id;
+    control.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); };
+    control.publish_retained = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish_retained(topic, payload); };
+    armor::node_control::start(control);
+  }
   // The radars run first: on the bench their statistics are the first thing to look at, with or without a network.
   armor::radar::start(settings, [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); });
   if (!armor::light_sensor_start(settings.sensors)) ESP_LOGE(kTag, "the light sensor could not be started: telemetry stays withheld unless a light fallback is set");

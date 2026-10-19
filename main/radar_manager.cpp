@@ -1,6 +1,7 @@
 // ARMOR-RADAR - the sensors on the three serial ports: the UARTs, the report frames, their health, and the command channel of each model.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "radar_manager.hpp"
+#include "node_control.hpp"
 
 #include <array>
 #include <cstdio>
@@ -207,6 +208,7 @@ void presence_now(const Line& line, int& present, int& distance) {
 }
 
 void publish_presence_devices(std::uint64_t now) {
+  if (!node_control::working()) return;   // paused or in standby by the server's order: no presence is published
   struct Message { std::string topic, payload; };
   Message messages[3];
   std::size_t count = 0;

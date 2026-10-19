@@ -27,6 +27,7 @@ extern "C" {
 #include "core/fw_trust.hpp"
 #include "core/release_assets.hpp"
 #include "core/semver.hpp"
+#include "node_control.hpp"
 
 namespace armor::github_update {
 namespace {
@@ -317,7 +318,11 @@ void install_task(void* raw) {
     else if (found.asset_url.empty()) result.error = "no_asset";
     else if (!found.update_available) result.error = "up_to_date";
     else if (found.sha256.empty()) result.error = "no_checksum";
-    else result = install(found);
+    else {
+      node_control::announce_maintenance("update", 900);   // the server holds back the node-offline alert for a while (a no-op when the server does not control this node)
+      result = install(found);
+      if (!result.ok) node_control::announce_maintenance_done("update");   // failed: the node stays; a success restarts, and the node clears the signal when it is back
+    }
   } else {
     result.error = "no_asset";
   }
@@ -408,6 +413,7 @@ void finish_copy(const char* error, const std::string& version) {
   g_copy.error = error == nullptr ? "" : error;
   g_copy.version = version;
   g_running = false;
+  node_control::announce_maintenance_done("update");   // the copy is over and the node did not restart
 }
 
 void copy_task(void*) {
@@ -452,6 +458,7 @@ bool start_copy() {
     g_copy = CopyProgress{};
     g_copy.state = "copying";
   }
+  node_control::announce_maintenance("update", 600);
   if (xTaskCreate(copy_task, "slot-copy", 6144, nullptr, 4, nullptr) != pdPASS) finish_copy("no_task", "");
   return true;
 }
