@@ -21,13 +21,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.3-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (2,212 vérifications dans 9 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.4. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui:** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (2,266 vérifications dans 9 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.4. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
 
 ---
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| Version | `0.7.3` |
+| Version | `0.7.4` |
 | Maturité | Établi |
-| Tests | 2,212 checks in 9 programs (`ctest`) |
+| Tests | 2,266 checks in 9 programs (`ctest`) |
 | Technologie | ESP-IDF C++ |
 | Sur matériel réel | Tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar, en rapportant au banc de test CM5 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,212 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,266 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings

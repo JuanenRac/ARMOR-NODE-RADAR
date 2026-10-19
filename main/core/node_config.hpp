@@ -21,6 +21,7 @@
 #include "mqtt_tls.hpp"
 #include "net_text.hpp"
 #include "node_id.hpp"
+#include "stored_load.hpp"
 #include "sensor_model.hpp"
 
 namespace armor::config {

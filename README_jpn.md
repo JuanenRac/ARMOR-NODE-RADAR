@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.3-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| バージョン | `0.7.3` |
+| バージョン | `0.7.4` |
 | 成熟度 | 確立 |
-| テスト | 2,212 checks in 9 programs (`ctest`) |
+| テスト | 2,266 checks in 9 programs (`ctest`) |
 | 技術 | ESP-IDF C++ |
 | 実機での確認 | レーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作し、CM5 テストベンチに報告 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,212 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,266 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings

@@ -21,13 +21,13 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.3-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.4-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Verificação de honestidade - o que funciona hoje:** O nó radar é o único nó que existe como hardware: o seu firmware corre numa placa real Waveshare ESP32-S3-ETH com um radar e reporta à bancada de testes do CM5, e o seu painel web e as atualizações pelo ar são usados nela. O núcleo independente do hardware (2,212 verificações em 9 programas de teste: os descodificadores do LD2450, do LD2461 e de quatro sensores de presença, o canal de comandos do LD2450, as definições e as suas verificações, a tabela de pinos, utilizadores e sessões, o plano de rede, o serializador de mensagens cuja saída o ARMOR-COMMON aceita, e as verificações de versão e assinatura) é testado num computador, o **painel web** foi exercitado num navegador real contra um nó de substituição e a **imagem do firmware compila** no contentor ESP-IDF 5.4. O que **ainda não** está provado: os descodificadores do LD2461 e dos sensores de presença só coincidem com os exemplos resolvidos dos seus manuais, sem um módulo por trás; a verificação da assinatura das atualizações e o emparelhamento Bluetooth com PIN estão provados no computador com assinaturas reais mas ainda não na placa; o canal de comandos do radar não foi confrontado com um módulo; e o certificado HTTPS do painel (feito pelo próprio nó) não foi experimentado em todos os navegadores.
+**Verificação de honestidade - o que funciona hoje:** O nó radar é o único nó que existe como hardware: o seu firmware corre numa placa real Waveshare ESP32-S3-ETH com um radar e reporta à bancada de testes do CM5, e o seu painel web e as atualizações pelo ar são usados nela. O núcleo independente do hardware (2,266 verificações em 9 programas de teste: os descodificadores do LD2450, do LD2461 e de quatro sensores de presença, o canal de comandos do LD2450, as definições e as suas verificações, a tabela de pinos, utilizadores e sessões, o plano de rede, o serializador de mensagens cuja saída o ARMOR-COMMON aceita, e as verificações de versão e assinatura) é testado num computador, o **painel web** foi exercitado num navegador real contra um nó de substituição e a **imagem do firmware compila** no contentor ESP-IDF 5.4. O que **ainda não** está provado: os descodificadores do LD2461 e dos sensores de presença só coincidem com os exemplos resolvidos dos seus manuais, sem um módulo por trás; a verificação da assinatura das atualizações e o emparelhamento Bluetooth com PIN estão provados no computador com assinaturas reais mas ainda não na placa; o canal de comandos do radar não foi confrontado com um módulo; e o certificado HTTPS do painel (feito pelo próprio nó) não foi experimentado em todos os navegadores.
 
 ---
 
@@ -35,9 +35,9 @@
 
 | | |
 |---|---|
-| Versão | `0.7.3` |
+| Versão | `0.7.4` |
 | Maturidade | Estabelecido |
-| Testes | 2,212 checks in 9 programs (`ctest`) |
+| Testes | 2,266 checks in 9 programs (`ctest`) |
 | Tecnologia | ESP-IDF C++ |
 | Em hardware real | Corre numa placa real Waveshare ESP32-S3-ETH com um radar, reportando à bancada de testes do CM5 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,212 checks, -Werror
+build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 2,266 checks, -Werror
 build/host/emit_samples | python tests/check_contract.py
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
