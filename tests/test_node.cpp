@@ -1010,6 +1010,39 @@ static void test_stored_settings_after_an_update() {
   CHECK(!config::load_stored("{broken", base, out, dropped));
 }
 
+// What the panel's save does (api::put_config: load the document over the stored settings, then needs_restart): a save that changes nothing, or only the language, the name or the time
+// zone, asks for no restart; any other change does. The zone is applied at once by clocksync::set_zone and must be stored exactly as given.
+static void test_save_paths() {
+  config::Settings stored = config::default_settings("a1b2");
+  const auto save = [&](const char* document, config::Settings& after, bool& restart) {
+    config::Problems problems;
+    const bool ok = config::load(document, stored, after, problems);
+    restart = ok && config::needs_restart(stored, after);
+    return ok;
+  };
+  config::Settings after;
+  bool restart = true;
+  CHECK(save(R"({"ui":{"language":"en"}})", after, restart) && !restart && config::to_json(after, true) == config::to_json(stored, true));       // no-op
+  CHECK(save(R"({})", after, restart) && !restart);
+  CHECK(save(R"({"ui":{"language":"es"}})", after, restart) && !restart && after.language == "es");
+  CHECK(save(R"({"node":{"name":"Hall radar"}})", after, restart) && !restart && after.node_name == "Hall radar");
+  // the time zone: UTC -> Madrid is stored as written, applies without a restart, and the rest of the settings is untouched
+  stored.time.zone = "UTC0";
+  CHECK(save(R"({"time":{"zone":"CET-1CEST,M3.5.0,M10.5.0/3"}})", after, restart) && !restart && after.time.zone == "CET-1CEST,M3.5.0,M10.5.0/3");
+  CHECK(config::to_json(after, true).find("CET-1CEST,M3.5.0,M10.5.0/3") != std::string::npos);
+  after.time.zone = stored.time.zone;
+  CHECK(config::to_json(after, true) == config::to_json(stored, true));
+  config::Settings round;
+  config::Problems round_problems;
+  CHECK(config::load(config::to_json(after, true), stored, round, round_problems) && round_problems.empty());
+  // what is not applied live still asks for a restart
+  CHECK(save(R"({"time":{"ntp_enabled":false}})", after, restart) && restart);
+  CHECK(save(R"({"mqtt":{"heartbeat_s":20}})", after, restart) && restart);
+  CHECK(save(R"({"time":{"zone":"CET-1CEST,M3.5.0,M10.5.0/3","ntp":"time.example.org"}})", after, restart) && restart);   // a zone together with a restart-worthy change
+  // an invalid zone is refused and nothing is stored
+  CHECK(!save(R"({"time":{"zone":"Europe/Madrid; rm"}})", after, restart) && !restart);
+}
+
 int main() {
   test_stored_settings_after_an_update();
   test_web_policy();
@@ -1037,6 +1070,7 @@ int main() {
   test_sessions();
   test_throttle();
   test_ld2450_commands();
+  test_save_paths();
   std::printf("%d checks, %d failures\n", checks, failures);
   return failures == 0 ? 0 : 1;
 }

@@ -10,6 +10,8 @@
 #include <array>
 #include <cstdint>
 #include <initializer_list>
+#include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -737,6 +739,17 @@ inline bool load(std::string_view text, const Settings& base, Settings& out, Pro
   read_settings(document, out, problems);
   if (problems.empty()) problems = validate(out);
   return problems.empty();
+}
+
+// What changed in a way that needs a restart: everything but the time zone (applied at once), the node's display name and the panel language.
+// The copies are on the heap: whoever saves (the web server, the Bluetooth worker, the serial set-up) has a small stack and a Settings is about a kilobyte.
+inline bool needs_restart(const Settings& before, const Settings& after) {
+  const std::unique_ptr<Settings> a(new (std::nothrow) Settings(before)), b(new (std::nothrow) Settings(after));
+  if (!a || !b) return true;
+  a->node_name = b->node_name = "";
+  a->language = b->language = "en";
+  a->time.zone = b->time.zone = "";
+  return to_json(*a, true) != to_json(*b, true);
 }
 
 }  // namespace armor::config
