@@ -47,6 +47,7 @@ extern "C" {
 #include "clock_sync.hpp"
 #include "github_update.hpp"
 #include "network.hpp"
+#include "psram_mem.hpp"
 #include "node_store.hpp"
 #include "radar_manager.hpp"
 #include "tls_cert.hpp"
@@ -1121,7 +1122,7 @@ bool start(const config::Settings& settings) {
   register_handlers(g_server, redirect && tls_ok);   // never a redirect to a server that is not there
   ESP_LOGI(kTag, "the panel is on port 80%s", redirect && tls_ok ? " (it sends the browser to HTTPS)" : "");
   static bool map_task_started = false;
-  if (!map_task_started) { xTaskCreate(radar_map_task, "radar-map", 6144, nullptr, 2, nullptr); map_task_started = true; }
+  if (!map_task_started) { memory::start_task(radar_map_task, "radar-map", 6144, nullptr, 2); map_task_started = true;   /* builds the map from the tracks and queues it to the server: no flash, so its stack is in the external RAM */ }
   return true;
 }
 

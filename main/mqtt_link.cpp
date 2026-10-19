@@ -22,6 +22,7 @@ extern "C" {
 #include "core/gpio_logic.hpp"
 #include "core/mqtt_tls.hpp"
 #include "node_health.hpp"
+#include "psram_mem.hpp"
 #include "node_store.hpp"
 #include "esp_app_desc.h"
 #include "core/radar_calibration.hpp"
@@ -292,9 +293,10 @@ void link_task(void*) {
   // The certificate of the broker has dates: with the encryption on, the node waits (two minutes at most) for its clock before it connects, or a clock still at 1970 would refuse every certificate.
   if (g_settings.mqtt.tls) for (int waited = 0; waited < 120 && !clock_is_set(); ++waited) vTaskDelay(pdMS_TO_TICKS(1000));
   start_client(current_broker(g_settings, g_broker_index));
-  xTaskCreate(heartbeat_task, "heartbeat", 4096, nullptr, 4, nullptr);
-  xTaskCreate(telemetry_task, "telemetry", 5120, nullptr, 4, nullptr);
-  xTaskCreate(broker_watchdog_task, "mqtt-link-wd", 4096, nullptr, 2, nullptr);
+  // These three build a message or count seconds and hand it to the client: they never touch the flash, so their stacks (13 KB together) are in the external RAM.
+  memory::start_task(heartbeat_task, "heartbeat", 4096, nullptr, 4);
+  memory::start_task(telemetry_task, "telemetry", 5120, nullptr, 4);
+  memory::start_task(broker_watchdog_task, "mqtt-link-wd", 4096, nullptr, 2);
   vTaskDelete(nullptr);
 }
 }  // namespace
@@ -308,7 +310,7 @@ void start(const config::Settings& settings) {
   }
   g_enabled = true;
   g_out_ready = xSemaphoreCreateBinary();
-  xTaskCreate(outgoing_task, "mqtt-out", 4096, nullptr, 4, nullptr);
+  memory::start_task(outgoing_task, "mqtt-out", 4096, nullptr, 4);   // hands queued messages to the client: no flash, so its stack is in the external RAM
   xTaskCreate(link_task, "mqtt-link", 6144, nullptr, 4, nullptr);
 }
 
