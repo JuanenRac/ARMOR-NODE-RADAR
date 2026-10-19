@@ -2,6 +2,7 @@
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
 
 #include "core/node_config.hpp"
@@ -12,11 +13,19 @@ namespace armor::mqtt_link {
 // settings have no broker (mqtt disabled or no address yet): the node then only serves its panel.
 void start(const config::Settings& settings);
 
+using MessageHandler = std::function<void(const std::string& topic, const std::string& payload)>;
+// Asks for the messages of one topic (an exact topic, no wildcards). Call it before start(): on every (re)connection of the broker the topic is subscribed again, and every COMPLETE message
+// on it goes to `on_message` in the broker client's own task, so the handler must not wait for long.
+void subscribe(const std::string& topic, MessageHandler on_message);
+
 bool connected();
 bool clock_is_set();
 std::uint64_t wall_clock_ms();
 
 void publish(const std::string& topic, const std::string& payload);
+
+// Publishes one message retained, at QoS 1: only the planned-maintenance signal (armor/control/<node>/maintenance) is sent so; everything else stays QoS 0 and not retained.
+void publish_retained(const std::string& topic, const std::string& payload);
 
 struct Status {
   bool enabled = false;

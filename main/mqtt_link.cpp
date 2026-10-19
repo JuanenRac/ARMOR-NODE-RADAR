@@ -10,6 +10,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <vector>
 #include <ctime>
 extern "C" {
 #include <sys/time.h>
@@ -32,6 +33,7 @@ extern "C" {
 #include "gpio_manager.hpp"
 #include "light_sensor.hpp"
 #include "network.hpp"
+#include "node_control.hpp"
 #include "radar_manager.hpp"
 
 namespace armor::mqtt_link {
@@ -49,6 +51,12 @@ std::atomic<std::uint32_t> g_published{0};
 std::atomic<std::uint32_t> g_dropped{0};   // messages that were not handed to the client (the queue was full, or the link was down)
 std::atomic<int> g_withheld{0};   // 0 nothing, 1 light, 2 radars
 
+struct Subscription {
+  std::string topic;
+  MessageHandler on_message;
+};
+std::vector<Subscription> g_subscriptions;   // filled before start(), read-only afterwards
+
 // Which saved broker the node is trying (0: the one above, 1..: settings.mqtt.backup[index-1]). A watchdog task switches to the
 // next one, the same way main/network.cpp does for Wi-Fi, after the connection has stayed down for a while; it never touches a
 // broker that is still working.
@@ -58,9 +66,9 @@ int g_broker_index = 0;
 char g_health_topic[96];
 
 // Hands one message to the client, if there is one; a negative number says it was not accepted.
-int client_publish(const char* topic, const char* data, int length, int qos) {
+int client_publish(const char* topic, const char* data, int length, int qos, int retain = 0) {
   std::lock_guard<std::mutex> guard(g_client_lock);
-  const int accepted = g_client == nullptr ? -1 : esp_mqtt_client_publish(g_client, topic, data, length, qos, 0);
+  const int accepted = g_client == nullptr ? -1 : esp_mqtt_client_publish(g_client, topic, data, length, qos, retain);
   if (accepted >= 0) nodeguard::note_publish();   // the dead-man switch of the guard counts the silence
   return accepted;
 }
@@ -68,7 +76,7 @@ int client_publish(const char* topic, const char* data, int length, int qos) {
 // publish() never waits for the client: the client holds its own lock while it runs the handlers of the incoming messages, and such a handler may be waiting for a lock of its module
 // while the task that holds that lock publishes - each waiting for the other, for ever, with the watchdog of the idle tasks seeing nothing. A message goes into a short queue, in order,
 // and a task of its own hands it to the client without holding anything. When the queue is full the oldest message is dropped (the newest state is the one that matters).
-struct Outgoing { std::string topic; std::string payload; };
+struct Outgoing { std::string topic; std::string payload; bool retained = false; };   // retained: QoS 1 and kept by the broker (only the planned-maintenance signal)
 std::mutex g_out_lock;
 std::deque<Outgoing> g_out;
 SemaphoreHandle_t g_out_ready = nullptr;
@@ -85,7 +93,7 @@ void outgoing_task(void*) {
         next = std::move(g_out.front());
         g_out.pop_front();
       }
-      if (g_connected && client_publish(next.topic.c_str(), next.payload.c_str(), static_cast<int>(next.payload.size()), 0) >= 0) ++g_published;
+      if (g_connected && client_publish(next.topic.c_str(), next.payload.c_str(), static_cast<int>(next.payload.size()), next.retained ? 1 : 0, next.retained ? 1 : 0) >= 0) ++g_published;
       else ++g_dropped;
     }
   }
@@ -119,6 +127,7 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
       }
       const std::string filter = gpio::command_filter(g_settings.node_id);
       if (!filter.empty()) esp_mqtt_client_subscribe(event->client, filter.c_str(), 1);
+      for (const Subscription& subscription : g_subscriptions) esp_mqtt_client_subscribe(event->client, subscription.topic.c_str(), 1);
       pins::publish_all();
       radar::publish_presence_now();
       publish_info(event->client);
@@ -132,6 +141,14 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
     case MQTT_EVENT_ERROR: ESP_LOGW(kTag, "MQTT error (the broker refused the identity, or is not reachable)"); break;
     case MQTT_EVENT_DATA: {
       if (event->data_len != event->total_data_len || event->current_data_offset != 0) break;  // a command is a few bytes: never a fragment
+      const std::string topic(event->topic, static_cast<std::size_t>(event->topic_len));
+      bool taken = false;
+      for (const Subscription& subscription : g_subscriptions) {
+        if (subscription.topic != topic) continue;
+        subscription.on_message(topic, std::string(event->data, static_cast<std::size_t>(event->data_len)));
+        taken = true;
+      }
+      if (taken) break;
       const std::string name = gpio::pin_of_command_topic(g_settings.node_id, std::string_view(event->topic, static_cast<std::size_t>(event->topic_len)));
       if (name.empty()) break;
       const pins::Outcome outcome = pins::command(name, std::string_view(event->data, static_cast<std::size_t>(event->data_len)));
@@ -172,6 +189,7 @@ void publish_telemetry() {
   static bool warned_about_light = false;
   static bool warned_about_radars = false;
   if (!g_connected) return;
+  if (!node_control::working()) return;   // paused or in standby by the server's order: no targets are published (the heartbeat still says the node is there)
   const float lux = armor::light_lux();
   if (!(lux >= 0.0f)) {  // unknown light: withhold, and say so once
     g_withheld = 1;
@@ -349,6 +367,10 @@ void start(const config::Settings& settings) {
   xTaskCreate(link_task, "mqtt-link", 6144, nullptr, 4, nullptr);
 }
 
+void subscribe(const std::string& topic, MessageHandler on_message) {
+  if (!topic.empty() && on_message) g_subscriptions.push_back({topic, std::move(on_message)});
+}
+
 bool connected() { return g_connected; }
 bool clock_is_set() { return std::time(nullptr) > 1700000000; }
 
@@ -367,7 +389,18 @@ void publish(const std::string& topic, const std::string& payload) {
   {
     std::lock_guard<std::mutex> guard(g_out_lock);
     if (g_out.size() >= kOutMax) { g_out.pop_front(); ++g_dropped; }
-    g_out.push_back({topic, payload});
+    g_out.push_back({topic, payload, false});
+  }
+  xSemaphoreGive(g_out_ready);
+}
+
+// The same, retained and at QoS 1: for the one message the broker has to keep, the node's planned-maintenance signal (active, or cleared when the node is back).
+void publish_retained(const std::string& topic, const std::string& payload) {
+  if (!g_connected || g_out_ready == nullptr) return;
+  {
+    std::lock_guard<std::mutex> guard(g_out_lock);
+    if (g_out.size() >= kOutMax) { g_out.pop_front(); ++g_dropped; }
+    g_out.push_back({topic, payload, true});
   }
   xSemaphoreGive(g_out_ready);
 }

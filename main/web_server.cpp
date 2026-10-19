@@ -49,6 +49,7 @@ extern "C" {
 #include "github_update.hpp"
 #include "network.hpp"
 #include "psram_mem.hpp"
+#include "node_control.hpp"
 #include "node_store.hpp"
 #include "radar_manager.hpp"
 #include "tls_cert.hpp"
@@ -822,6 +823,7 @@ esp_err_t get_log(httpd_req_t* r) {
 esp_err_t post_ota(httpd_req_t* r) {
   Who who;
   if (!require(r, who, true, true)) return ESP_OK;
+  const node_control::UploadGuard upload_guard;   // the node does not restart, pause or go to standby in the middle of an upload
   const std::size_t total = r->content_len;
   if (total < 100 * 1024 || total > kMaxFirmware) return send_error(r, 413, "bad_size");
   // One writer of the slot at a time: an installation from GitHub, a copy of the slot or another upload would write the same flash.
