@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <ctime>
 extern "C" {
@@ -145,8 +146,9 @@ void publish_info(esp_mqtt_client_handle_t direct) {
   char payload[512];   // a name of 48 characters in Chinese or Japanese is up to 288 bytes once escaped: 256 made the message fail and never be sent
   std::size_t length = 0;
   if (!armor::build_topic(g_settings.node_id, "info", topic, sizeof topic)) return;
-  const config::Settings current = store::settings();   // the name may have been changed in the panel since the start
-  if (armor::build_info(g_settings.node_id, wall_clock_ms(), current.node_name, esp_app_get_description()->version, net.ip, 80, payload, sizeof payload, length) != armor::JsonResult::kOk) return;
+  // A copy of the whole settings is a few kilobytes: kept on the heap, not on the stack of this small task (it left the telemetry task with 56 bytes of stack and a restart on saving the settings).
+  const std::unique_ptr<config::Settings> current(new config::Settings(store::settings()));   // the name may have been changed in the panel since the start
+  if (armor::build_info(g_settings.node_id, wall_clock_ms(), current->node_name, esp_app_get_description()->version, net.ip, 80, payload, sizeof payload, length) != armor::JsonResult::kOk) return;
   if (direct != nullptr) esp_mqtt_client_publish(direct, topic, payload, static_cast<int>(length), 1, 0);
   else client_publish(topic, payload, static_cast<int>(length), 1);
 }
@@ -172,9 +174,10 @@ void publish_telemetry() {
   g_withheld = 0;
   armor::Track tracks[armor::kMaximumTracks];
   std::size_t count = radar::collect_tracks(tracks);
-  const config::Settings current = store::settings();   // calibration and fusion may have changed in the panel since the start
-  armor::calibration::apply_all(tracks, count, current.radars);
-  count = armor::calibration::merge_overlap(tracks, count, current.fusion_merge_mm);
+  // On the heap for the same reason as in publish_info(): the telemetry task has a small stack.
+  const std::unique_ptr<config::Settings> current(new config::Settings(store::settings()));   // calibration and fusion may have changed in the panel since the start
+  armor::calibration::apply_all(tracks, count, current->radars);
+  count = armor::calibration::merge_overlap(tracks, count, current->fusion_merge_mm);
   char topic[96];
   char payload[1600];
   std::size_t length = 0;
@@ -293,7 +296,7 @@ void link_task(void*) {
   if (g_settings.mqtt.tls) for (int waited = 0; waited < 120 && !clock_is_set(); ++waited) vTaskDelay(pdMS_TO_TICKS(1000));
   start_client(current_broker(g_settings, g_broker_index));
   xTaskCreate(heartbeat_task, "heartbeat", 4096, nullptr, 4, nullptr);
-  xTaskCreate(telemetry_task, "telemetry", 5120, nullptr, 4, nullptr);
+  xTaskCreate(telemetry_task, "telemetry", 6144, nullptr, 4, nullptr);
   xTaskCreate(broker_watchdog_task, "mqtt-link-wd", 4096, nullptr, 2, nullptr);
   vTaskDelete(nullptr);
 }

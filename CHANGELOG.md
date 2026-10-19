@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [0.7.6] - Saving the settings no longer restarts the node
+
+- Saving any setting in the panel restarted the node: the telemetry task had 56 bytes of stack left (the whole settings were copied onto it at every publication) and the extra work of a saved change overflowed it. The copies now live on the heap and the task has 1 KB more stack.
+- The heartbeat task, which made the same copy for the information message, is relieved the same way.
+
 ## [0.7.5] - Update from GitHub through long redirects, a richer help and the green frames of the Summary
 
 - **Update from GitHub works again when GitHub answers with a long redirect:** the checksum file is fetched through a redirect whose headers add up to more than 5 KB, and the 4 KB header buffer made the HTTP client give up. The buffer is now 20 KB, which the memory settings place in the external RAM (above 16 KB), so it costs no internal memory; a board with no external RAM falls back to 6 KB. The log says how much internal memory was free before and after the client was opened.
