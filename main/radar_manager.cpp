@@ -23,6 +23,7 @@ extern "C" {
 #include "core/presence.hpp"
 #include "core/sensor_model.hpp"
 #include "core/track_stabiliser.hpp"
+#include "node_guard.hpp"
 #include "core/var_framer.hpp"
 
 namespace armor::radar {
@@ -63,6 +64,9 @@ struct Line {
 
 std::array<Line, 3> g_lines;
 std::mutex g_data_lock;          // the track set, the counters, the readings and the fps windows
+// What a command learns about a sensor (its firmware text, its report mode) is written under the same lock that status() reads it with: a std::string written while another task reads it is not safe.
+void set_line_firmware(Line& line, const std::string& text) { std::lock_guard<std::mutex> guard(g_data_lock); line.firmware = text; }
+void set_line_mode(Line& line, int mode) { std::lock_guard<std::mutex> guard(g_data_lock); line.tracking_mode = mode; }
 armor::TrackSet g_tracks;
 armor::RadarHealth g_health;
 Publisher g_publish;
@@ -332,14 +336,14 @@ CommandResult run_command_family(std::size_t index, Op op, bool flag, const ld24
   const bool ld2450 = line.model == sensors::Model::kLd2450;
   switch (op) {
     case Op::kReadInfo: {
-      if (simple(ld2450cmd::kReadFirmware, ld2450cmd::kReadFirmware)) { result.firmware = ld2450cmd::firmware_text(ack); line.firmware = result.firmware; }
+      if (simple(ld2450cmd::kReadFirmware, ld2450cmd::kReadFirmware)) { result.firmware = ld2450cmd::firmware_text(ack); set_line_firmware(line, result.firmware); }
       else ok = false;
-      if (ld2450 && ok && simple(ld2450cmd::kQueryTrackingMode, ld2450cmd::kQueryTrackingMode)) { result.tracking_mode = ld2450cmd::tracking_mode(ack); line.tracking_mode = result.tracking_mode; }
+      if (ld2450 && ok && simple(ld2450cmd::kQueryTrackingMode, ld2450cmd::kQueryTrackingMode)) { result.tracking_mode = ld2450cmd::tracking_mode(ack); set_line_mode(line, result.tracking_mode); }
       if (ld2450 && ok && simple(ld2450cmd::kQueryZones, ld2450cmd::kQueryZones)) result.has_zones = ld2450cmd::zones_from_ack(ack, result.zones);
       break;
     }
-    case Op::kSingleTarget: ok = simple(ld2450cmd::kSingleTarget, ld2450cmd::kSingleTarget); if (ok) line.tracking_mode = 1; break;
-    case Op::kMultiTarget: ok = simple(ld2450cmd::kMultiTarget, ld2450cmd::kMultiTarget); if (ok) line.tracking_mode = 2; break;
+    case Op::kSingleTarget: ok = simple(ld2450cmd::kSingleTarget, ld2450cmd::kSingleTarget); if (ok) set_line_mode(line, 1); break;
+    case Op::kMultiTarget: ok = simple(ld2450cmd::kMultiTarget, ld2450cmd::kMultiTarget); if (ok) set_line_mode(line, 2); break;
     case Op::kSetZones:
       length = ld2450cmd::build_set_zones(*zones, frame, sizeof frame);
       ok = exchange(line, index, frame, length, ld2450cmd::kSetZones, ack, result);
@@ -380,11 +384,11 @@ CommandResult run_ld2461(std::size_t index, Op op, const ld2450cmd::ZoneFilter* 
         char text[48];
         std::snprintf(text, sizeof text, "%u.%u (%02u-%02u, id %08X)", version.major, version.minor, version.month, version.day, static_cast<unsigned>(version.identifier));
         result.firmware = version.ok ? text : "";
-        line.firmware = result.firmware;
+        set_line_firmware(line, result.firmware);
       } else ok = false;
       if (ok && ask(ld2461::build_query(ld2461::kReadReportFormat, frame, sizeof frame), ld2461::kReadReportFormat) && answer.value_length >= 1) {
         result.tracking_mode = answer.value[0];
-        line.tracking_mode = result.tracking_mode;
+        set_line_mode(line, result.tracking_mode);
       }
       if (ok && ask(ld2461::build_query(ld2461::kReadZones, frame, sizeof frame), ld2461::kReadZones)) {
         ld2461::Zone zone[3];
@@ -436,9 +440,9 @@ void ld2461_format_task(void* argument) {
       std::size_t length = ld2461::build_query(ld2461::kReadReportFormat, frame, sizeof frame);
       const bool read_ok = exchange_ld2461(line, index, frame, length, ld2461::kReadReportFormat, answer, result) && answer.value_length >= 1;
       const int format = read_ok ? answer.value[0] : 0;
-      if (format == 1 || format == 3) { line.tracking_mode = format; ESP_LOGI(kTag, "sensor %u (ld2461): report format %d, coordinates on", static_cast<unsigned>(index + 1), format); break; }
+      if (format == 1 || format == 3) { set_line_mode(line, format); ESP_LOGI(kTag, "sensor %u (ld2461): report format %d, coordinates on", static_cast<unsigned>(index + 1), format); break; }
       length = ld2461::build_set_format(3, frame, sizeof frame);
-      if (exchange_ld2461(line, index, frame, length, ld2461::kSetReportFormat, answer, result)) { line.tracking_mode = 3; ESP_LOGI(kTag, "sensor %u (ld2461): report format set to coordinates and zones", static_cast<unsigned>(index + 1)); break; }
+      if (exchange_ld2461(line, index, frame, length, ld2461::kSetReportFormat, answer, result)) { set_line_mode(line, 3); ESP_LOGI(kTag, "sensor %u (ld2461): report format set to coordinates and zones", static_cast<unsigned>(index + 1)); break; }
       ESP_LOGW(kTag, "sensor %u (ld2461): could not set the report format (%s); without coordinates it gives no tracks", static_cast<unsigned>(index + 1), result.error.c_str());
     }
     vTaskDelay(pdMS_TO_TICKS(5000));
@@ -509,6 +513,7 @@ void start(const config::Settings& settings, Publisher publisher) {
     ESP_LOGI(kTag, "sensor %u (%s) on UART%u at %d baud: RX GPIO %d, TX GPIO %d%s%s", static_cast<unsigned>(i + 1), model.label, static_cast<unsigned>(i), baud, wanted.rx, wanted.tx,
              model.tracker ? "" : ", device ", model.tracker ? "" : wanted.name.c_str());
   }
+  nodeguard::expect_task("radar");   // the node is worth nothing without the task that reads its sensors: the guard looks for it
   xTaskCreate(reader_task, "radar", 6144, nullptr, 5, nullptr);
   xTaskCreate(apply_stored_task, "radar-stored", 4096, nullptr, 2, nullptr);
   for (std::size_t i = 0; i < 3; ++i) {

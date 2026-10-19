@@ -22,7 +22,9 @@ extern "C" {
 }
 #include "core/gpio_logic.hpp"
 #include "core/mqtt_tls.hpp"
+#include "node_guard.hpp"
 #include "node_health.hpp"
+#include "psram_mem.hpp"
 #include "node_store.hpp"
 #include "esp_app_desc.h"
 #include "core/radar_calibration.hpp"
@@ -52,10 +54,15 @@ std::atomic<int> g_withheld{0};   // 0 nothing, 1 light, 2 radars
 // broker that is still working.
 int g_broker_index = 0;
 
+// The node's own health topic (armor/node/<id>/health), which carries its presence, its last will and its birth. Written once by the link task before the client starts.
+char g_health_topic[96];
+
 // Hands one message to the client, if there is one; a negative number says it was not accepted.
 int client_publish(const char* topic, const char* data, int length, int qos) {
   std::lock_guard<std::mutex> guard(g_client_lock);
-  return g_client == nullptr ? -1 : esp_mqtt_client_publish(g_client, topic, data, length, qos, 0);
+  const int accepted = g_client == nullptr ? -1 : esp_mqtt_client_publish(g_client, topic, data, length, qos, 0);
+  if (accepted >= 0) nodeguard::note_publish();   // the dead-man switch of the guard counts the silence
+  return accepted;
 }
 
 // publish() never waits for the client: the client holds its own lock while it runs the handlers of the incoming messages, and such a handler may be waiting for a lock of its module
@@ -101,8 +108,15 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
   switch (event_id) {
     case MQTT_EVENT_CONNECTED: {
       g_connected = true;
+      nodeguard::note_broker_connected(true);
       node_health::note_broker_connected();   // the health report counts how often the broker was reached
       ESP_LOGI(kTag, "MQTT connected to %s", current_broker(g_settings, g_broker_index).uri.c_str());
+      {   // The other half of the last will: "online", kept by the broker until the will (or the next start) replaces it. The heartbeat repeats it, not retained.
+        char birth[128];
+        std::size_t birth_length = 0;
+        if (g_health_topic[0] != 0 && armor::build_health(g_settings.node_id, wall_clock_ms(), true, birth, sizeof birth, birth_length) == armor::JsonResult::kOk)
+          esp_mqtt_client_publish(event->client, g_health_topic, birth, static_cast<int>(birth_length), 1, 1);
+      }
       const std::string filter = gpio::command_filter(g_settings.node_id);
       if (!filter.empty()) esp_mqtt_client_subscribe(event->client, filter.c_str(), 1);
       pins::publish_all();
@@ -112,6 +126,7 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
     }
     case MQTT_EVENT_DISCONNECTED:
       g_connected = false;
+      nodeguard::note_broker_connected(false);
       ESP_LOGW(kTag, "MQTT disconnected; the broker will publish the last will");
       break;
     case MQTT_EVENT_ERROR: ESP_LOGW(kTag, "MQTT error (the broker refused the identity, or is not reachable)"); break;
@@ -203,7 +218,6 @@ void telemetry_task(void*) {
   }
 }
 
-static char g_health_topic[96];
 static char g_will[128];
 std::size_t g_will_length = 0;
 
@@ -220,7 +234,7 @@ void start_client(const config::Broker& broker) {
   config.session.last_will.msg = g_will;
   config.session.last_will.msg_len = static_cast<int>(g_will_length);
   config.session.last_will.qos = 1;
-  config.session.last_will.retain = 0;
+  config.session.last_will.retain = 1;   // the last state stays on the broker: a server that starts later learns that the node is gone
   // Encrypted link (off unless the owner turned it on in the panel): only the authority stored in the settings is trusted, the certificate of the broker must be signed by it and must vouch for
   // the name or the address in the URL (the client checks the host name: skip_cert_common_name_check stays off). g_settings is never changed after start(), so the text outlives the client.
   if (g_settings.mqtt.tls && !g_settings.mqtt.ca_pem.empty() && mqtt_tls::uri_is_tls(broker.uri)) {
@@ -236,9 +250,16 @@ void start_client(const config::Broker& broker) {
 #endif
   }
   esp_mqtt_client_handle_t client = esp_mqtt_client_init(&config);
-  ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, on_mqtt, nullptr));
+  // A client that cannot be made (an address that is not valid, no memory for a moment) is not a reason to restart the node over and over: it is said, the node goes on without a broker
+  // (its radars and its panel keep working), and the watchdog tries again.
+  if (client == nullptr) { ESP_LOGE(kTag, "the MQTT client could not be created for %s", broker.uri.c_str()); return; }
+  if (esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, on_mqtt, nullptr) != ESP_OK) { ESP_LOGE(kTag, "the MQTT client could not be set up"); esp_mqtt_client_destroy(client); return; }
   { std::lock_guard<std::mutex> guard(g_client_lock); g_client = client; }   // before it starts: its first events may publish
-  ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+  if (esp_mqtt_client_start(client) != ESP_OK) {
+    ESP_LOGE(kTag, "the MQTT client could not be started");
+    { std::lock_guard<std::mutex> guard(g_client_lock); if (g_client == client) g_client = nullptr; }
+    esp_mqtt_client_destroy(client);
+  }
 }
 
 constexpr int kBrokerCheckEverySeconds = 10;
@@ -269,6 +290,12 @@ void broker_watchdog_task(void*) {
       continue;
     }
     rounds_on_backup = 0;
+    bool no_client = false;
+    { std::lock_guard<std::mutex> guard(g_client_lock); no_client = g_client == nullptr; }
+    if (no_client) {   // the client could not be created or started: it is tried again, after about half a minute
+      if (++bad_rounds >= kBrokerBadRoundsBeforeSwitch) { bad_rounds = 0; start_client(current_broker(g_settings, g_broker_index)); }
+      continue;
+    }
     const int total = broker_count(g_settings);
     if (total <= 1) continue;
     bad_rounds += 1;
@@ -295,9 +322,8 @@ void link_task(void*) {
   // The certificate of the broker has dates: with the encryption on, the node waits (two minutes at most) for its clock before it connects, or a clock still at 1970 would refuse every certificate.
   if (g_settings.mqtt.tls) for (int waited = 0; waited < 120 && !clock_is_set(); ++waited) vTaskDelay(pdMS_TO_TICKS(1000));
   start_client(current_broker(g_settings, g_broker_index));
-  xTaskCreate(heartbeat_task, "heartbeat", 4096, nullptr, 4, nullptr);
-  xTaskCreate(telemetry_task, "telemetry", 6144, nullptr, 4, nullptr);
-  xTaskCreate(broker_watchdog_task, "mqtt-link-wd", 4096, nullptr, 2, nullptr);
+  nodeguard::expect_task("mqtt-link-wd");
+  memory::start_task(broker_watchdog_task, "mqtt-link-wd", 4096, nullptr, 2);   // counts seconds and restarts the client: no flash, so its stack is in the external RAM
   vTaskDelete(nullptr);
 }
 }  // namespace
@@ -310,8 +336,16 @@ void start(const config::Settings& settings) {
     return;
   }
   g_enabled = true;
+  nodeguard::note_broker_in_use();
   g_out_ready = xSemaphoreCreateBinary();
-  xTaskCreate(outgoing_task, "mqtt-out", 4096, nullptr, 4, nullptr);
+  // The tasks that must exist for the node to be worth anything are made here, before the network is up and before Bluetooth starts: once the radio has taken its memory the node ran for days
+  // without its telemetry task. They publish only while the broker is connected, so they can wait. heartbeat and telemetry only build a message and hand it to the client (no flash).
+  nodeguard::expect_task("mqtt-out");
+  nodeguard::expect_task("heartbeat");
+  nodeguard::expect_task("telemetry");
+  memory::start_task(heartbeat_task, "heartbeat", 4096, nullptr, 4);
+  memory::start_task(telemetry_task, "telemetry", 6144, nullptr, 4);
+  memory::start_task(outgoing_task, "mqtt-out", 4096, nullptr, 4);   // hands queued messages to the client: no flash, so its stack is in the external RAM
   xTaskCreate(link_task, "mqtt-link", 6144, nullptr, 4, nullptr);
 }
 
