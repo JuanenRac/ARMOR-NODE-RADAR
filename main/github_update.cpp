@@ -70,6 +70,7 @@ bool get_bounded_once(const std::string& url, const char* accept, std::string& o
   config.crt_bundle_attach = esp_crt_bundle_attach;
   config.timeout_ms = 15000;
   config.buffer_size = header_buffer();
+  config.buffer_size_tx = release::kRequestBuffer;   // GitHub's redirect address does not fit the default 512-byte request buffer
   const unsigned internal_before = static_cast<unsigned>(esp_get_free_internal_heap_size());
   esp_http_client_handle_t client = esp_http_client_init(&config);
   ESP_LOGI(kTag, "HTTP client opened with a %d-byte header buffer: %u bytes of internal memory free before, %u after", config.buffer_size, internal_before, static_cast<unsigned>(esp_get_free_internal_heap_size()));
@@ -203,6 +204,7 @@ InstallResult install(const CheckResult& offer) {
   config.crt_bundle_attach = esp_crt_bundle_attach;
   config.timeout_ms = 20000;
   config.buffer_size = header_buffer();
+  config.buffer_size_tx = release::kRequestBuffer;   // GitHub's redirect address does not fit the default 512-byte request buffer
   const unsigned internal_before = static_cast<unsigned>(esp_get_free_internal_heap_size());
   esp_http_client_handle_t client = esp_http_client_init(&config);
   ESP_LOGI(kTag, "HTTP client opened with a %d-byte header buffer: %u bytes of internal memory free before, %u after", config.buffer_size, internal_before, static_cast<unsigned>(esp_get_free_internal_heap_size()));

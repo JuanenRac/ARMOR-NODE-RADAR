@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## [0.7.7] - The GitHub update reads the checksum again
+
+- The checksum and the image are read again from GitHub: the HTTP request buffer is 4 KB, because the request that follows GitHub's redirect carries an address of about a thousand characters.
+
 ## [0.7.6] - Saving the settings no longer restarts the node
 
 - Saving any setting in the panel restarted the node: the telemetry task had 56 bytes of stack left (the whole settings were copied onto it at every publication) and the extra work of a saved change overflowed it. The copies now live on the heap and the task has 1 KB more stack.
