@@ -37,7 +37,7 @@
 |---|---|
 | 版本 | `0.7.9` |
 | 成熟度 | 成熟 |
-| 测试 | 2,266 checks in 9 programs (`ctest`) |
+| 测试 | 9 个程序中的 2,266 项检查（`ctest`） |
 | 技术栈 | ESP-IDF C++ |
 | 真实硬件 | 运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ## 🛠️ 开发环境
 
-**环境要求:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+**环境要求:** 用于主机测试的 C++17 编译器, 用于构建镜像的 ESP-IDF 5.4 容器, Waveshare ESP32-S3-ETH 或 ESP32-S3-WROOM-1 N16R8
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host

@@ -37,7 +37,7 @@
 |---|---|
 | バージョン | `0.7.9` |
 | 成熟度 | 確立 |
-| テスト | 2,266 checks in 9 programs (`ctest`) |
+| テスト | 9 個のプログラムで 2,266 件のチェック（`ctest`） |
 | 技術 | ESP-IDF C++ |
 | 実機での確認 | レーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作し、CM5 テストベンチに報告 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ## 🛠️ 開発環境
 
-**必要なもの:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+**必要なもの:** ホストテスト用の C++17 コンパイラ, イメージをビルドするための ESP-IDF 5.4 コンテナ, Waveshare ESP32-S3-ETH または ESP32-S3-WROOM-1 N16R8
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host

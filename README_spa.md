@@ -37,7 +37,7 @@
 |---|---|
 | Versión | `0.7.9` |
 | Madurez | Establecido |
-| Tests | 2,266 checks in 9 programs (`ctest`) |
+| Tests | 2.266 comprobaciones en 9 programas (`ctest`) |
 | Tecnología | ESP-IDF C++ |
 | En hardware real | Corre en una placa real Waveshare ESP32-S3-ETH con un radar, reportando al banco de pruebas de la CM5 |
 
@@ -104,7 +104,7 @@ ARMOR-RADAR/
 
 ## 🛠️ Entorno de desarrollo
 
-**Requisitos:** a C++17 compiler for the host tests, the ESP-IDF 5.4 container to build the image, a Waveshare ESP32-S3-ETH or an ESP32-S3-WROOM-1 N16R8
+**Requisitos:** un compilador de C++17 para las pruebas en el PC, el contenedor de ESP-IDF 5.4 para compilar la imagen, un Waveshare ESP32-S3-ETH o un ESP32-S3-WROOM-1 N16R8
 
 ```bash
 cmake -S tests -B build/host && cmake --build build/host
