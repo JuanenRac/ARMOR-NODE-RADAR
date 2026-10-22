@@ -8,6 +8,7 @@ All notable changes to this project are documented here.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 ## [0.7.9] - Perimeter engine, sensor identity and diagnostics
 
+- **ESP-IDF 5.5.5 is the one version:** `tools/build_node.sh` uses the 5.5.5 container, and the firmware guide, the requirements of the READMEs and the manifest name it (it said 5.4 in places).
 - **Perimeter engine on the node (off by default):** six detection zones and three exclusion zones, each a rectangle turned by an angle; three tripwire lines that count crossings by direction; three entry paths with strict entry; range, debounce, still/walking/running per target, pet immunity for presence sensors that report energy and masking detection. It runs next to the sensors, so it works when the broker cannot be reached; the events go out on `armor/radar/<node>/events` (QoS 1, a fixed list of words) and an offline ring keeps them while the broker is away.
 - **Who each sensor is:** at start, and when a sensor is plugged in, the node reads its firmware version and Bluetooth address (LD2450, LD2410B/C, LD2412, LD2410S) and shows them in the panel.
 - **The sensors' own Bluetooth is closed by default** (`sensor_security.bluetooth_off`), because it asks for no PIN; the node never changes the serial speed of a sensor and knows which LD2412 versions acknowledge commands they do not carry out.

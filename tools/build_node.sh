@@ -18,7 +18,7 @@ BOARD="${2:-s3-eth}"
 [[ "$NODE" =~ ^[a-z0-9][a-z0-9_-]{0,63}$ ]] || { echo "usage: build_node.sh NODE_ID [s3-eth|s3-wifi]   (lowercase letters, digits, - and _)" >&2; exit 2; }
 [[ "$BOARD" == "s3-eth" || "$BOARD" == "s3-wifi" ]] || { echo "the board is s3-eth or s3-wifi, not '$BOARD'" >&2; exit 2; }
 IMAGE="$NODE-$BOARD"
-IDF_IMAGE="${ARMOR_IDF_IMAGE:-espressif/idf:v5.4.2}"
+IDF_IMAGE="${ARMOR_IDF_IMAGE:-espressif/idf:v5.5.5}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONF="secrets/$NODE.conf"
 DEFAULTS="sdkconfig.defaults;sdkconfig.board.$BOARD;$CONF"
