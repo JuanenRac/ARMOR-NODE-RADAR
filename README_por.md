@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,7 +35,7 @@
 
 | | |
 |---|---|
-| Versão | `0.7.8` |
+| Versão | `0.7.9` |
 | Maturidade | Estabelecido |
 | Testes | 2,266 checks in 9 programs (`ctest`) |
 | Tecnologia | ESP-IDF C++ |
@@ -60,6 +60,9 @@
 * **Ligação cifrada opcional ao broker (TLS):** desativada por predefinição, por isso o nó fala MQTT sem cifra como antes. Um interruptor e uma caixa para o certificado da autoridade própria da instalação (PEM, no máximo 2 KB) na página Broker fazem-no ligar-se com `mqtts://`, confiar só nessa autoridade e verificar que o certificado do broker foi feito para o endereço alcançado; o que não for um único certificado PEM é recusado. Coberto por testes no computador; o handshake ainda não foi executado numa placa.
 * **Relatório de saúde:** cerca de uma vez por minuto o nó publica há quanto tempo está ligado e porque reiniciou da última vez, a memória livre, a ligação e o sinal Wi-Fi, quantas vezes se ligou ao broker e o último erro que registou (`armor/health/<nó>`, o contrato `node_health` do ARMOR-COMMON). O código que o constrói é partilhado por todos os nós e testado num computador; nunca correu numa placa.
 * **Controlo a partir do servidor:** o Studio pode reiniciar o nó de forma limpa, pô-lo em pausa até uma hora (retoma sozinho), pôr o seu trabalho em espera (sem fim, mantida nos reinícios, o nó continua ligado e a responder), fazê-lo mostrar-se, pedir um instantâneo de diagnóstico e marcá-lo em manutenção (`armor/control/<nó>/...`, o contrato `node_control` do ARMOR-COMMON). Cada ordem tem dois passos com um token de uso único que pertence a essa operação, só o servidor as pode escrever no broker, e não existe reposição de fábrica, apagamento nem sono profundo. Enquanto o nó está em pausa ou em espera, não publica alvos nem presença (o batimento continua a dizer que está lá). O código é partilhado por todos os nós e testado num computador; ainda não correu numa placa.
+* **Um motor de perímetro no nó (desligado por predefinição):** seis zonas de deteção e três de exclusão, cada uma um retângulo que pode ser rodado por um ângulo, três linhas de passagem que contam as travessias por sentido, três percursos de entrada, imunidade a animais e deteção de ocultação. Funciona junto dos sensores, por isso continua a funcionar sem acesso ao broker, guarda os seus eventos enquanto o broker está ausente e publica-os em `armor/radar/<nó>/events`; o editor de zonas está no painel do nó. Nada disto foi ainda experimentado com um sensor numa placa.
+* **Quem é cada sensor, e o seu Bluetooth próprio fechado:** ao arrancar, o nó lê a versão de firmware e o endereço Bluetooth de cada sensor, fecha por predefinição o Bluetooth próprio dos sensores (não pede PIN) e pode ceder a linha série de um sensor à ferramenta de PC de um administrador durante alguns minutos (uma ponte série transparente). `GET /metrics` para administradores e uma exportação e importação de tudo ou nada das definições completam o conjunto.
+* **Diagnóstico sem cabo:** depois de um arranque que não foi limpo (um bloqueio, um watchdog, uma quebra de alimentação, uma reserva de memória falhada), o relatório de saúde diz o motivo durante dez minutos; uma falha deixa o seu core dump para ver, descarregar ou apagar a partir do painel; as definições guardadas são copiadas antes de cada instalação de firmware e recuperadas se uma atualização as danificar; e um administrador pode pedir ao nó, através do servidor, um pacote de diagnóstico ou o seu registo com um token de utilização única.
 
 ## 🖼️ Capturas de ecrã
 

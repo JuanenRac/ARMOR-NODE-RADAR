@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,7 +35,7 @@
 
 | | |
 |---|---|
-| Version | `0.7.8` |
+| Version | `0.7.9` |
 | Reifegrad | Etabliert |
 | Tests | 2,266 checks in 9 programs (`ctest`) |
 | Technik | ESP-IDF C++ |
@@ -60,6 +60,9 @@
 * **Optionale verschlüsselte Verbindung zum Broker (TLS):** standardmäßig aus, der Knoten spricht also wie bisher unverschlüsseltes MQTT. Ein Schalter und ein Feld für das Zertifikat der eigenen Zertifizierungsstelle der Anlage (PEM, höchstens 2 KB) auf der Broker-Seite sorgen dafür, dass er sich mit `mqtts://` verbindet, nur dieser Stelle vertraut und prüft, ob das Zertifikat des Brokers für die erreichte Adresse ausgestellt wurde; alles, was nicht genau ein PEM-Zertifikat ist, wird abgelehnt. Durch Host-Tests abgedeckt; der Handshake wurde auf einer Platine noch nicht ausgeführt.
 * **Zustandsbericht:** etwa einmal pro Minute veröffentlicht der Knoten, wie lange er läuft und warum er zuletzt neu gestartet ist, seinen freien Speicher, seine Verbindung und sein WLAN-Signal, wie oft er sich mit dem Broker verbunden hat und den letzten protokollierten Fehler (`armor/health/<Knoten>`, der Vertrag `node_health` von ARMOR-COMMON). Der Code, der ihn erzeugt, wird von allen Knoten geteilt und auf einem Computer getestet; auf einer Platine ist er noch nicht gelaufen.
 * **Steuerung vom Server aus:** Studio kann den Knoten sauber neu starten, bis zu einer Stunde pausieren (er läuft von selbst weiter), seine Arbeit in den Standby setzen (ohne Ende, über Neustarts hinweg gespeichert, der Knoten bleibt verbunden und antwortet weiter), ihn sich zeigen lassen, einen Diagnose-Schnappschuss anfordern und ihn als in Wartung markieren (`armor/control/<Knoten>/...`, der Vertrag `node_control` von ARMOR-COMMON). Jeder Befehl besteht aus zwei Schritten mit einem Einmal-Token, das zu dieser Operation gehört; nur der Server darf sie am Broker schreiben, und es gibt kein Zurücksetzen auf Werkseinstellungen, kein Löschen und keinen Tiefschlaf. Solange der Knoten pausiert oder im Standby ist, veröffentlicht er weder Ziele noch Anwesenheit (der Herzschlag meldet weiter, dass er da ist). Der Code wird von allen Knoten geteilt und auf einem Rechner getestet; auf einer Platine ist er noch nicht gelaufen.
+* **Eine Perimeter-Engine auf dem Knoten (standardmäßig aus):** sechs Erkennungszonen und drei Ausschlusszonen, jeweils ein Rechteck, das um einen Winkel gedreht werden kann, drei Stolperdrahtlinien, die Überschreitungen nach Richtung zählen, drei Eintrittspfade, Haustier-Immunität und Maskierungserkennung. Sie läuft neben den Sensoren, funktioniert also auch ohne Broker-Verbindung, behält ihre Ereignisse, solange der Broker fehlt, und veröffentlicht sie auf `armor/radar/<Knoten>/events`; der Zoneneditor ist im Panel des Knotens. Nichts davon ist bisher mit einem Sensor auf einer Platine gelaufen.
+* **Wer jeder Sensor ist, und sein eigenes Bluetooth geschlossen:** Beim Start liest der Knoten Firmware-Version und Bluetooth-Adresse jedes Sensors, schließt standardmäßig das eigene Bluetooth der Sensoren (es verlangt keine PIN) und kann die serielle Leitung eines Sensors für einige Minuten an ein PC-Werkzeug eines Administrators übergeben (eine transparente serielle Brücke). `GET /metrics` für Administratoren sowie Export und Alles-oder-nichts-Import der Einstellungen runden es ab.
+* **Diagnose ohne Kabel:** Nach einem unsauberen Start (Absturz, Watchdog, Spannungseinbruch, fehlgeschlagene Speicherreservierung) nennt der Gesundheitsbericht zehn Minuten lang den Grund; ein Absturz hinterlässt sein Core-Dump, das man im Panel ansehen, herunterladen oder löschen kann; die gespeicherten Einstellungen werden vor jeder Firmware-Installation kopiert und wiederhergestellt, falls ein Update sie beschädigt; und ein Administrator kann den Knoten über den Server mit einem Einmal-Token nach einem Diagnosepaket oder seinem Protokoll fragen.
 
 ## 🖼️ Screenshots
 

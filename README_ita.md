@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,7 +35,7 @@
 
 | | |
 |---|---|
-| Versione | `0.7.8` |
+| Versione | `0.7.9` |
 | Maturità | Consolidato |
 | Test | 2,266 checks in 9 programs (`ctest`) |
 | Tecnologia | ESP-IDF C++ |
@@ -60,6 +60,9 @@
 * **Collegamento cifrato facoltativo con il broker (TLS):** disattivato per impostazione predefinita, quindi il nodo parla MQTT non cifrato come prima. Un interruttore e una casella per il certificato dell'autorità propria dell'installazione (PEM, al massimo 2 KB) nella pagina Broker lo fanno collegare con `mqtts://`, fidarsi solo di quell'autorità e verificare che il certificato del broker sia stato fatto per l'indirizzo raggiunto; ciò che non è un solo certificato PEM viene rifiutato. Coperto da test sul computer; l'handshake non è ancora stato eseguito su una scheda.
 * **Rapporto di salute:** circa una volta al minuto il nodo pubblica da quanto è acceso e perché si è riavviato l'ultima volta, la memoria libera, il collegamento e il segnale Wi-Fi, quante volte si è connesso al broker e l'ultimo errore registrato (`armor/health/<nodo>`, il contratto `node_health` di ARMOR-COMMON). Il codice che lo costruisce è condiviso da tutti i nodi e testato su un computer; non è mai girato su una scheda.
 * **Controllo dal server:** Studio può riavviare il nodo in modo pulito, metterlo in pausa fino a un'ora (riprende da solo), mettere il suo lavoro in standby (senza fine, conservato ai riavvii, il nodo resta connesso e continua a rispondere), farlo mostrare, chiedere un'istantanea diagnostica e segnarlo in manutenzione (`armor/control/<nodo>/...`, il contratto `node_control` di ARMOR-COMMON). Ogni ordine è in due passi con un token monouso legato a quell'operazione, solo il server può scriverli sul broker e non esistono ripristino di fabbrica, cancellazione né sonno profondo. Finché il nodo è in pausa o in standby non pubblica bersagli né presenza (il battito continua a dire che c'è). Il codice è condiviso da tutti i nodi e provato su un computer; non ha ancora girato su una scheda.
+* **Un motore di perimetro sul nodo (spento per impostazione predefinita):** sei zone di rilevamento e tre di esclusione, ciascuna un rettangolo ruotabile di un angolo, tre linee di attraversamento che contano i passaggi per direzione, tre percorsi d'ingresso, immunità agli animali domestici e rilevamento del mascheramento. Funziona accanto ai sensori, quindi continua senza accesso al broker, conserva i suoi eventi finché il broker è assente e li pubblica su `armor/radar/<nodo>/events`; l'editor delle zone è nel pannello del nodo. Nulla di tutto ciò è ancora stato provato con un sensore su una scheda.
+* **Chi è ciascun sensore, e il suo Bluetooth proprio chiuso:** all'avvio il nodo legge la versione del firmware e l'indirizzo Bluetooth di ogni sensore, chiude per impostazione predefinita il Bluetooth dei sensori (non richiede PIN) e può affidare la linea seriale di un sensore allo strumento PC di un amministratore per qualche minuto (un ponte seriale trasparente). `GET /metrics` per gli amministratori e un'esportazione e importazione tutto o niente delle impostazioni completano il quadro.
+* **Diagnostica senza cavo:** dopo un avvio non pulito (un blocco, un watchdog, un calo di alimentazione, un'allocazione fallita) il rapporto di salute ne indica la causa per dieci minuti; un arresto anomalo lascia il suo core dump da vedere, scaricare o cancellare dal pannello; le impostazioni salvate vengono copiate prima di ogni installazione del firmware e recuperate se un aggiornamento le danneggia; e un amministratore può chiedere al nodo, tramite il server, un pacchetto di diagnostica o il suo registro con un token monouso.
 
 ## 🖼️ Schermate
 

@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,7 +35,7 @@
 
 | | |
 |---|---|
-| Version | `0.7.8` |
+| Version | `0.7.9` |
 | Maturity | Established |
 | Tests | 2,266 checks in 9 programs (`ctest`) |
 | Stack | ESP-IDF C++ |
@@ -60,6 +60,9 @@
 * **Optional encrypted link to the broker (TLS):** off by default, so the node talks plain MQTT as before. A switch and a box for the certificate of the installation's own authority (PEM, at most 2 KB) in the Broker page make it connect with `mqtts://`, trust that authority only and check that the broker's certificate was made for the address it reached; anything that is not one PEM certificate is refused. Covered by host tests; the handshake has not been run on a board yet.
 * **Health report:** about once a minute the node publishes how long it has been up and why it last restarted, its free memory, its link and Wi-Fi signal, how many times it connected to the broker and the last error it logged (`armor/health/<node>`, the `node_health` contract of ARMOR-COMMON). The code that builds it is shared by every node and tested on a computer; it has not run on a board.
 * **Control from the server:** Studio can restart the node cleanly, pause it for up to an hour (it resumes by itself), put its work in standby (no end, kept across restarts, the node stays connected and keeps answering), make it show itself, ask for a diagnostics snapshot and mark it as in maintenance (`armor/control/<node>/...`, the `node_control` contract of ARMOR-COMMON). Every order takes two steps with a one-time token that belongs to that operation, only the server may write them on the broker, and there is no factory reset, no erase and no deep sleep. While the node is paused or in standby it publishes no targets and no presence (the heartbeat still says it is there). The code is shared by every node and tested on a computer; it has not run on a board.
+* **A perimeter engine on the node (off by default):** six detection zones and three exclusion zones, each a rectangle that can be turned by an angle, three tripwire lines that count crossings by direction, three entry paths, pet immunity and masking detection. It runs next to the sensors, so it works when the broker cannot be reached, keeps its events while the broker is away and publishes them on `armor/radar/<node>/events`; the zone editor is in the node's panel. None of it has run with a sensor on a board yet.
+* **Who each sensor is, and its own Bluetooth closed:** at start the node reads the firmware version and the Bluetooth address of each sensor, closes the sensors' own Bluetooth (it asks for no PIN) by default, and can hand the serial line of one sensor to an administrator's PC tool for a few minutes (a transparent serial bridge). `GET /metrics` for administrators and an export and all-or-nothing import of the settings complete it.
+* **Diagnostics without a cable:** after a start that was not clean (a crash, a watchdog, a sag of the supply, a failed allocation) the health report says why for ten minutes; a crash leaves its core dump to look at, download or erase from the panel; the stored settings are copied before every firmware install and recovered if an update damages them; and an administrator can ask the node, through the server, for a diagnostic package or its log with a one-time token.
 
 ## 🖼️ Screenshots
 

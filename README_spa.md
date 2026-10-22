@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.7.8-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.7.9-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -35,7 +35,7 @@
 
 | | |
 |---|---|
-| Versión | `0.7.8` |
+| Versión | `0.7.9` |
 | Madurez | Establecido |
 | Tests | 2,266 checks in 9 programs (`ctest`) |
 | Tecnología | ESP-IDF C++ |
@@ -60,6 +60,9 @@
 * **Enlace cifrado opcional con el broker (TLS):** desactivado por defecto, así que el nodo habla MQTT sin cifrar como antes. Un interruptor y una caja para el certificado de la autoridad propia de la instalación (PEM, 2 KB como máximo) en la página Broker hacen que se conecte con `mqtts://`, confíe solo en esa autoridad y compruebe que el certificado del broker se hizo para la dirección a la que llegó; lo que no sea un único certificado PEM se rechaza. Cubierto con pruebas en el ordenador; el handshake aún no se ha ejecutado en una placa.
 * **Informe de salud:** cada minuto más o menos el nodo publica cuánto lleva encendido y por qué se reinició la última vez, su memoria libre, su enlace y su señal Wi-Fi, cuántas veces se conectó al broker y el último error que anotó (`armor/health/<nodo>`, el contrato `node_health` de ARMOR-COMMON). El código que lo construye lo comparten todos los nodos y está probado en un ordenador; no se ha ejecutado en una placa.
 * **Control desde el servidor:** Studio puede reiniciar el nodo limpiamente, pausarlo hasta una hora (se reanuda solo), poner su trabajo en espera (sin fin, se conserva al reiniciar, el nodo sigue conectado y respondiendo), hacer que se muestre, pedirle una instantánea de diagnóstico y marcarlo en mantenimiento (`armor/control/<nodo>/...`, el contrato `node_control` de ARMOR-COMMON). Cada orden son dos pasos con un token de un solo uso que pertenece a esa operación, solo el servidor puede escribirlas en el broker, y no existe restablecimiento de fábrica, borrado ni sueño profundo. Mientras el nodo está en pausa o en espera no publica objetivos ni presencia (el latido sigue diciendo que está). El código es compartido por todos los nodos y se prueba en un ordenador; no ha funcionado en una placa.
+* **Un motor de perímetro en el nodo (apagado por defecto):** seis zonas de detección y tres de exclusión, cada una un rectángulo que se puede girar un ángulo, tres líneas de cruce que cuentan los pasos por sentido, tres rutas de entrada, inmunidad a mascotas y detección de enmascaramiento. Funciona junto a los sensores, así que sigue funcionando sin acceso al broker, guarda sus eventos mientras el broker no está y los publica en `armor/radar/<nodo>/events`; el editor de zonas está en el panel del nodo. Nada de esto se ha probado aún con un sensor en una placa.
+* **Quién es cada sensor y su Bluetooth propio cerrado:** al arrancar, el nodo lee la versión de firmware y la dirección Bluetooth de cada sensor, cierra por defecto el Bluetooth propio de los sensores (no pide PIN) y puede ceder la línea serie de un sensor a una herramienta de PC de un administrador durante unos minutos (un puente serie transparente). `GET /metrics` para administradores y una exportación e importación de todo o nada de los ajustes lo completan.
+* **Diagnóstico sin cable:** tras un arranque que no fue limpio (un cuelgue, un watchdog, una caída de la alimentación, una reserva de memoria fallida) el informe de salud dice el motivo durante diez minutos; un fallo deja su volcado de núcleo (core dump) para verlo, descargarlo o borrarlo desde el panel; los ajustes guardados se copian antes de cada instalación de firmware y se recuperan si una actualización los daña; y un administrador puede pedir al nodo, a través del servidor, un paquete de diagnóstico o su registro con un token de un solo uso.
 
 ## 🖼️ Capturas de pantalla
 
