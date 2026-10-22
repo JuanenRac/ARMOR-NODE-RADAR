@@ -142,3 +142,5 @@ can read two for one person.
 * The AHT20 (temperature and humidity) is not read: the message contract has no field for it.
 * The access point's throughput, the roaming of phones between nodes, and the current the PoE module gives are all unmeasured.
 * Studio links to a node's panel by the address the node publishes (a private address: it opens from the same network, not from the Internet); the panel is not proxied through the server.
+
+Where the setup code and the Bluetooth PIN come from, which image gives which kind of code and how to read it: [SETUP_CODE.md](SETUP_CODE.md).
