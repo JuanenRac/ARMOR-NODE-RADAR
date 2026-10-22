@@ -190,6 +190,9 @@ struct Settings {
   // A periodic, unconditional restart (disconnect_before_restart() then esp_restart()), independent of any fault: 0 means never. One of
   // {0, 1, 2, 3, 4, 6, 12, 24, 48} hours (auto_restart_hours_is_valid()).
   int auto_restart_hours = 0;
+  // Wrong passwords the whole node lets through in a minute, from all addresses and names together (auth::LoginThrottle). 30 is how the node has always behaved; 0 turns this limit off (the limit of
+  // each address and each person stays); at most 120.
+  int login_limit_per_minute = 30;
   // Two radars seeing one person at once, within this many millimetres of each other on the shared plane (radar_calibration.hpp), are
   // published as one target instead of two. 0: off, published exactly as each radar reported it (the setting's own default).
   int fusion_merge_mm = 0;
@@ -609,7 +612,10 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
     }
   }
   if (const json::Value* ui = document.get("ui"); ui != nullptr && ui->is_object()) read_text(*ui, "language", s.language, 4, "ui.language", problems);
-  if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) read_int(*system, "auto_restart_hours", s.auto_restart_hours, 0, 48, "system.auto_restart_hours", problems);
+  if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) {
+    read_int(*system, "auto_restart_hours", s.auto_restart_hours, 0, 48, "system.auto_restart_hours", problems);
+    read_int(*system, "login_limit_per_minute", s.login_limit_per_minute, 0, 120, "system.login_limit_per_minute", problems);
+  }
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
     if (!p->is_object()) bad(problems, "perimeter", "invalid"); else read_perimeter(*p, s.perimeter, problems);
@@ -915,7 +921,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
-  w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).end_object();
+  w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

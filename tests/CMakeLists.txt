@@ -48,6 +48,10 @@ if(Python3_FOUND)
   add_test(NAME task_safety COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_task_safety.py)
   # a saved time zone applies at once; the panel can still say that a restart is needed
   add_test(NAME save_paths COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_save_paths.py)
+  # the Bluetooth set-up keeps the session of the phone under its lock, and a request or an answer never crosses to another connection
+  add_test(NAME ble_session COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_ble_session.py)
+  # the routes every node of the family serves, the routes the panel calls, and the stand-in node the panel is tried against
+  add_test(NAME routes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_routes.py)
   # the PC side of the transparent serial bridge, against a node made up for the test
   add_test(NAME bridge_client COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_bridge_client.py)
 endif()
