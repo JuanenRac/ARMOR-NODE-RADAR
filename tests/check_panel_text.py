@@ -59,10 +59,12 @@ def main():
         elif any(not s.strip() for s in strings):
             problems.append(f"{key}: an empty text")
     codes = set()
-    for name in ("web_server.cpp", "github_update.cpp", "api_shared.cpp", "ble_provision.cpp"):
+    for name in ("web_server.cpp", "github_update.cpp", "api_shared.cpp", "ble_provision.cpp", "radar_manager.cpp", "sensor_bridge.cpp"):
         source = (ROOT / "main" / name).read_text(encoding="utf-8")
         codes |= set(re.findall(r'send_error\(r, \d+, "([a-z_0-9]+)"', source))
         codes |= set(re.findall(r'error = "([a-z_0-9]+)"', source))
+    bridge = (ROOT / "main" / "core" / "serial_bridge.hpp").read_text(encoding="utf-8")   # the refusals of the serial bridge are answered by name
+    codes |= set(re.findall(r'return "(bridge_[a-z_]+)";', bridge))
     codes.discard("http_")   # http_<status> is told by one row, e_http
     for code in sorted(codes):
         if "e_" + code not in table:

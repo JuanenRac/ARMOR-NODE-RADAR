@@ -38,6 +38,9 @@ enum Command : std::uint16_t {
   kRestart = 0x00A3,
   kBluetooth = 0x00A4,
   kReadMac = 0x00A5,
+  kReadSerialNumber = 0x0011,   // LD2410S
+  kSetBaseParameters = 0x0002,  // LD2412: nearest gate, farthest gate, how long it keeps saying "somebody" (seconds), polarity of the OUT pin
+  kReadBaseParameters = 0x0012,
   kQueryZones = 0x00C1,
   kSetZones = 0x00C2,
 };
@@ -62,6 +65,17 @@ inline std::size_t build_enable_configuration(std::uint8_t* out, std::size_t cap
   return build(kEnableConfiguration, value, 2, out, capacity);
 }
 inline std::size_t build_simple(std::uint16_t command, std::uint8_t* out, std::size_t capacity) { return build(command, nullptr, 0, out, capacity); }
+// "Get the MAC address": the value is 0x0001. The answer is the status and six bytes (the sensor's Bluetooth address, or 08:05:04:03:02:01 when its Bluetooth is off).
+inline std::size_t build_read_mac(std::uint8_t* out, std::size_t capacity) {
+  const std::uint8_t value[2] = {0x01, 0x00};
+  return build(kReadMac, value, 2, out, capacity);
+}
+// LD2412: the nearest and farthest distance gate to detect in (0.75 m each), the seconds it waits before it says nobody, and the polarity of its OUT pin (0 high when somebody).
+inline std::size_t build_ld2412_base_parameters(std::uint8_t nearest, std::uint8_t farthest, std::uint16_t unmanned_s, std::uint8_t polarity, std::uint8_t* out, std::size_t capacity) {
+  if (nearest < 1 || farthest > 13 || nearest > farthest || polarity > 1) return 0;
+  const std::uint8_t value[5] = {nearest, farthest, static_cast<std::uint8_t>(unmanned_s & 0xFF), static_cast<std::uint8_t>(unmanned_s >> 8), polarity};
+  return build(kSetBaseParameters, value, 5, out, capacity);
+}
 inline std::size_t build_bluetooth(bool on, std::uint8_t* out, std::size_t capacity) {
   const std::uint8_t value[2] = {static_cast<std::uint8_t>(on ? 0x01 : 0x00), 0x00};
   return build(kBluetooth, value, 2, out, capacity);
@@ -102,6 +116,7 @@ inline std::size_t build_set_zones(const ZoneFilter& filter, std::uint8_t* out, 
 // An acknowledgement: the command it answers, whether the module says it is done, and the answer that follows the status.
 struct Ack {
   std::uint16_t command = 0;  // the command word with the 0x0100 answer bit removed
+  std::uint16_t status = 0xFFFF;  // the two bytes after the command word, as the sensor sent them (0 = done); a few answers of the family carry data there instead
   bool ok = false;
   std::uint8_t data[kMaxValue]{};
   std::size_t data_length = 0;
@@ -135,7 +150,8 @@ class AckParser {
           const std::uint16_t word = static_cast<std::uint16_t>(body_[0] | (body_[1] << 8));
           if ((word & 0x0100) == 0) return false;  // not an answer
           ack.command = static_cast<std::uint16_t>(word & ~0x0100);
-          ack.ok = body_[2] == 0 && body_[3] == 0;
+          ack.status = static_cast<std::uint16_t>(body_[2] | (body_[3] << 8));
+          ack.ok = ack.status == 0;
           ack.data_length = static_cast<std::size_t>(length_) - 4;
           for (std::size_t i = 0; i < ack.data_length && i < kMaxValue; ++i) ack.data[i] = body_[4 + i];
           return true;
@@ -164,6 +180,17 @@ inline std::string firmware_text(const Ack& ack) {
   std::snprintf(text, sizeof text, "%u.%02X.%02X%02X%02X%02X", static_cast<unsigned>(ack.data[3]), static_cast<unsigned>(ack.data[2]), static_cast<unsigned>(ack.data[7]),
                 static_cast<unsigned>(ack.data[6]), static_cast<unsigned>(ack.data[5]), static_cast<unsigned>(ack.data[4]));
   return text;
+}
+
+// The answer to kReadBaseParameters (LD2412): the nearest and farthest gate, the seconds of the unmanned delay and the polarity of the OUT pin. False when it is not understood.
+struct BaseParameters { std::uint8_t nearest = 0, farthest = 0; std::uint16_t unmanned_s = 0; std::uint8_t polarity = 0; };
+inline bool base_parameters_from_ack(const Ack& ack, BaseParameters& out) {
+  if (ack.command != kReadBaseParameters || !ack.ok || ack.data_length < 5) return false;
+  out.nearest = ack.data[0];
+  out.farthest = ack.data[1];
+  out.unmanned_s = static_cast<std::uint16_t>(ack.data[2] | (ack.data[3] << 8));
+  out.polarity = ack.data[4];
+  return out.nearest >= 1 && out.farthest >= out.nearest && out.farthest <= 13 && out.polarity <= 1;
 }
 
 // The tracking mode in the answer to kQueryTrackingMode: 1 = one target, 2 = up to three; 0 when the answer is not understood.

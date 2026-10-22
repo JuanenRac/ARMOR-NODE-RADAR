@@ -299,14 +299,17 @@ static void test_ld2450() {
   CHECK(!radar::decode_frame(bad.data(), bad.size(), frame));
   CHECK(!radar::decode_frame(full.data(), 29, frame) && !radar::decode_frame(full.data(), 31, frame) && !radar::decode_frame(nullptr, 30, frame));
 
-  // The speed of the contract is clamped, never wrapped: 32767 cm/s cannot occur, but must not become a small number.
+  // A speed the module cannot measure (32767 cm/s) is a garbled frame, not a target: it is refused, and what the contract takes is never a wrapped number. The fastest valid speed is far inside the contract's range.
   const int fast[1][4] = {{100, 100, 32767, 320}};
   const std::vector<std::uint8_t> rocket = make_frame(fast, 1);
   CHECK(radar::decode_frame(rocket.data(), rocket.size(), frame));
-  CHECK(radar::to_tracks(1, frame, tracks) == 1 && tracks[0].speed_mm_s == 32767);
+  CHECK(frame.count() == 1 && frame.valid_count() == 0 && frame.targets[0].rejected == radar::Reject::kOutOfRange && radar::to_tracks(1, frame, tracks) == 0);
   const int back[1][4] = {{100, 100, -32767, 320}};
   const std::vector<std::uint8_t> reverse = make_frame(back, 1);
-  CHECK(radar::decode_frame(reverse.data(), reverse.size(), frame) && radar::to_tracks(1, frame, tracks) == 1 && tracks[0].speed_mm_s == -32768);
+  CHECK(radar::decode_frame(reverse.data(), reverse.size(), frame) && radar::to_tracks(1, frame, tracks) == 0);
+  const int limit[2][4] = {{100, 100, 1000, 320}, {-100, 100, -1000, 320}};
+  const std::vector<std::uint8_t> limits = make_frame(limit, 2);
+  CHECK(radar::decode_frame(limits.data(), limits.size(), frame) && radar::to_tracks(1, frame, tracks) == 2 && tracks[0].speed_mm_s == 10000 && tracks[1].speed_mm_s == -10000);
 }
 
 static void test_ld2450_stream() {

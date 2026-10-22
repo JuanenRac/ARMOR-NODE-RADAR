@@ -10,6 +10,11 @@
 // is not matched is kept for a few frames (and still reported for the first ones, so one lost frame does not make a target flicker) and then dropped.
 // A silence longer than `reset_after_ms` forgets everything, as a radar that was off knows nothing about who was where.
 // Ids run 1 to 255 and wrap, skipping 0 (the contract wants a positive id). Nothing here decides who is a person: it only keeps a name attached.
+//
+// A track also keeps its own velocity (constant velocity, in millimetres per frame, an average of the last displacements) and is looked for where that motion puts it:
+// two people who cross keep their names where the plain nearest-pair rule swaps them. This is the useful half of a constant-velocity Kalman filter (the prediction used
+// for the association) in integer arithmetic; the measurement update stays the fixed smoothing above, which cannot be poisoned by one odd measurement because every value
+// here is an integer already inside the range the decoders allow, and all the sums are 64 bit (a squared distance of two 16 bit coordinates does not fit 32 bits).
 #pragma once
 #include <array>
 #include <cstddef>
@@ -26,6 +31,7 @@ struct StabiliserConfig {
   unsigned max_missed = 5;          // frames a track survives without a detection
   unsigned coast_reported = 2;      // of those, the first frames it is still reported at its last position
   std::uint32_t reset_after_ms = 1000;
+  bool predict = true;              // a target is looked for where its own motion puts it (constant velocity), not only where it was seen last
 };
 
 class TrackStabiliser {
@@ -40,15 +46,15 @@ class TrackStabiliser {
     if (count > kTracksPerRadar) count = kTracksPerRadar;
 
     // 1. every (track, detection) pair inside the track's gate, nearest first
-    struct Pair { std::size_t track, detection; long distance2; };
+    struct Pair { std::size_t track, detection; std::int64_t distance2; };
     Pair pairs[kTracksPerRadar * kTracksPerRadar];
     std::size_t pair_count = 0;
     for (std::size_t t = 0; t < kTracksPerRadar; ++t) {
       if (!tracks_[t].used) continue;
-      const long gate = gate_of(tracks_[t]);
+      const std::int64_t gate = gate_of(tracks_[t]);
       for (std::size_t d = 0; d < count; ++d) {
-        const long dx = detections[d].x_mm - tracks_[t].x, dy = detections[d].y_mm - tracks_[t].y;
-        const long distance2 = dx * dx + dy * dy;
+        const std::int64_t dx = detections[d].x_mm - expected_x(tracks_[t]), dy = detections[d].y_mm - expected_y(tracks_[t]);
+        const std::int64_t distance2 = dx * dx + dy * dy;
         if (distance2 <= gate * gate) pairs[pair_count++] = Pair{t, d, distance2};
       }
     }
@@ -67,8 +73,12 @@ class TrackStabiliser {
       if (track_taken[p.track] || detection_taken[p.detection]) continue;
       track_taken[p.track] = detection_taken[p.detection] = true;
       Slot& slot = tracks_[p.track];
+      const std::int64_t before_x = slot.x, before_y = slot.y;
       slot.x += (detections[p.detection].x_mm - slot.x) * config_.smoothing_percent / 100;
       slot.y += (detections[p.detection].y_mm - slot.y) * config_.smoothing_percent / 100;
+      // the velocity: the average of what it was and the displacement this frame took (per frame, so a missed frame counts for its own length)
+      slot.vx = (slot.vx + (slot.x - before_x) / static_cast<std::int64_t>(slot.missed + 1)) / 2;
+      slot.vy = (slot.vy + (slot.y - before_y) / static_cast<std::int64_t>(slot.missed + 1)) / 2;
       slot.speed = detections[p.detection].speed_mm_s;
       slot.missed = 0;
       fresh[p.track] = true;
@@ -95,6 +105,7 @@ class TrackStabiliser {
       next_id_ = next_id_ == 255 ? 1 : static_cast<std::uint8_t>(next_id_ + 1);
       slot.x = detections[d].x_mm;
       slot.y = detections[d].y_mm;
+      slot.vx = slot.vy = 0;
       slot.speed = detections[d].speed_mm_s;
       fresh[chosen] = true;
       sensor_ = detections[d].sensor_id;
@@ -121,13 +132,24 @@ class TrackStabiliser {
   struct Slot {
     bool used = false;
     std::uint8_t id = 0;
-    long x = 0, y = 0;
+    std::int64_t x = 0, y = 0;
+    std::int64_t vx = 0, vy = 0;   // millimetres per frame
     std::int16_t speed = 0;
     unsigned missed = 0;
   };
-  long gate_of(const Slot& slot) const {
-    long gate = config_.gate_mm + static_cast<long>(slot.missed) * config_.gate_growth_mm;
-    return gate > 2L * config_.gate_mm ? 2L * config_.gate_mm : gate;
+  std::int64_t gate_of(const Slot& slot) const {
+    std::int64_t gate = config_.gate_mm + static_cast<std::int64_t>(slot.missed) * config_.gate_growth_mm;
+    return gate > 2 * static_cast<std::int64_t>(config_.gate_mm) ? 2 * static_cast<std::int64_t>(config_.gate_mm) : gate;
+  }
+  // Where the track is expected to be in the next frame: its last position plus its motion (never more than a third of the gate away from where it was seen, so a wrong velocity
+  // cannot lose the target, and never when prediction is off).
+  std::int64_t expected_x(const Slot& slot) const { return slot.x + shifted(slot.vx, slot.missed); }
+  std::int64_t expected_y(const Slot& slot) const { return slot.y + shifted(slot.vy, slot.missed); }
+  std::int64_t shifted(std::int64_t per_frame, unsigned missed) const {
+    if (!config_.predict) return 0;
+    const std::int64_t limit = config_.gate_mm / 3;
+    const std::int64_t value = per_frame * static_cast<std::int64_t>(missed + 1);
+    return value > limit ? limit : value < -limit ? -limit : value;
   }
 
   StabiliserConfig config_;

@@ -27,6 +27,10 @@ void publish(const std::string& topic, const std::string& payload);
 // Publishes one message retained, at QoS 1: only the planned-maintenance signal (armor/control/<node>/maintenance) is sent so; everything else stays QoS 0 and not retained.
 void publish_retained(const std::string& topic, const std::string& payload);
 
+// Hands one message to the broker with delivery guaranteed at least once (QoS 1) and says whether the client took it: false when the broker is not connected. The events of the perimeter engine go this way;
+// the caller keeps what was refused (core/offline_ring.hpp) and sends it again.
+bool publish_event(const std::string& topic, const std::string& payload);
+
 struct Status {
   bool enabled = false;
   bool connected = false;

@@ -18,6 +18,13 @@ std::string config_export_json();
 std::string problems_json(const config::Problems& problems);   // [{"path":..,"code":..}]
 
 enum class PutResult { kSaved, kInvalid, kStorage };
+// Loads a file made by config_export_json (or a bare settings document) as a whole: every setting is read and checked, against the others as well, before anything is stored. With `dry_run` it only
+// checks. See core/config_transfer.hpp.
+enum class ImportResult { kApplied, kChecked, kInvalid, kStorage };
+ImportResult import_config(std::string_view document, bool dry_run, config::Problems& problems, bool& restart_required);
+
+// The two members the radar node adds to its health report (see core/radar_report.hpp): `"sensors":[...],"radar":{...}`.
+std::string health_members_json();
 // Applies a (partial) settings document on top of the stored one: checked in full, and stored only when nothing is wrong.
 PutResult put_config(std::string_view document, config::Problems& problems, bool& restart_required);
 

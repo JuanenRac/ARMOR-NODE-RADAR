@@ -134,11 +134,24 @@ inline bool decode_report(Family family, const std::uint8_t* frame, std::size_t 
 
 // ---- MR24HPC1 --------------------------------------------------------------------------------------------------------------------
 
-enum class Mr24Kind { kNone, kOccupied, kMotion, kBodyMovement, kProximity };
+enum class Mr24Kind { kNone, kOccupied, kMotion, kBodyMovement, kProximity, kFirmware };
 struct Mr24Event {
   Mr24Kind kind = Mr24Kind::kNone;
   int value = 0;
+  char text[24] = {0};   // kFirmware: the version the module answered, as printable text
 };
+
+// The question "what firmware version are you" (manual V1.5, "Information inquiry"): 53 59 | 02 A4 | 00 01 | 0F | checksum | 54 43. Returns the length written, or 0 when the buffer is too small.
+inline std::size_t mr24_build_firmware_query(std::uint8_t* out, std::size_t capacity) {
+  constexpr std::uint8_t body[] = {0x53, 0x59, 0x02, 0xA4, 0x00, 0x01, 0x0F};
+  if (capacity < sizeof body + 3) return 0;
+  std::uint8_t sum = 0;
+  for (std::size_t i = 0; i < sizeof body; ++i) { out[i] = body[i]; sum = static_cast<std::uint8_t>(sum + body[i]); }
+  out[sizeof body] = sum;
+  out[sizeof body + 1] = 0x54;
+  out[sizeof body + 2] = 0x43;
+  return sizeof body + 3;
+}
 
 // The checksum of an MR24 frame: the low byte of the sum of every byte before it.
 inline std::uint8_t mr24_checksum(const std::uint8_t* frame, std::size_t length_without_checksum_and_tail) {
@@ -155,6 +168,17 @@ inline bool decode_mr24(const std::uint8_t* frame, std::size_t length, Mr24Event
   const std::size_t data_length = (static_cast<std::size_t>(frame[4]) << 8) | frame[5];
   if (2 + 1 + 1 + 2 + data_length + 1 + 2 != length) return false;
   if (mr24_checksum(frame, length - 3) != frame[length - 3]) return false;
+  if (frame[2] == 0x02 && frame[3] == 0xA4 && data_length >= 1 && data_length < sizeof out.text) {   // the answer to the firmware question: the data is the version
+    std::size_t n = 0;
+    for (std::size_t i = 0; i < data_length; ++i) {
+      const std::uint8_t c = frame[6 + i];
+      if (c >= 0x20 && c <= 0x7E) out.text[n++] = static_cast<char>(c);
+      else if (c != 0) { n = 0; break; }   // not text: the module answers in a form this node does not know, so nothing is shown
+    }
+    out.text[n] = 0;
+    if (n > 0) out.kind = Mr24Kind::kFirmware;
+    return true;
+  }
   if (frame[2] != 0x80 || data_length != 1) return true;
   const int value = frame[6];
   switch (frame[3]) {
@@ -174,6 +198,7 @@ struct Mr24State {
   int motion = 0;                 // 0 none, 1 motionless, 2 active
   int body_movement = 0;
   int proximity = 0;
+  std::string firmware;           // the answer to the firmware question, when it was asked and understood
   // Applies an event; true when the occupied flag changed (the moment worth publishing at once).
   bool apply(const Mr24Event& event) {
     switch (event.kind) {
@@ -181,6 +206,7 @@ struct Mr24State {
       case Mr24Kind::kMotion: motion = event.value; return false;
       case Mr24Kind::kBodyMovement: body_movement = event.value; return false;
       case Mr24Kind::kProximity: proximity = event.value; return false;
+      case Mr24Kind::kFirmware: firmware = event.text; return false;
       case Mr24Kind::kNone: break;
     }
     return false;

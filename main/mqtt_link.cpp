@@ -30,10 +30,12 @@ extern "C" {
 #include "esp_app_desc.h"
 #include "core/radar_calibration.hpp"
 #include "core/telemetry_json.hpp"
+#include "core/zone_control.hpp"
 #include "gpio_manager.hpp"
 #include "light_sensor.hpp"
 #include "network.hpp"
 #include "node_control.hpp"
+#include "perimeter_rt.hpp"
 #include "radar_manager.hpp"
 
 namespace armor::mqtt_link {
@@ -128,8 +130,11 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
       const std::string filter = gpio::command_filter(g_settings.node_id);
       if (!filter.empty()) esp_mqtt_client_subscribe(event->client, filter.c_str(), 1);
       for (const Subscription& subscription : g_subscriptions) esp_mqtt_client_subscribe(event->client, subscription.topic.c_str(), 1);
+      const std::string armed_topic = zonecontrol::armed_topic(g_settings.node_id);   // whether the perimeter is armed (only the rule that suspects a covered sensor looks at it)
+      if (!armed_topic.empty()) esp_mqtt_client_subscribe(event->client, armed_topic.c_str(), 1);
       pins::publish_all();
       radar::publish_presence_now();
+      perimeter_rt::on_broker_connected();   // the events that waited in flash go out, the zones say their state
       publish_info(event->client);
       break;
     }
@@ -149,9 +154,16 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
         taken = true;
       }
       if (taken) break;
-      const std::string name = gpio::pin_of_command_topic(g_settings.node_id, std::string_view(event->topic, static_cast<std::size_t>(event->topic_len)));
+      const std::string_view topic_text(topic), payload_text(event->data, static_cast<std::size_t>(event->data_len));
+      if (topic_text == zonecontrol::armed_topic(g_settings.node_id)) {
+        const int armed = zonecontrol::parse_armed(payload_text);
+        if (armed >= 0) perimeter_rt::set_armed(armed == 1);
+        break;
+      }
+      const std::string name = gpio::pin_of_command_topic(g_settings.node_id, topic_text);
       if (name.empty()) break;
-      const pins::Outcome outcome = pins::command(name, std::string_view(event->data, static_cast<std::size_t>(event->data_len)));
+      const pins::Outcome outcome = pins::command(name, payload_text);
+      if (outcome == pins::Outcome::kUnknownPin && perimeter_rt::zone_order(name, zonecontrol::parse(payload_text))) break;   // a zone of the perimeter engine is a device too
       if (outcome != pins::Outcome::kOk) ESP_LOGW(kTag, "command for \"%s\" ignored (%s)", name.c_str(), outcome == pins::Outcome::kUnknownPin ? "no such pin" : "not understood");
       break;
     }
@@ -211,6 +223,7 @@ void publish_telemetry() {
   const std::unique_ptr<config::Settings> current(new config::Settings(store::settings()));   // calibration and fusion may have changed in the panel since the start
   armor::calibration::apply_all(tracks, count, current->radars);
   count = armor::calibration::merge_overlap(tracks, count, current->fusion_merge_mm);
+  if (!perimeter_rt::should_send_targets(tracks, count, static_cast<std::uint64_t>(esp_timer_get_time()) / 1000ULL)) return;   // the setting "stream": every frame, on change, or only now and then
   char topic[96];
   char payload[1600];
   std::size_t length = 0;
@@ -403,6 +416,11 @@ void publish_retained(const std::string& topic, const std::string& payload) {
     g_out.push_back({topic, payload, true});
   }
   xSemaphoreGive(g_out_ready);
+}
+
+bool publish_event(const std::string& topic, const std::string& payload) {
+  if (!g_connected) return false;
+  return client_publish(topic.c_str(), payload.c_str(), static_cast<int>(payload.size()), 1) >= 0;
 }
 
 Status status() {

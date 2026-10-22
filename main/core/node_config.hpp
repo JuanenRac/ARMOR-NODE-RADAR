@@ -23,6 +23,7 @@
 #include "mqtt_tls.hpp"
 #include "net_text.hpp"
 #include "node_id.hpp"
+#include "perimeter_config.hpp"
 #include "stored_load.hpp"
 #include "sensor_model.hpp"
 
@@ -111,6 +112,11 @@ struct RadarLine {
   int zone_type = 0;               // 0 no filter, 1 report only what is inside the rectangles, 2 ignore what is inside them
   std::array<ZoneRect, kZonesPerRadar> zones{};
   int target_mode = 0;             // LD2450: 0 leave the module as it is, 1 one target, 2 up to three
+  // LD2412 only: the distance gates it detects in (0.75 m each) and how long it waits before it says nobody. gate_max 0: the node leaves the sensor's own values alone. With gates set, the node
+  // writes them a few seconds after start and, on the firmware versions that forget them, reads them back about 40 s later and writes them once more if they changed.
+  int gate_min = 1;                // 1 to 13
+  int gate_max = 0;                // 0: not managed; 1 to 13
+  int unmanned_s = 5;              // 0 to 65535
 };
 
 struct Sensors {
@@ -187,6 +193,10 @@ struct Settings {
   // Two radars seeing one person at once, within this many millimetres of each other on the shared plane (radar_calibration.hpp), are
   // published as one target instead of two. 0: off, published exactly as each radar reported it (the setting's own default).
   int fusion_merge_mm = 0;
+  // The node's own perimeter engine (zones, tripwire lines, paths, masking, the pet filter and how the targets are streamed): off until the panel turns it on. See core/perimeter_config.hpp.
+  perimeter::Config perimeter;
+  // The sensors that have a Bluetooth radio of their own (LD2450, LD2410, LD2412) ship with it on and open. On (the default): the node closes it a few seconds after start and keeps it closed.
+  bool sensor_bluetooth_off = true;
 };
 
 struct Problem {
@@ -299,6 +309,106 @@ inline void read_int(const json::Value& parent, const char* name, int& target, l
   target = static_cast<int>(value);
 }
 }  // namespace detail
+
+// The perimeter engine's settings. Every member is optional. A list in the document (zones, lines, paths) replaces the stored one, like the other lists.
+inline void read_perimeter(const json::Value& p, perimeter::Config& c, Problems& problems) {
+  using namespace detail;
+  read_bool(p, "enabled", c.enabled, "perimeter.enabled", problems);
+  read_int(p, "range_min_mm", c.range_min_mm, -500, 4000, "perimeter.range_min_mm", problems);
+  read_int(p, "range_max_mm", c.range_max_mm, 1000, 8000, "perimeter.range_max_mm", problems);
+  read_int(p, "debounce_frames", c.debounce_frames, 1, 20, "perimeter.debounce_frames", problems);
+  read_int(p, "count_window", c.count_window, 1, 20, "perimeter.count_window", problems);
+  read_bool(p, "strict_entry", c.strict_entry, "perimeter.strict_entry", problems);
+  read_bool(p, "jam_detection", c.jam_detection, "perimeter.jam_detection", problems);
+  if (!read_choice<perimeter::Stream>(p, "stream", {{"live", perimeter::Stream::kLive}, {"change", perimeter::Stream::kOnChange}, {"events", perimeter::Stream::kEventsOnly}}, c.stream)) bad(problems, "perimeter.stream", "invalid");
+  if (const json::Value* night = p.get("night"); night != nullptr) {
+    if (!night->is_object()) bad(problems, "perimeter.night", "invalid");
+    else {
+      read_bool(*night, "enabled", c.night_enabled, "perimeter.night.enabled", problems);
+      read_int(*night, "from_min", c.night_from_min, 0, 1439, "perimeter.night.from_min", problems);
+      read_int(*night, "to_min", c.night_to_min, 0, 1439, "perimeter.night.to_min", problems);
+    }
+  }
+  if (const json::Value* pet = p.get("pet"); pet != nullptr) {
+    if (!pet->is_object()) bad(problems, "perimeter.pet", "invalid");
+    else {
+      read_bool(*pet, "enabled", c.pet_immunity, "perimeter.pet.enabled", problems);
+      read_int(*pet, "distance_cm", c.pet_distance_cm, 50, 400, "perimeter.pet.distance_cm", problems);
+      read_int(*pet, "energy", c.pet_energy, 1, 100, "perimeter.pet.energy", problems);
+    }
+  }
+  if (const json::Value* masking = p.get("masking"); masking != nullptr) {
+    if (!masking->is_object()) bad(problems, "perimeter.masking", "invalid");
+    else {
+      read_int(*masking, "minutes", c.masking_minutes, 0, 1440, "perimeter.masking.minutes", problems);
+      read_bool(*masking, "armed_only", c.masking_armed_only, "perimeter.masking.armed_only", problems);
+    }
+  }
+  if (const json::Value* zones = p.get("zones"); zones != nullptr) {
+    if (!zones->is_array() || zones->items.size() > perimeter::kMaxZones) bad(problems, "perimeter.zones", "invalid");
+    else {
+      for (perimeter::Zone& z : c.zones) z = perimeter::Zone{};
+      for (std::size_t i = 0; i < zones->items.size(); ++i) {
+        const json::Value& item = zones->items[i];
+        const std::string base = "perimeter.zones." + std::to_string(i) + ".";
+        perimeter::Zone& z = c.zones[i];
+        if (!item.is_object()) { bad(problems, base + "name", "invalid"); continue; }
+        read_bool(item, "enabled", z.enabled, base + "enabled", problems);
+        read_text(item, "name", z.name, perimeter::kMaxName, base + "name", problems);
+        read_bool(item, "exclude", z.exclude, base + "exclude", problems);
+        read_int(item, "x_mm", z.x_mm, -12800, 12800, base + "x_mm", problems);
+        read_int(item, "y_mm", z.y_mm, -12800, 12800, base + "y_mm", problems);
+        read_int(item, "width_mm", z.width_mm, 0, 25600, base + "width_mm", problems);
+        read_int(item, "height_mm", z.height_mm, 0, 25600, base + "height_mm", problems);
+        read_int(item, "angle_deg", z.angle_deg, -180, 180, base + "angle_deg", problems);
+        read_int(item, "profiles", z.profiles, 1, 3, base + "profiles", problems);
+        read_bool(item, "latch", z.latch, base + "latch", problems);
+        read_int(item, "loiter_s", z.loiter_s, 0, 86400, base + "loiter_s", problems);
+        read_bool(item, "active", z.active, base + "active", problems);
+      }
+    }
+  }
+  if (const json::Value* lines = p.get("lines"); lines != nullptr) {
+    if (!lines->is_array() || lines->items.size() > perimeter::kMaxLines) bad(problems, "perimeter.lines", "invalid");
+    else {
+      for (perimeter::Line& l : c.lines) l = perimeter::Line{};
+      for (std::size_t i = 0; i < lines->items.size(); ++i) {
+        const json::Value& item = lines->items[i];
+        const std::string base = "perimeter.lines." + std::to_string(i) + ".";
+        perimeter::Line& l = c.lines[i];
+        if (!item.is_object()) { bad(problems, base + "name", "invalid"); continue; }
+        read_bool(item, "enabled", l.enabled, base + "enabled", problems);
+        read_text(item, "name", l.name, perimeter::kMaxName, base + "name", problems);
+        read_int(item, "ax_mm", l.ax_mm, -12800, 12800, base + "ax_mm", problems);
+        read_int(item, "ay_mm", l.ay_mm, -12800, 12800, base + "ay_mm", problems);
+        read_int(item, "bx_mm", l.bx_mm, -12800, 12800, base + "bx_mm", problems);
+        read_int(item, "by_mm", l.by_mm, -12800, 12800, base + "by_mm", problems);
+      }
+    }
+  }
+  if (const json::Value* paths = p.get("paths"); paths != nullptr) {
+    if (!paths->is_array() || paths->items.size() > perimeter::kMaxPaths) bad(problems, "perimeter.paths", "invalid");
+    else {
+      for (perimeter::Path& q : c.paths) q = perimeter::Path{};
+      for (std::size_t i = 0; i < paths->items.size(); ++i) {
+        const json::Value& item = paths->items[i];
+        const std::string base = "perimeter.paths." + std::to_string(i) + ".";
+        perimeter::Path& q = c.paths[i];
+        if (!item.is_object()) { bad(problems, base + "name", "invalid"); continue; }
+        read_bool(item, "enabled", q.enabled, base + "enabled", problems);
+        read_text(item, "name", q.name, perimeter::kMaxName, base + "name", problems);
+        if (const json::Value* list = item.get("zones"); list != nullptr) {
+          if (!list->is_array() || list->items.size() > perimeter::kPathLength) { bad(problems, base + "zones", "invalid"); continue; }
+          for (std::string& name : q.zones) name.clear();
+          for (std::size_t k = 0; k < list->items.size(); ++k) {
+            if (!list->items[k].is_string() || list->items[k].text.size() > perimeter::kMaxName) { bad(problems, base + "zones." + std::to_string(k), "invalid"); continue; }
+            q.zones[k] = list->items[k].text;
+          }
+        }
+      }
+    }
+  }
+}
 
 // Applies the members present in `document` on top of `settings`; whatever the document omits stays as it was. The result is checked
 // with validate(): read_settings() only reports a member of the wrong type or size.
@@ -425,6 +535,9 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       read_int(item, "yaw_deg", s.radars[i].yaw_deg, -180, 180, base + "yaw_deg", problems);
       read_int(item, "pitch_deg", s.radars[i].pitch_deg, -45, 45, base + "pitch_deg", problems);
       read_int(item, "target_mode", s.radars[i].target_mode, 0, 2, base + "target_mode", problems);
+      read_int(item, "gate_min", s.radars[i].gate_min, 1, 13, base + "gate_min", problems);
+      read_int(item, "gate_max", s.radars[i].gate_max, 0, 13, base + "gate_max", problems);
+      read_int(item, "unmanned_s", s.radars[i].unmanned_s, 0, 65535, base + "unmanned_s", problems);
       if (const json::Value* zones = item.get("zones"); zones != nullptr) {
         if (!zones->is_object()) bad(problems, base + "zones", "invalid");
         else {
@@ -498,6 +611,10 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   if (const json::Value* ui = document.get("ui"); ui != nullptr && ui->is_object()) read_text(*ui, "language", s.language, 4, "ui.language", problems);
   if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) read_int(*system, "auto_restart_hours", s.auto_restart_hours, 0, 48, "system.auto_restart_hours", problems);
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
+  if (const json::Value* p = document.get("perimeter"); p != nullptr) {
+    if (!p->is_object()) bad(problems, "perimeter", "invalid"); else read_perimeter(*p, s.perimeter, problems);
+  }
+  if (const json::Value* security = document.get("sensor_security"); security != nullptr && security->is_object()) read_bool(*security, "bluetooth_off", s.sensor_bluetooth_off, "sensor_security.bluetooth_off", problems);
 }
 
 // ---- checking ------------------------------------------------------------------------------------------------------------------
@@ -556,6 +673,50 @@ struct PinClaims {
   }
 };
 }  // namespace detail
+
+// The perimeter engine's settings against each other: the sizes, the names (unique among the zones that are on), the counts of each kind, the points of a line and the zones a path names.
+inline void validate_perimeter(const perimeter::Config& c, Problems& problems) {
+  using detail::bad;
+  if (c.range_max_mm - c.range_min_mm < 500) bad(problems, "perimeter.range_max_mm", "range");
+  std::size_t detect = 0, exclude = 0;
+  for (std::size_t i = 0; i < perimeter::kMaxZones; ++i) {
+    const perimeter::Zone& z = c.zones[i];
+    if (!z.enabled) continue;
+    const std::string base = "perimeter.zones." + std::to_string(i) + ".";
+    if (!perimeter::name_is_valid(z.name)) bad(problems, base + "name", z.name.empty() ? "required" : "invalid");
+    for (std::size_t k = 0; k < i; ++k) if (c.zones[k].enabled && c.zones[k].name == z.name) bad(problems, base + "name", "conflict");
+    if (z.width_mm < 100) bad(problems, base + "width_mm", "range");
+    if (z.height_mm < 100) bad(problems, base + "height_mm", "range");
+    if (z.exclude) ++exclude; else ++detect;
+    if (z.exclude && (z.latch || z.loiter_s != 0)) bad(problems, base + "latch", "conflict");   // an exclusion zone only hides what is inside it
+  }
+  if (detect > perimeter::kMaxDetectZones) bad(problems, "perimeter.zones", "too_many_detection");
+  if (exclude > perimeter::kMaxExcludeZones) bad(problems, "perimeter.zones", "too_many_exclusion");
+  for (std::size_t i = 0; i < perimeter::kMaxLines; ++i) {
+    const perimeter::Line& l = c.lines[i];
+    if (!l.enabled) continue;
+    const std::string base = "perimeter.lines." + std::to_string(i) + ".";
+    if (!perimeter::name_is_valid(l.name)) bad(problems, base + "name", l.name.empty() ? "required" : "invalid");
+    for (std::size_t k = 0; k < i; ++k) if (c.lines[k].enabled && c.lines[k].name == l.name) bad(problems, base + "name", "conflict");
+    const long long dx = l.bx_mm - l.ax_mm, dy = l.by_mm - l.ay_mm;
+    if (dx * dx + dy * dy < 200LL * 200LL) bad(problems, base + "bx_mm", "range");   // a line shorter than 20 cm is a point
+  }
+  for (std::size_t i = 0; i < perimeter::kMaxPaths; ++i) {
+    const perimeter::Path& q = c.paths[i];
+    if (!q.enabled) continue;
+    const std::string base = "perimeter.paths." + std::to_string(i) + ".";
+    if (!perimeter::name_is_valid(q.name)) bad(problems, base + "name", q.name.empty() ? "required" : "invalid");
+    std::size_t named = 0;
+    for (std::size_t k = 0; k < perimeter::kPathLength; ++k) {
+      if (q.zones[k].empty()) { for (std::size_t m = k; m < perimeter::kPathLength; ++m) if (!q.zones[m].empty()) bad(problems, base + "zones." + std::to_string(m), "invalid"); break; }
+      ++named;
+      bool found = false;
+      for (const perimeter::Zone& z : c.zones) if (z.enabled && !z.exclude && z.name == q.zones[k]) found = true;
+      if (!found) bad(problems, base + "zones." + std::to_string(k), "unknown_zone");
+    }
+    if (named < 2) bad(problems, base + "zones", "required");
+  }
+}
 
 inline Problems validate(const Settings& s) {
   using detail::bad;
@@ -634,6 +795,7 @@ inline Problems validate(const Settings& s) {
     else {
       static const int kSpeeds[] = {9600, 19200, 38400, 57600, 115200, 230400, 256000, 460800};
       if (radar.baud != 0 && std::find(std::begin(kSpeeds), std::end(kSpeeds), radar.baud) == std::end(kSpeeds)) bad(problems, base + "baud", "range");
+      if (radar.gate_max != 0 && (model != sensors::Model::kLd2412 || radar.gate_min > radar.gate_max)) bad(problems, base + "gate_max", model != sensors::Model::kLd2412 ? "unsupported" : "range");
       if (!sensors::info(model).tracker) {   // a presence sensor is a device: it needs a name for its topic
         if (!valid_slug(radar.name)) bad(problems, base + "name", radar.name.empty() ? "required" : "invalid");
         else if (std::find(names.begin(), names.end(), radar.name) != names.end()) bad(problems, base + "name", "conflict");
@@ -659,6 +821,11 @@ inline Problems validate(const Settings& s) {
     if (pin.mode == PinMode::kAdc && !board::pin_info(pin.gpio).adc1) bad(problems, base + "mode", "no_adc");
     if (!report_allowed(pin.mode, report_of(pin))) bad(problems, base + "report", "invalid");
   }
+  validate_perimeter(s.perimeter, problems);
+  for (std::size_t z = 0; z < perimeter::kMaxZones; ++z) {   // a zone is a device of the server: its name is not a pin's nor a presence sensor's
+    const perimeter::Zone& zone = s.perimeter.zones[z];
+    if (zone.enabled && !zone.name.empty() && std::find(names.begin(), names.end(), zone.name) != names.end()) bad(problems, "perimeter.zones." + std::to_string(z) + ".name", "conflict");
+  }
   if (std::count_if(s.pins.begin(), s.pins.end(), [](const MappedPin& p) { return p.mode == PinMode::kPwm; }) > 8) bad(problems, "pins", "too_many_pwm");
   // the chip has four PWM timers, one frequency each
   std::vector<int> frequencies;
@@ -668,6 +835,28 @@ inline Problems validate(const Settings& s) {
 }
 
 // ---- writing -------------------------------------------------------------------------------------------------------------------
+
+inline void write_perimeter(json::Writer& w, const perimeter::Config& c) {
+  w.key("perimeter").begin_object().field("enabled", c.enabled).field("range_min_mm", c.range_min_mm).field("range_max_mm", c.range_max_mm).field("debounce_frames", c.debounce_frames)
+      .field("count_window", c.count_window).field("strict_entry", c.strict_entry).field("jam_detection", c.jam_detection).field("stream", perimeter::stream_text(c.stream));
+  w.key("night").begin_object().field("enabled", c.night_enabled).field("from_min", c.night_from_min).field("to_min", c.night_to_min).end_object();
+  w.key("pet").begin_object().field("enabled", c.pet_immunity).field("distance_cm", c.pet_distance_cm).field("energy", c.pet_energy).end_object();
+  w.key("masking").begin_object().field("minutes", c.masking_minutes).field("armed_only", c.masking_armed_only).end_object();
+  w.key("zones").begin_array();
+  for (const perimeter::Zone& z : c.zones) {
+    w.begin_object().field("enabled", z.enabled).field("name", z.name).field("exclude", z.exclude).field("x_mm", z.x_mm).field("y_mm", z.y_mm).field("width_mm", z.width_mm).field("height_mm", z.height_mm)
+        .field("angle_deg", z.angle_deg).field("profiles", z.profiles).field("latch", z.latch).field("loiter_s", z.loiter_s).field("active", z.active).end_object();
+  }
+  w.end_array().key("lines").begin_array();
+  for (const perimeter::Line& l : c.lines) w.begin_object().field("enabled", l.enabled).field("name", l.name).field("ax_mm", l.ax_mm).field("ay_mm", l.ay_mm).field("bx_mm", l.bx_mm).field("by_mm", l.by_mm).end_object();
+  w.end_array().key("paths").begin_array();
+  for (const perimeter::Path& q : c.paths) {
+    w.begin_object().field("enabled", q.enabled).field("name", q.name).key("zones").begin_array();
+    for (const std::string& name : q.zones) if (!name.empty()) w.string(name);
+    w.end_array().end_object();
+  }
+  w.end_array().end_object();
+}
 
 // `secrets`: true writes the passwords (for flash storage); false replaces them with "password_set" flags (for the panel).
 inline std::string to_json(const Settings& s, bool secrets) {
@@ -706,7 +895,8 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("radars").begin_array();
   for (const RadarLine& radar : s.radars) {
     w.begin_object().field("enabled", radar.enabled).field("model", radar.model).field("baud", radar.baud).field("name", radar.name).field("rx", radar.rx).field("tx", radar.tx)
-        .field("offset_x_mm", radar.offset_x_mm).field("offset_y_mm", radar.offset_y_mm).field("yaw_deg", radar.yaw_deg).field("pitch_deg", radar.pitch_deg).field("target_mode", radar.target_mode);
+        .field("offset_x_mm", radar.offset_x_mm).field("offset_y_mm", radar.offset_y_mm).field("yaw_deg", radar.yaw_deg).field("pitch_deg", radar.pitch_deg).field("target_mode", radar.target_mode)
+        .field("gate_min", radar.gate_min).field("gate_max", radar.gate_max).field("unmanned_s", radar.unmanned_s);
     w.key("zones").begin_object().field("type", radar.zone_type).key("list").begin_array();
     for (const ZoneRect& rect : radar.zones) w.begin_object().field("x1", rect.x1).field("y1", rect.y1).field("x2", rect.x2).field("y2", rect.y2).end_object();
     w.end_array().end_object().end_object();
@@ -727,18 +917,24 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
+  write_perimeter(w, s.perimeter);
+  w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();
   w.end_object();
   return w.str();
 }
 
 // Reads a stored or received document on top of `base` and checks the result. Nothing is applied unless `problems` stays empty.
-inline bool load(std::string_view text, const Settings& base, Settings& out, Problems& problems) {
-  json::Value document;
-  if (!json::parse(text, document)) { problems.push_back({"", "not_json"}); return false; }
+inline bool load_document(const json::Value& document, const Settings& base, Settings& out, Problems& problems) {
   out = base;
   read_settings(document, out, problems);
   if (problems.empty()) problems = validate(out);
   return problems.empty();
+}
+
+inline bool load(std::string_view text, const Settings& base, Settings& out, Problems& problems) {
+  json::Value document;
+  if (!json::parse(text, document)) { problems.push_back({"", "not_json"}); return false; }
+  return load_document(document, base, out, problems);
 }
 
 // What changed in a way that needs a restart: everything but the time zone (applied at once), the node's display name and the panel language.
@@ -749,6 +945,8 @@ inline bool needs_restart(const Settings& before, const Settings& after) {
   a->node_name = b->node_name = "";
   a->language = b->language = "en";
   a->time.zone = b->time.zone = "";
+  a->perimeter = b->perimeter = perimeter::Config{};   // the perimeter engine and the rule for the sensors' Bluetooth apply at once
+  a->sensor_bluetooth_off = b->sensor_bluetooth_off = true;
   return to_json(*a, true) != to_json(*b, true);
 }
 

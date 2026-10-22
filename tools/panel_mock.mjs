@@ -45,9 +45,19 @@ const config = {
   ble: { mode: "setup" },
   time: { ntp_enabled: true, ntp: "pool.ntp.org", zone: "CET-1CEST,M3.5.0,M10.5.0/3" },
   system: { auto_restart_hours: 0 },
+  fusion: { merge_mm: 0 },
+  sensor_security: { bluetooth_off: true },
+  perimeter: {
+    enabled: false, range_min_mm: 0, range_max_mm: 8000, debounce_frames: 2, count_window: 5, strict_entry: false, jam_detection: false, stream: "live",
+    night: { enabled: false, from_min: 1320, to_min: 360 }, pet: { enabled: false, distance_cm: 200, energy: 30 }, masking: { minutes: 0, armed_only: true },
+    zones: Array.from({ length: 9 }, () => ({ enabled: false, name: "", exclude: false, x_mm: 0, y_mm: 0, width_mm: 0, height_mm: 0, angle_deg: 0, profiles: 3, latch: false, loiter_s: 0, active: true })),
+    lines: Array.from({ length: 3 }, () => ({ enabled: false, name: "", ax_mm: 0, ay_mm: 0, bx_mm: 0, by_mm: 0 })),
+    paths: Array.from({ length: 3 }, () => ({ enabled: false, name: "", zones: [] })),
+  },
   web: { mode: "both" },
   ui: { language: "en" },
 };
+const bridge = { active: false, sensor: 0, baud: 0, until: 0, by: "" };
 const live = { garden_light: { on: false, percent: 0, value: 0, has_value: false }, gate_contact: { on: true, percent: 0, value: 0, has_value: false }, battery: { on: false, percent: 0, value: 12.61, has_value: true } };
 
 const catalog = [];
@@ -76,11 +86,15 @@ function status() {
       ap_active: config.ap.enabled, ap_setup: users.size === 0, ap_bridged: config.ap.bridge, ap_ssid: users.size === 0 ? "ARMOR-SETUP-A1B2C3" : config.ap.ssid, ap_channel: 6, ap_clients: 2, sta_connected: false, sta_ssid: "", sta_rssi: 0 },
     mqtt: { enabled: config.mqtt.enabled, connected: true, clock_set: true, published: 4120 + Math.floor((Date.now() - started) / 200), withheld: "" },
     web: { mode: config.web.mode, https: config.web.mode !== "http", cert_sha256: "a3f1c07d9e2b4c58a7106f3de9b2c4815d6e7f80a1b2c3d4e5f60718293a4b5c" },
-    lux: 312.4,
+    lux: 312.4, chip_temperature_c: 47.5,
+    perimeter: { enabled: config.perimeter.enabled, masked: false, wifi_jam: false, buffered: 0, sent: 12, targets: 1 },
+    bridge: { active: bridge.active, sensor: bridge.sensor, seconds_left: Math.max(0, Math.round((bridge.until - Date.now()) / 1000)) },
     radars: config.radars.map((r, i) => ({
       radar: i + 1, enabled: r.enabled, model: r.model, tracker: r.model === "ld2450" || r.model === "ld2461", name: r.name, rx: r.rx, tx: r.tx,
       state: !r.enabled ? "disabled" : i === 1 ? "no_data" : "reporting", state_text: "", bytes: i === 1 ? 0 : 812345, frames: i === 1 ? 0 : 27020, bad_frames: 3, fps: i === 1 ? 0 : 9.9,
-      firmware: i === 0 ? "1.02.22062416" : "", tracking_mode: i === 0 ? 2 : 0, present: i === 2 ? 1 : -1, distance_cm: i === 2 ? 240 : -1,
+      firmware: i === 0 ? "1.02.22062416" : "", firmware_known: i === 0, serial: "", mac: i === 0 ? "8F:27:2E:B8:0F:65" : "", bluetooth: i === 0 ? "open" : i === 1 ? "none" : "closed", bluetooth_alert: i === 0, bluetooth_found_open: i === 0, bluetooth_attempts: i === 0 ? 2 : 0,
+      bluetooth_gave_up: i === 0, quirk: i === 2 ? "ld2412_unknown_firmware" : "", gates: i === 2 ? "applied" : "", pet_ignored: i === 2 ? 4 : 0, bridge: bridge.active && bridge.sensor === i + 1,
+      tracking_mode: i === 0 ? 2 : 0, present: i === 2 ? 1 : -1, distance_cm: i === 2 ? 240 : -1,
       ...(i === 2 ? { detail: { state: 1, moving_cm: 240, moving_energy: 62, static_cm: 0, static_energy: 0, calibrating: false, detection_cm: 240 } } : {}),
     })),
   };
@@ -156,10 +170,36 @@ const server = createServer(async (request, response) => {
     return json(response, 200, { ok: true, restart_required: false });
   }
   if (method === "GET" && route === "radars") return json(response, 200, status().radars);
+  if (method === "GET" && route === "perimeter") {
+    const p = config.perimeter;
+    return json(response, 200, { enabled: p.enabled, armed: false, masked: false, wifi_jam: false, stream: p.stream, targets: 1, raw_targets: 1, movement: { still: 0, walking: 1, running: 0 },
+      zones: p.zones.filter(z => z.enabled).map(z => ({ name: z.name, exclude: z.exclude, active: z.active, on: z.active, occupied: !z.exclude && z.name.length % 2 === 0, latched: false, occupants: 1, entries: 3, last_dwell_s: 12 })),
+      lines: p.lines.filter(l => l.enabled).map(l => ({ name: l.name, ins: 4, outs: 2 })), events: { sent: 12, replayed: 0, buffered: 0, limited: 0, dropped: 0, flash_failures: 0 },
+      learner: { active: false, progress: 100, frames: 1800, suggestions: [{ x_mm: -400, y_mm: 1800, width_mm: 500, height_mm: 400, frames: 1700 }] } });
+  }
+  if (method === "POST" && route === "perimeter/zone") { if (!needAdmin()) return; const z = config.perimeter.zones.find(x => x.enabled && x.name === body.name); if (!z) return json(response, 404, { error: "unknown_zone" }); if (body.order === "on") z.active = true; else if (body.order === "off") z.active = false; return json(response, 200, { ok: true, restart_required: false }); }
+  if (method === "POST" && (route === "perimeter/armed" || route === "perimeter/learn")) { if (!needAdmin()) return; return json(response, 200, { ok: true, restart_required: false }); }
+  if (method === "GET" && route === "bridge") { if (!needAdmin()) return; if (bridge.active && Date.now() > bridge.until) bridge.active = false; return json(response, 200, { active: bridge.active, sensor: bridge.sensor, baud: bridge.baud, seconds_left: Math.max(0, Math.round((bridge.until - Date.now()) / 1000)), by: bridge.by, to_sensor: 0, from_sensor: 0 }); }
+  if (method === "POST" && route === "bridge/open") {
+    if (!needAdmin()) return;
+    if (bridge.active && Date.now() < bridge.until) return json(response, 409, { error: "bridge_busy" });
+    Object.assign(bridge, { active: true, sensor: body.sensor, baud: body.baud || 256000, until: Date.now() + (body.minutes || 10) * 60000, by: session.user });
+    return json(response, 200, { ok: true, token: "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf", sensor: body.sensor, baud: bridge.baud, minutes: body.minutes || 10 });
+  }
+  if (method === "POST" && route === "bridge/close") { if (!needAdmin()) return; if (!bridge.active) return json(response, 409, { error: "bridge_no_session" }); bridge.active = false; return json(response, 200, { ok: true, restart_required: false }); }
+  if (method === "POST" && route === "config/import") {
+    if (!needAdmin()) return;
+    const doc = body.config ?? body;
+    if (body.format !== undefined && body.format !== "armor-radar-config") return json(response, 422, { error: "invalid", problems: [{ path: "format", code: "invalid" }] });
+    if (url.searchParams.get("dry") === "1") return json(response, 200, { ok: true, applied: false, restart_required: false });
+    Object.assign(config, doc, { node: { ...config.node, ...doc.node, id: config.node.id } });
+    return json(response, 200, { ok: true, applied: true, restart_required: true });
+  }
   if (method === "POST" && route === "radars/command") {
     if (!needAdmin()) return;
     const zones = { type: 1, list: [{ x1: -500, y1: 300, x2: 500, y2: 2500 }, { x1: 0, y1: 0, x2: 0, y2: 0 }, { x1: 0, y1: 0, x2: 0, y2: 0 }] };
     if (body.radar === 2) return json(response, 200, { ok: false, error: "no_answer", firmware: "", tracking_mode: 0, last_answer: "" });
+    if (body.op === "secure_bluetooth") return json(response, 200, { ok: true, error: "", firmware: "", mac: "", bluetooth: "closed", tracking_mode: 0, last_answer: "" });
     return json(response, 200, { ok: true, error: "", firmware: body.op === "read_info" ? "1.02.22062416" : "", tracking_mode: body.op === "single" ? 1 : 2, last_answer: "0000010040", ...(body.op === "read_info" ? { zones } : {}) });
   }
   if (method === "GET" && route === "users") { if (!needAdmin()) return; return json(response, 200, [...users].map(([name, u]) => ({ name, role: u.role }))); }

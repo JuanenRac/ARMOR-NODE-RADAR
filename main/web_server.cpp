@@ -5,6 +5,7 @@
 // JSON. Errors are short codes ({"error":"invalid"}), never sentences: the panel translates them into the eight languages.
 // The panel itself (index.html, app.js, style.css) is embedded compressed in the firmware, so an update of the firmware updates it too.
 #include "web_server.hpp"
+#include "node_diag.hpp"
 #include "node_guard.hpp"
 
 #include <arpa/inet.h>
@@ -27,6 +28,7 @@ extern "C" {
 #include "esp_partition.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "mbedtls/base64.h"
 #include "mbedtls/sha256.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -34,6 +36,9 @@ extern "C" {
 }
 #include "core/admin_sources.hpp"
 #include "core/auth.hpp"
+#include "core/config_transfer.hpp"
+#include "core/serial_bridge.hpp"
+#include "core/zone_control.hpp"
 #include "core/gpio_logic.hpp"
 #include "core/json.hpp"
 #include "core/web_policy.hpp"
@@ -43,7 +48,10 @@ extern "C" {
 #include "gpio_manager.hpp"
 #include "light_sensor.hpp"
 #include "log_buffer.hpp"
+#include "metrics_page.hpp"
 #include "mqtt_link.hpp"
+#include "perimeter_rt.hpp"
+#include "sensor_bridge.hpp"
 #include "api_shared.hpp"
 #include "clock_sync.hpp"
 #include "github_update.hpp"
@@ -579,7 +587,8 @@ void radar_map_task(void*) {
     w.begin_object().key("targets").begin_array();
     for (std::size_t i = 0; i < count; ++i) {
       w.begin_object().field("sensor_id", static_cast<int>(tracks[i].sensor_id)).field("track_id", static_cast<int>(tracks[i].track_id))
-          .field("x_mm", static_cast<int>(tracks[i].x_mm)).field("y_mm", static_cast<int>(tracks[i].y_mm)).field("speed_mm_s", static_cast<int>(tracks[i].speed_mm_s)).end_object();
+          .field("x_mm", static_cast<int>(tracks[i].x_mm)).field("y_mm", static_cast<int>(tracks[i].y_mm)).field("speed_mm_s", static_cast<int>(tracks[i].speed_mm_s))
+          .field("movement", perimeter_rt::movement_of(tracks[i].sensor_id, tracks[i].track_id)).end_object();
     }
     w.end_array().end_object();
     std::lock_guard<std::mutex> guard(g_map_lock);
@@ -625,12 +634,14 @@ esp_err_t post_radar_command(httpd_req_t* r) {
   else if (name == "restart") op = radar::Op::kRestart;
   else if (name == "factory") op = radar::Op::kFactoryReset;
   else if (name == "bluetooth") op = radar::Op::kBluetooth;
+  else if (name == "secure_bluetooth") op = radar::Op::kSecureBluetooth;
   else if (name == "set_zones") { op = radar::Op::kSetZones; has_zones = read_zones(in, zones); if (!has_zones) return send_error(r, 422, "invalid_zones"); }
   else return send_error(r, 422, "invalid_op");
   ESP_LOGI(kTag, "radar %lld: \"%s\" by \"%s\"", number, name.c_str(), who.user.c_str());
   const radar::CommandResult result = radar::run(static_cast<std::size_t>(number - 1), op, in.bool_or("flag", false), has_zones ? &zones : nullptr);
   json::Writer w;
-  w.begin_object().field("ok", result.ok).field("error", result.error).field("firmware", result.firmware).field("tracking_mode", result.tracking_mode).field("last_answer", result.last_answer_hex);
+  w.begin_object().field("ok", result.ok).field("error", result.error).field("firmware", result.firmware).field("firmware_known", result.firmware_known).field("mac", result.mac).field("bluetooth", result.bluetooth)
+      .field("serial", result.serial).field("tracking_mode", result.tracking_mode).field("last_answer", result.last_answer_hex);
   if (result.has_zones) {
     w.key("zones").begin_object().field("type", static_cast<int>(result.zones.type)).key("list").begin_array();
     for (const ld2450cmd::Zone& zone : result.zones.zones) w.begin_object().field("x1", static_cast<int>(zone.x1)).field("y1", static_cast<int>(zone.y1)).field("x2", static_cast<int>(zone.x2)).field("y2", static_cast<int>(zone.y2)).end_object();
@@ -802,6 +813,28 @@ esp_err_t post_factory_reset(httpd_req_t* r) {
   return send_ok(r, true);
 }
 
+// The core dump of the last crash. ONLY an administrator who is logged in to this panel may read it, see it described or erase it: it holds the memory the node had when it crashed, which can
+// include a secret. Nothing here is reachable without the session, and the dump is never written to the log.
+esp_err_t get_coredump_info(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, false)) return ESP_OK;
+  return send_json(r, 200, node_diag::core_info_json());
+}
+
+esp_err_t get_coredump(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, false)) return ESP_OK;
+  ESP_LOGW(kTag, "the core dump is being downloaded by \"%s\"", who.user.c_str());
+  return node_diag::send_core_dump(r);
+}
+
+esp_err_t post_coredump_erase(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  if (!node_diag::erase_core_dump()) return send_error(r, 404, "no_coredump");
+  return send_ok(r);
+}
+
 esp_err_t get_log(httpd_req_t* r) {
   Who who;
   if (!require(r, who, false, false)) return ESP_OK;
@@ -826,6 +859,7 @@ esp_err_t post_ota(httpd_req_t* r) {
   const node_control::UploadGuard upload_guard;   // the node does not restart, pause or go to standby in the middle of an upload
   const std::size_t total = r->content_len;
   if (total < 100 * 1024 || total > kMaxFirmware) return send_error(r, 413, "bad_size");
+  store::snapshot_settings(esp_app_get_description()->version);   // a copy of the settings, for the start to use if the new firmware cannot read them
   // One writer of the slot at a time: an installation from GitHub, a copy of the slot or another upload would write the same flash.
   if (!github_update::begin_manual_write()) return send_error(r, 409, "ota_busy");
   struct Release { ~Release() { github_update::end_manual_write(); } } release;
@@ -953,6 +987,181 @@ esp_err_t get_ota_progress(httpd_req_t* r) {
   return send_json(r, 200, w.str());
 }
 
+// ---- the perimeter engine ------------------------------------------------------------------------------------------------------------------
+
+esp_err_t get_perimeter(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, false, false)) return ESP_OK;
+  return send_json(r, 200, perimeter_rt::state_json());
+}
+
+// Switches a zone on or off (an exclusion zone for a window that is open, a detection zone for a gate) or lets go of a zone that holds a target until it is seen leaving.
+esp_err_t post_perimeter_zone(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  json::Value in;
+  if (!read_json(r, in)) return ESP_OK;
+  const zonecontrol::Order order = zonecontrol::parse(in.string_or("order", ""));
+  if (order == zonecontrol::Order::kNone) return send_error(r, 422, "invalid_command");
+  if (!perimeter_rt::zone_order(in.string_or("name", ""), order)) return send_error(r, 404, "unknown_zone");
+  ESP_LOGI(kTag, "zone \"%s\": order \"%s\" by \"%s\"", in.string_or("name", "").c_str(), in.string_or("order", "").c_str(), who.user.c_str());
+  return send_ok(r);
+}
+
+esp_err_t post_perimeter_armed(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  json::Value in;
+  if (!read_json(r, in)) return ESP_OK;
+  const json::Value* armed = in.get("armed");
+  if (armed == nullptr || !armed->is_bool()) return send_error(r, 422, "invalid_command");
+  perimeter_rt::set_armed(armed->boolean);
+  return send_ok(r);
+}
+
+// A run that learns where the static reflectors are (the area must be empty) and then suggests exclusion zones for them.
+esp_err_t post_perimeter_learn(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  json::Value in;
+  if (!read_json(r, in)) return ESP_OK;
+  const std::string action = in.string_or("action", "");
+  if (action == "start") perimeter_rt::learn_start(static_cast<unsigned>(in.integer_or("seconds", 180, 30, 1800)));
+  else if (action == "stop") perimeter_rt::learn_stop();
+  else return send_error(r, 422, "invalid_op");
+  ESP_LOGI(kTag, "reflector learning \"%s\" by \"%s\"", action.c_str(), who.user.c_str());
+  return send_ok(r);
+}
+
+// ---- the transparent serial bridge ---------------------------------------------------------------------------------------------------------
+
+long long query_number(httpd_req_t* r, const char* key, long long fallback, long long lowest, long long highest) {
+  char query[96];
+  if (httpd_req_get_url_query_str(r, query, sizeof query) != ESP_OK) return fallback;
+  char value[16];
+  if (httpd_query_key_value(query, key, value, sizeof value) != ESP_OK) return fallback;
+  char* end = nullptr;
+  const long long number = std::strtoll(value, &end, 10);
+  return end == value || *end != '\0' || number < lowest || number > highest ? fallback : number;
+}
+
+int bridge_status_code(const std::string& error) {
+  if (error == "bridge_bad_token") return 403;
+  if (error == "bridge_too_big") return 413;
+  if (error == "bridge_too_fast") return 429;
+  if (error == "bridge_busy" || error == "bridge_no_session" || error == "bridge_expired" || error == "bridge_unavailable") return 409;
+  return 422;
+}
+
+esp_err_t get_bridge(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, false)) return ESP_OK;
+  const sensor_bridge::Status s = sensor_bridge::status();
+  json::Writer w;
+  w.begin_object().field("active", s.active).field("sensor", s.sensor).field("baud", static_cast<long long>(s.baud)).field("seconds_left", static_cast<long long>(s.seconds_left)).field("by", s.by)
+      .field("to_sensor", static_cast<long long>(s.to_sensor)).field("from_sensor", static_cast<long long>(s.from_sensor)).end_object();
+  return send_json(r, 200, w.str());
+}
+
+esp_err_t post_bridge_open(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  json::Value in;
+  if (!read_json(r, in)) return ESP_OK;
+  const sensor_bridge::Opened opened = sensor_bridge::open(static_cast<std::size_t>(in.integer_or("sensor", 0, 0, 3)), static_cast<std::uint32_t>(in.integer_or("baud", 0, 0, 921600)),
+                                                           static_cast<unsigned>(in.integer_or("minutes", 0, 0, 1000)), who.user);
+  if (!opened.ok) return send_error(r, bridge_status_code(opened.error), opened.error.c_str());
+  json::Writer w;
+  w.begin_object().field("ok", true).field("token", opened.token).field("sensor", opened.sensor).field("baud", static_cast<long long>(opened.baud)).field("minutes", static_cast<long long>(opened.minutes)).end_object();
+  return send_json(r, 200, w.str());
+}
+
+esp_err_t post_bridge_close(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  if (!sensor_bridge::close(who.user)) return send_error(r, 409, "bridge_no_session");
+  return send_ok(r);
+}
+
+// One exchange: the body is what the tool writes to the sensor (up to 512 bytes), the answer is what the sensor sent (up to `read` bytes, waiting up to `wait` ms for the first one).
+esp_err_t post_bridge_io(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  std::string body;
+  if (!read_body(r, body, bridge::kMaxWrite)) return send_error(r, 413, "bridge_too_big");
+  const std::size_t want = static_cast<std::size_t>(query_number(r, "read", 0, 0, static_cast<long long>(bridge::kMaxRead) + 1));
+  const unsigned wait = static_cast<unsigned>(query_number(r, "wait", 20, 0, 500));
+  const sensor_bridge::Exchanged x = sensor_bridge::io(header(r, "X-Bridge-Token"), reinterpret_cast<const std::uint8_t*>(body.data()), body.size(), want, wait);
+  if (!x.ok) return send_error(r, bridge_status_code(x.error), x.error.c_str());
+  security_headers(r);
+  httpd_resp_set_status(r, status_line(200));
+  httpd_resp_set_type(r, "application/octet-stream");
+  return httpd_resp_send(r, x.bytes.data(), static_cast<ssize_t>(x.bytes.size()));
+}
+
+// ---- the whole configuration as a file --------------------------------------------------------------------------------------------------------
+
+esp_err_t post_config_import(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  std::string body;
+  if (!read_body(r, body, config::kMaxImportBytes)) return send_error(r, 413, "too_large");
+  const bool dry_run = query_number(r, "dry", 0, 0, 1) == 1;
+  config::Problems problems;
+  bool restart_required = false;
+  const api::ImportResult result = api::import_config(body, dry_run, problems, restart_required);
+  if (result == api::ImportResult::kInvalid) {
+    json::Writer w;
+    w.begin_object().field("error", "invalid").key("problems").raw(api::problems_json(problems)).end_object();
+    return send_json(r, 422, w.str());
+  }
+  if (result == api::ImportResult::kStorage) return send_error(r, 500, "storage");
+  ESP_LOGW(kTag, "configuration file %s by \"%s\"", dry_run ? "checked" : "loaded", who.user.c_str());
+  json::Writer w;
+  w.begin_object().field("ok", true).field("applied", !dry_run).field("restart_required", restart_required).end_object();
+  return send_json(r, 200, w.str());
+}
+
+// ---- the metrics --------------------------------------------------------------------------------------------------------------------------------
+
+// A Prometheus scraper has no session cookie: it may present an administrator's name and password with HTTP Basic (over HTTPS), counted by the same limits as a login.
+bool basic_administrator(httpd_req_t* r) {
+  const std::string value = header(r, "Authorization");
+  if (value.compare(0, 6, "Basic ") != 0 || value.size() > 6 + 200) return false;
+  unsigned char decoded[160];
+  std::size_t length = 0;
+  const std::string encoded = value.substr(6);
+  if (mbedtls_base64_decode(decoded, sizeof decoded - 1, &length, reinterpret_cast<const unsigned char*>(encoded.data()), encoded.size()) != 0) return false;
+  const std::string pair(reinterpret_cast<const char*>(decoded), length);
+  const std::size_t colon = pair.find(':');
+  if (colon == std::string::npos) return false;
+  const std::uint32_t source = source_of(r);
+  {
+    std::lock_guard<std::mutex> guard(g_lock);
+    if (!g_throttle.allowed(source, now_ms()) || !g_throttle.minute_allowed(now_ms())) return false;
+  }
+  auth::Role role = auth::Role::kViewer;
+  const bool ok = store::user_verify(pair.substr(0, colon), pair.substr(colon + 1), role) && role == auth::Role::kAdmin;
+  std::lock_guard<std::mutex> guard(g_lock);
+  if (ok) g_throttle.success(source); else { g_throttle.failure(source, now_ms()); g_throttle.minute_failure(now_ms()); }
+  return ok;
+}
+
+esp_err_t get_metrics(httpd_req_t* r) {
+  if (store::users_empty()) return send_error(r, 403, "setup_required");
+  if (!adminsrc::allowed(source_of(r), store::settings().admin_sources)) return send_error(r, 403, "outside_network");
+  const Who who = authenticate(r);
+  if (!(who.ok && who.role == auth::Role::kAdmin) && !basic_administrator(r)) {
+    httpd_resp_set_hdr(r, "WWW-Authenticate", "Basic realm=\"armor\"");
+    return send_error(r, 401, "unauthorized");
+  }
+  const std::string text = metrics_page::text();
+  security_headers(r);
+  httpd_resp_set_status(r, status_line(200));
+  httpd_resp_set_type(r, "text/plain; version=0.0.4; charset=utf-8");
+  return httpd_resp_send(r, text.c_str(), static_cast<ssize_t>(text.size()));
+}
+
 // ---- dispatch -----------------------------------------------------------------------------------------------------------------------
 
 esp_err_t api_handler(httpd_req_t* r) {
@@ -975,9 +1184,13 @@ esp_err_t api_handler(httpd_req_t* r) {
     if (route == "config/export") return get_config_export(r);
     if (route == "pins") return get_pins(r);
     if (route == "radars") return get_radars(r);
+    if (route == "perimeter") return get_perimeter(r);
+    if (route == "bridge") return get_bridge(r);
     if (route == "users") return get_users(r);
     if (route == "ble-pin") return get_ble_pin(r);
     if (route == "log") return get_log(r);
+    if (route == "coredump") return get_coredump(r);
+    if (route == "coredump/info") return get_coredump_info(r);
     if (route == "ota/check") return get_ota_check(r);
   } else if (method == HTTP_POST) {
     if (route == "setup") return post_setup(r);
@@ -985,10 +1198,18 @@ esp_err_t api_handler(httpd_req_t* r) {
     if (route == "logout") return post_logout(r);
     if (route == "pins/command") return post_pin_command(r);
     if (route == "radars/command") return post_radar_command(r);
+    if (route == "perimeter/zone") return post_perimeter_zone(r);
+    if (route == "perimeter/armed") return post_perimeter_armed(r);
+    if (route == "perimeter/learn") return post_perimeter_learn(r);
+    if (route == "bridge/open") return post_bridge_open(r);
+    if (route == "bridge/close") return post_bridge_close(r);
+    if (route == "bridge/io") return post_bridge_io(r);
+    if (route == "config/import") return post_config_import(r);
     if (route == "users") return post_user(r);
     if (route == "reboot") return post_reboot(r);
     if (route == "factory-reset") return post_factory_reset(r);
     if (route == "ota") return post_ota(r);
+    if (route == "coredump/erase") return post_coredump_erase(r);
     if (route == "ota/switch") return post_ota_switch(r);
     if (route == "ota/copy") return post_ota_copy(r);
     if (route == "ota/install") return post_ota_install(r);
@@ -1040,6 +1261,11 @@ void register_handlers(httpd_handle_t server, bool redirect_only) {
     api.handler = api_handler;
     httpd_register_uri_handler(server, &api);
   }
+  httpd_uri_t metrics{};
+  metrics.uri = "/metrics";
+  metrics.method = HTTP_GET;
+  metrics.handler = get_metrics;
+  httpd_register_uri_handler(server, &metrics);
   for (const char* path : {"/", "/app.js", "/style.css"}) {
     httpd_uri_t page{};
     page.uri = path;

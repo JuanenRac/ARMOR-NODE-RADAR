@@ -162,12 +162,22 @@ async function exportConfig() {
 // any other edit. The node keeps its own identity - node.id is never overwritten by an import.
 function importConfig(file) {
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     let parsed;
     try { parsed = JSON.parse(String(reader.result)); } catch (error) { S.message = { kind: "err", text: t("importBadFile") }; render(); return; }
-    const keepId = S.cfg.node ? S.cfg.node.id : undefined;
-    S.cfg = Object.assign({}, S.cfg, parsed, { node: Object.assign({}, S.cfg.node, parsed.node, { id: keepId }) });
-    S.zones = {}; S.problems = {}; S.message = { kind: "warn", text: t("importLoaded") };
+    // The node reads the whole file and checks every setting, against the others as well, before it changes anything; then it is asked again to apply it. The node keeps its own id.
+    S.message = { kind: "warn", text: t("importChecking") }; render();
+    const check = await api("POST", "config/import?dry=1", parsed);
+    if (!check.ok) {
+      const list = (check.data.problems || []).slice(0, 8).map(p => (p.path || "—") + ": " + problemText(p.code)).join("; ");
+      S.message = { kind: "bad", text: t("importRefused") + " " + (list || errorText(check.data.error)) }; render(); return;
+    }
+    if (!confirm(t("importValid"))) { S.message = null; render(); return; }
+    const applied = await api("POST", "config/import", parsed);
+    if (!applied.ok) { S.message = { kind: "bad", text: errorText(applied.data.error) }; render(); return; }
+    await loadConfig();
+    S.zones = {}; S.problems = {}; S.restartNeeded = S.restartNeeded || !!applied.data.restart_required;
+    S.message = { kind: "ok", text: t("importApplied") };
     render();
   };
   reader.onerror = () => { S.message = { kind: "err", text: t("importBadFile") }; render(); };
@@ -225,6 +235,8 @@ const PAGES = [
   { id: "broker", icon: "⌁", label: "navBroker", group: "navNetwork" },
   { id: "radars", icon: "◉", label: "navRadars", group: "navSensors" },
   { id: "map", icon: "⊡", label: "navMap", group: "navSensors" },
+  { id: "perimeter", icon: "▣", label: "navPerimeter", group: "navSensors" },
+  { id: "tools", icon: "⚒", label: "navTools", group: "navSensors" },
   { id: "pins", icon: "▦", label: "navPins", group: "navSensors" },
   { id: "users", icon: "☺", label: "navUsers", group: "navSystem" },
   { id: "update", icon: "⟳", label: "navUpdate", group: "navSystem" },
@@ -271,7 +283,7 @@ function formatUptime(seconds) {
 const reasonText = code => (L["reason" + code.charAt(0).toUpperCase() + code.slice(1)] ? t("reason" + code.charAt(0).toUpperCase() + code.slice(1)) : t("reasonOther"));
 
 function radarStateText(state) { return t("state_" + state); }
-function statePill(state) { return el("span", { class: "pill " + (state === "reporting" ? "ok" : state === "disabled" ? "" : state === "silent" || state === "garbled" ? "warn" : "bad") }, radarStateText(state).split(":")[0]); }
+function statePill(state) { return el("span", { class: "pill " + (state === "reporting" ? "ok" : state === "disabled" ? "" : state === "silent" || state === "garbled" || state === "bridge" ? "warn" : "bad") }, radarStateText(state).split(":")[0]); }
 
 function overviewPage() {
   const s = S.status;
@@ -281,7 +293,7 @@ function overviewPage() {
   return el("div", { class: "grid" },
     card(t("ovNode"), kvf([[t("nodeId"), s.node_id], [t("nodeName"), s.name], [t("firmware"), s.version + " (" + s.partition + ")"], [t("uptime"), formatUptime(s.uptime_s)],
       [t("resetReason"), reasonText(s.reset_reason)], [t("memory"), Math.round(s.heap_free / 1024) + " kB" + (s.psram_free ? " + " + Math.round(s.psram_free / 1048576 * 10) / 10 + " MB PSRAM" : "")],
-      [t("light"), s.lux === null ? t("unknown") : s.lux + " lx"]])),
+      [t("light"), s.lux === null ? t("unknown") : s.lux + " lx"], typeof s.chip_temperature_c === "number" ? [t("chipTemp"), s.chip_temperature_c.toFixed(1) + " °C"] : null])),
     s.hardware ? card(t("ovHardware"), kvf([[t("chip"), s.hardware.chip.toUpperCase() + " rev " + s.hardware.chip_revision + " · " + s.hardware.cores + " " + t("cores")],
       [t("flash"), s.hardware.flash_mb + " MB"], [t("psram"), s.hardware.psram_mb ? s.hardware.psram_mb + " MB" : t("none")],
       [t("appIdf"), s.hardware.app_idf], [t("bootloaderIdf"), s.hardware.bootloader_idf]])) : null,
@@ -297,7 +309,13 @@ function overviewPage() {
     card(t("ovBroker"), kvf([[t("navBroker"), !m.enabled ? t("notConfigured") : m.connected ? t("connected") : t("notConnected")], [t("clock"), m.clock_set ? t("clockSet") : t("clockNotSet")], [t("messages"), m.published]]),
       m.withheld === "light" ? note(t("withheldLight")) : m.withheld === "radars" ? note(t("withheldRadars")) : null),
     card(t("radarsTitle"), el("div", { class: "row" }, s.radars.map(r => el("div", {}, el("h3", {}, t("sensorN", r.radar), r.enabled && r.model ? " · " + modelOf(r.model).label : "", r.enabled && r.name ? " · " + r.name : ""), statePill(r.enabled ? r.state : "disabled"),
-      r.enabled ? el("p", { class: "muted" }, presenceText(r) ? presenceText(r) + " · " : "", t("framesRate", r.fps), " · ", t("counters", r.bytes, r.frames, r.bad_frames)) : null)))));
+      r.enabled ? el("p", { class: "muted" }, presenceText(r) ? presenceText(r) + " · " : "", t("framesRate", r.fps), " · ", t("counters", r.bytes, r.frames, r.bad_frames)) : null,
+      r.enabled ? el("p", { class: "muted mono" }, (r.firmware_known ? r.firmware : t("fwUnknown").split(" (")[0]) + (r.bluetooth && r.bluetooth !== "none" ? " · Bluetooth " : ""), r.bluetooth && r.bluetooth !== "none" ? btPill(r.bluetooth) : null) : null)))),
+    s.perimeter ? card(t("ovPerimeter"), kvf([[t("ovPerimeter"), s.perimeter.enabled ? t("yes") : t("perimOff")],
+      s.perimeter.enabled ? [t("ovTargets"), String(s.perimeter.targets)] : null,
+      s.perimeter.buffered ? [t("ovBuffered"), String(s.perimeter.buffered)] : null,
+      s.bridge && s.bridge.active ? [t("ovBridge"), t("sensorN", s.bridge.sensor) + " · " + s.bridge.seconds_left + " s"] : null]),
+      s.perimeter.masked ? note(t("perimMasked"), "bad") : null, s.perimeter.wifi_jam ? note(t("perimJamNow"), "bad") : null) : null);
 }
 
 // The board the image is for: the s3-eth board has an Ethernet port, the s3-wifi board has none (its way in is always Wi-Fi).
@@ -517,6 +535,7 @@ async function radarCommand(index, op, extra) {
   const r = await api("POST", "radars/command", Object.assign({ radar: index + 1, op }, extra || {}));
   const d = r.data;
   S.radarInfo[index] = { ok: !!d.ok, error: d.error || (r.ok ? "" : d.error), firmware: d.firmware, mode: d.tracking_mode, last: d.last_answer, done: !!d.ok };
+  if (op === "secure_bluetooth" && !d.ok && d.error === "still_open") S.radarInfo[index].error = "still_open";
   if (d.zones) S.zones[index] = { type: d.zones.type, list: d.zones.list };
   if (d.ok) {
     // what the sensor was just told is also kept in the node's settings (and so in the exported file), and told to the sensor again at every start
@@ -541,12 +560,12 @@ async function persistRadar(index, patch) {
 
 // What each model can be told (the node answers "unsupported" to the rest) and how its serial port starts.
 const SENSOR_MODELS = [
-  { id: "ld2450", label: "HLK-LD2450", tracker: true, fov: 60, range_mm: 6000, baud: 256000, cmds: ["read_info", "single", "multi", "bluetooth", "restart", "factory", "zones"] },
+  { id: "ld2450", label: "HLK-LD2450", tracker: true, fov: 60, range_mm: 6000, baud: 256000, cmds: ["read_info", "single", "multi", "bluetooth", "secure_bluetooth", "restart", "factory", "zones"] },
   { id: "ld2461", label: "HLK-LD2461", tracker: true, fov: 45, range_mm: 8000, baud: 9600, cmds: ["read_info", "factory", "zones"] },
-  { id: "ld2410", label: "HLK-LD2410B / LD2410C", tracker: false, baud: 256000, cmds: ["read_info", "bluetooth", "restart", "factory"] },
-  { id: "ld2412", label: "HLK-LD2412", tracker: false, baud: 115200, cmds: ["read_info", "bluetooth", "restart", "factory"] },
-  { id: "ld2410s", label: "HLK-LD2410S", tracker: false, baud: 115200, cmds: [] },
-  { id: "mr24hpc1", label: "Seeed MR24HPC1", tracker: false, baud: 9600, cmds: [] },
+  { id: "ld2410", label: "HLK-LD2410B / LD2410C", tracker: false, baud: 256000, cmds: ["read_info", "bluetooth", "secure_bluetooth", "restart", "factory"] },
+  { id: "ld2412", label: "HLK-LD2412", tracker: false, baud: 115200, cmds: ["read_info", "bluetooth", "secure_bluetooth", "restart", "factory"] },
+  { id: "ld2410s", label: "HLK-LD2410S", tracker: false, baud: 115200, cmds: ["read_info"] },
+  { id: "mr24hpc1", label: "Seeed MR24HPC1", tracker: false, baud: 9600, cmds: ["read_info"] },
 ];
 const SENSOR_BAUDS = [9600, 19200, 38400, 57600, 115200, 230400, 256000, 460800];
 const modelOf = id => SENSOR_MODELS.find(m => m.id === id) || SENSOR_MODELS[0];
@@ -600,20 +619,25 @@ function radarCard(index) {
           field("offsetY", base + "offset_y_mm", { type: "number", min: -5000, max: 5000 }),
           field("yawDeg", base + "yaw_deg", { type: "number", min: -180, max: 180 }),
           field("pitchDeg", base + "pitch_deg", { type: "number", min: -45, max: 45 })),
-        note(t("calibrationNote"), "info")] : null] : null,
-    status.enabled ? el("div", { class: "actions" }, statePill(status.state), el("span", { class: "muted", id: "radar-live-" + index }, liveText(status))) : null,
+        note(t("calibrationNote"), "info")] : null,
+      model.id === "ld2412" ? [el("h3", {}, t("gatesTitle")),
+        el("div", { class: "row" }, field("gateMin", base + "gate_min", { type: "number", min: 1, max: 13 }), field("gateMax", base + "gate_max", { type: "number", min: 0, max: 13 }), field("unmannedS", base + "unmanned_s", { type: "number", min: 0, max: 65535 })),
+        el("p", { class: "hint" }, t("gatesHint"))] : null] : null,
+    status.enabled ? el("div", { class: "actions" }, statePill(status.state), el("span", { class: "muted", id: "radar-live-" + index }, liveText(status)), status.bridge ? el("span", { class: "pill warn" }, t("bridgeInUse")) : null) : null,
     status.enabled ? [
       el("p", { class: "muted", id: "radar-detail-" + index }, detailText(status)),
       status.model === "ld2461" && status.state === "reporting" && status.detail && status.detail.coordinates === false ? note(t("zonesOnly")) : null,
-      status.firmware || info.firmware ? el("p", { class: "muted mono" }, t("firmwareOfModule") + ": " + (info.firmware || status.firmware)) : null,
+      identityBlock(index, status, model, canCommand),
       formatNumber && can("read_info") ? el("p", { class: "muted" }, t(model.id === "ld2461" ? "reportFormat" : "trackingMode") + ": " + t((model.id === "ld2461" ? "fmt" : "mode") + formatNumber)) : null,
       model.cmds.length === 0 ? el("p", { class: "hint" }, t("noCommands")) : null,
+      can("bluetooth") ? el("p", { class: "hint" }, t("btOnHint")) : null,
       model.cmds.length ? el("div", { class: "actions" },
         button("primary", "read_info", "readInfo", () => radarCommand(index, "read_info")),
         button("", "single", "singleTarget", () => radarCommand(index, "single")),
         button("", "multi", "multiTarget", () => radarCommand(index, "multi")),
         button("", "bluetooth", "bluetoothOff", () => radarCommand(index, "bluetooth", { flag: false })),
         button("", "bluetooth", "bluetoothOn", () => radarCommand(index, "bluetooth", { flag: true })),
+        button("primary", "secure_bluetooth", "btSecureNow", () => { if (confirm(t("btSecureAsk"))) radarCommand(index, "secure_bluetooth"); }),
         button("danger", "restart", "restartModule", () => ask(() => radarCommand(index, "restart"))),
         button("danger", "factory", "factoryModule", () => ask(() => radarCommand(index, "factory")))) : null,
       can("zones") ? [
@@ -629,7 +653,249 @@ function radarCard(index) {
 function radarsPage() {
   return el("div", {}, note(t("radarWarn")),
     card(t("fusionTitle"), field("mergeMm", "fusion.merge_mm", { type: "number", min: 0, max: 2000, hint: t("fusionHint") }), note(t("fusionNote"), "info")),
+    card(t("sensorSecurityTitle"), field("sensorBluetoothOff", "sensor_security.bluetooth_off", { type: "checkbox" }), note(t("sensorBluetoothOffHint"), "info")),
     el("div", { class: "grid wide" }, [0, 1, 2].map(radarCard)));
+}
+
+// ---- who each sensor is, the sensors' own Bluetooth ------------------------------------------------------------------------------------
+
+const btPill = bluetooth => el("span", { class: "pill " + (bluetooth === "open" ? "bad" : bluetooth === "closed" ? "ok" : "") }, t(bluetooth === "open" ? "btOpen" : bluetooth === "closed" ? "btClosed" : bluetooth === "none" ? "btNone" : "btUnknown").split(" (")[0]);
+
+// The firmware, the serial number or the Bluetooth address, the state of the sensor's own radio and the warnings about it; the button that closes it.
+function identityBlock(index, status, model, canCommand) {
+  const bluetooth = status.bluetooth || "unknown";
+  const firmware = status.firmware_known ? status.firmware : status.tx < 0 ? "—" : t("fwUnknown");
+  const rows = [[t("firmwareOfModule"), firmware]];
+  if (status.serial) rows.push([t("serialNumber"), status.serial]);
+  if (bluetooth !== "none") rows.push([t("btState"), [btPill(bluetooth), status.mac ? " " + t("btMac") + " " + status.mac : ""]]);
+  if (status.gates) rows.push([t("gatesState"), t("gates_" + status.gates)]);
+  return el("div", { id: "radar-identity-" + index },
+    kvf(rows),
+    status.bluetooth_alert ? note(t("btAlert"), "bad") : null,
+    status.bluetooth_alert && status.bluetooth_gave_up ? note(t("btGaveUp", status.bluetooth_attempts), "bad") : null,
+    !status.bluetooth_alert && status.bluetooth_found_open ? note(t("btFoundOpen"), "info") : null,
+    status.quirk === "ld2412_bad_firmware" ? note(t("quirkBad", status.firmware || "?"), "warn") : status.quirk === "ld2412_unknown_firmware" ? note(t("quirkUnknown"), "warn") : null,
+    status.pet_ignored > 0 ? el("p", { class: "muted" }, t("petCount", status.pet_ignored)) : null);
+}
+
+// What the cards say about the sensors changes by itself (the radio gets closed a few seconds after start): the page is drawn again when any of it did.
+function radarSignature() {
+  return S.status ? JSON.stringify(S.status.radars.map(r => [r.enabled, r.firmware, r.bluetooth, r.bluetooth_alert, r.bluetooth_gave_up, r.quirk, r.gates, r.bridge, r.mac, r.serial])) : "";
+}
+
+// ---- the perimeter engine ------------------------------------------------------------------------------------------------------------------
+
+const toMinutes = text => { const m = /^(\d{1,2}):(\d{2})$/.exec(text || ""); return m ? Math.min(1439, Number(m[1]) * 60 + Number(m[2])) : NaN; };
+const fromMinutes = minutes => String(Math.floor(minutes / 60)).padStart(2, "0") + ":" + String(minutes % 60).padStart(2, "0");
+function timeField(labelKey, path) {
+  const input = el("input", { type: "time", value: fromMinutes(getValue(path) || 0), disabled: !isAdmin(), onchange: e => setValue(path, toMinutes(e.target.value)) });
+  return el("label", { class: "field", tip: labelKey }, el("span", {}, t(labelKey)), input, S.problems[path] ? el("span", { class: "err" }, problemText(S.problems[path])) : null);
+}
+
+const blankZone = (exclude, preset) => Object.assign({ enabled: true, name: "", exclude, x_mm: -1000, y_mm: 2000, width_mm: 2000, height_mm: 2000, angle_deg: 0, profiles: 3, latch: false, loiter_s: 0, active: true }, preset || {});
+function addZone(exclude, preset) {
+  const zones = S.cfg.perimeter.zones;
+  const slot = zones.findIndex(z => !z.enabled);
+  const used = zones.filter(z => z.enabled).length;
+  if (slot < 0) return;
+  const word = exclude ? "excl" : "zone";
+  let n = used + 1;
+  while (zones.some(z => z.enabled && z.name === word + n)) ++n;
+  zones[slot] = blankZone(exclude, Object.assign({ name: word + n }, preset || {}));
+  refreshBar(); render();
+}
+function removeZone(i) {
+  const zones = S.cfg.perimeter.zones, gone = zones[i].name;
+  zones[i] = blankZone(false); zones[i].enabled = false; zones[i].name = "";
+  S.cfg.perimeter.paths.forEach(p => { p.zones = p.zones.map(n => (n === gone ? "" : n)).filter((n, k, a) => n || a.slice(k).every(x => !x)); if (p.zones.length < 2) p.enabled = false; });
+  refreshBar(); render();
+}
+function addLine() {
+  const lines = S.cfg.perimeter.lines, slot = lines.findIndex(l => !l.enabled);
+  if (slot < 0) return;
+  let n = lines.filter(l => l.enabled).length + 1;
+  while (lines.some(l => l.enabled && l.name === "line" + n)) ++n;
+  lines[slot] = { enabled: true, name: "line" + n, ax_mm: -2000, ay_mm: 3000, bx_mm: 2000, by_mm: 3000 };
+  refreshBar(); render();
+}
+function addPath() {
+  const paths = S.cfg.perimeter.paths, slot = paths.findIndex(p => !p.enabled);
+  if (slot < 0) return;
+  const names = S.cfg.perimeter.zones.filter(z => z.enabled && !z.exclude).map(z => z.name);
+  paths[slot] = { enabled: true, name: "path" + (slot + 1), zones: names.slice(0, 2) };
+  refreshBar(); render();
+}
+
+async function zoneOrder(name, order) {
+  const r = await api("POST", "perimeter/zone", { name, order });
+  S.message = r.ok ? null : { kind: "bad", text: errorText(r.data.error) };
+  await refreshPerimeter(); render();
+}
+async function setArmed(armed) {
+  const r = await api("POST", "perimeter/armed", { armed });
+  S.message = r.ok ? null : { kind: "bad", text: errorText(r.data.error) };
+  await refreshPerimeter(); render();
+}
+async function learnAction(action, seconds) {
+  const r = await api("POST", "perimeter/learn", { action, seconds });
+  S.message = r.ok ? null : { kind: "bad", text: errorText(r.data.error) };
+  await refreshPerimeter(); render();
+}
+async function refreshPerimeter() {
+  const r = await api("GET", "perimeter");
+  if (r.ok) S.perimeter = r.data;
+}
+
+const learnUi = { seconds: 180 };
+
+// The numbers that change while the page is open: drawn into their own box again at every poll, so what is being typed is not lost.
+function perimeterLive() {
+  const live = S.perimeter, cfg = S.cfg.perimeter;
+  if (!live || !live.enabled) return el("div", {}, note(t(cfg.enabled ? "perimUnsaved" : "perimNotRunning"), "info"));
+  const mov = live.movement || {};
+  const zoneRows = (live.zones || []).map(z => el("div", { class: "actions" },
+    el("strong", {}, z.name), el("span", { class: "pill " + (!z.on ? "" : z.occupied ? "warn" : "ok") }, !z.on ? t("perimOff") : z.occupied ? t("perimOccupied", z.occupants) : t("perimFree")),
+    z.latched ? el("span", { class: "hint" }, t("perimLatched")) : null,
+    isAdmin() ? [el("button", { class: "b", onclick: () => zoneOrder(z.name, z.active ? "off" : "on") }, t(z.active ? "perimSwitchOff" : "perimSwitchOn")),
+      z.latched ? el("button", { class: "b", onclick: () => zoneOrder(z.name, "release") }, t("perimRelease")) : null] : null));
+  const lineRows = (live.lines || []).map(l => el("p", { class: "muted" }, t("perimLineCount", l.name, l.ins, l.outs)));
+  const ev = live.events || {};
+  return el("div", {},
+    el("p", { class: "muted" }, t("perimTargetsNow", live.targets, live.raw_targets, mov.still || 0, mov.walking || 0, mov.running || 0)),
+    zoneRows, lineRows,
+    el("div", { class: "actions" }, el("span", { class: "pill " + (live.armed ? "warn" : "") }, t(live.armed ? "perimArmed" : "perimDisarmed")),
+      isAdmin() ? el("button", { class: "b", onclick: () => setArmed(!live.armed) }, t(live.armed ? "perimSetDisarmed" : "perimSetArmed")) : null),
+    live.masked ? note(t("perimMasked"), "bad") : null, live.wifi_jam ? note(t("perimJamNow"), "bad") : null,
+    el("p", { class: "muted" }, t("perimEvents", ev.sent || 0, ev.buffered || 0, ev.dropped || 0, ev.limited || 0)));
+}
+
+function zoneCard(i) {
+  const z = S.cfg.perimeter.zones[i], base = "perimeter.zones." + i + ".";
+  return el("section", { class: "card" },
+    el("div", { class: "row" }, field("zoneName", base + "name", { max: 16 }),
+      el("label", { class: "field" }, el("span", {}, t("zoneKind")), el("span", { class: "pill" }, t(z.exclude ? "zoneExclude" : "zoneDetect")))),
+    el("div", { class: "row" }, field("zoneX", base + "x_mm", { type: "number", min: -12800, max: 12800 }), field("zoneY", base + "y_mm", { type: "number", min: -12800, max: 12800 }),
+      field("zoneW", base + "width_mm", { type: "number", min: 100, max: 25600 }), field("zoneH", base + "height_mm", { type: "number", min: 100, max: 25600 }), field("zoneAngle", base + "angle_deg", { type: "number", min: -180, max: 180 })),
+    el("div", { class: "row" },
+      S.cfg.perimeter.night_enabled ? field("zoneProfiles", base + "profiles", { type: "select", number: true, options: [[3, t("zoneAlways")], [1, t("zoneDay")], [2, t("zoneNight")]] }) : null,
+      field("zoneActive", base + "active", { type: "checkbox" })),
+    z.exclude ? null : el("div", { class: "row" }, field("zoneLatch", base + "latch", { type: "checkbox" }), field("zoneLoiter", base + "loiter_s", { type: "number", min: 0, max: 86400 })),
+    isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b danger", onclick: () => removeZone(i) }, t("remove"))) : null);
+}
+
+function lineCard(i) {
+  const l = S.cfg.perimeter.lines[i], base = "perimeter.lines." + i + ".";
+  return el("section", { class: "card" }, el("div", { class: "row" }, field("zoneName", base + "name", { max: 16 })),
+    el("div", { class: "row" }, field("lineAx", base + "ax_mm", { type: "number", min: -12800, max: 12800 }), field("lineAy", base + "ay_mm", { type: "number", min: -12800, max: 12800 }),
+      field("lineBx", base + "bx_mm", { type: "number", min: -12800, max: 12800 }), field("lineBy", base + "by_mm", { type: "number", min: -12800, max: 12800 })),
+    isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b danger", onclick: () => { Object.assign(l, { enabled: false, name: "" }); refreshBar(); render(); } }, t("remove"))) : null);
+}
+
+function pathCard(i) {
+  const q = S.cfg.perimeter.paths[i], base = "perimeter.paths." + i + ".";
+  const names = S.cfg.perimeter.zones.filter(z => z.enabled && !z.exclude).map(z => z.name);
+  const pick = k => el("label", { class: "field" }, el("span", {}, t("pathZoneN", k + 1)),
+    el("select", { disabled: !isAdmin(), onchange: e => { const list = q.zones.slice(0, 4); list[k] = e.target.value; q.zones = list.filter((n, j) => n || list.slice(j).every(x => !x)); refreshBar(); render(); } },
+      [el("option", { value: "", selected: !q.zones[k] }, "—")].concat(names.map(n => el("option", { value: n, selected: q.zones[k] === n }, n)))));
+  return el("section", { class: "card" }, el("div", { class: "row" }, field("pathName", base + "name", { max: 16 })),
+    el("div", { class: "row" }, [0, 1, 2, 3].map(pick)),
+    S.problems[base + "zones"] ? el("span", { class: "err" }, problemText(S.problems[base + "zones"])) : null,
+    isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b danger", onclick: () => { Object.assign(q, { enabled: false, name: "", zones: [] }); refreshBar(); render(); } }, t("remove"))) : null);
+}
+
+function learnerCard() {
+  const learner = (S.perimeter && S.perimeter.learner) || {};
+  const found = learner.suggestions || [];
+  const seconds = el("input", { type: "number", min: 30, max: 1800, value: learnUi.seconds, disabled: !isAdmin(), oninput: e => { learnUi.seconds = Number(e.target.value) || 180; } });
+  return card(t("learnTitle"), el("p", { class: "muted" }, t("learnIntro")),
+    el("label", { class: "field" }, el("span", {}, t("learnSeconds")), seconds),
+    el("div", { class: "actions" }, el("button", { class: "b primary", disabled: !isAdmin() || learner.active, onclick: () => learnAction("start", learnUi.seconds) }, t("learnStart")),
+      learner.active ? el("button", { class: "b", disabled: !isAdmin(), onclick: () => learnAction("stop") }, t("learnStop")) : null),
+    learner.active ? el("p", { class: "muted" }, t("learnProgress", learner.progress, learner.frames)) : null,
+    !learner.active && learner.frames > 0 ? [el("h3", {}, t("learnSuggestions")), found.length ? found.map(s => el("div", { class: "actions" },
+      el("span", { class: "muted" }, t("learnSuggestion", s.width_mm, s.height_mm, s.x_mm, s.y_mm, s.frames)),
+      isAdmin() && S.cfg.perimeter.zones.some(z => !z.enabled) ? el("button", { class: "b", onclick: () => addZone(true, { x_mm: s.x_mm, y_mm: s.y_mm, width_mm: s.width_mm, height_mm: s.height_mm, name: "reflector" + (found.indexOf(s) + 1) }) }, t("learnAdd")) : null)) : el("p", { class: "muted" }, t("learnNone"))] : null);
+}
+
+function perimeterPage() {
+  const p = S.cfg.perimeter, base = "perimeter.";
+  const zones = p.zones.map((z, i) => [z, i]).filter(([z]) => z.enabled);
+  const lines = p.lines.map((l, i) => [l, i]).filter(([l]) => l.enabled);
+  const paths = p.paths.map((q, i) => [q, i]).filter(([q]) => q.enabled);
+  const detect = zones.filter(([z]) => !z.exclude).length, exclude = zones.length - detect;
+  return el("div", {},
+    note(t("perimeterIntro"), "info"),
+    el("div", { class: "grid wide" },
+      card(t("perimeterTitle"), field("perimEnabled", base + "enabled", { type: "checkbox", rerender: true }),
+        p.enabled ? [
+          el("div", { class: "row" }, field("perimRangeMin", base + "range_min_mm", { type: "number", min: -500, max: 4000 }), field("perimRangeMax", base + "range_max_mm", { type: "number", min: 1000, max: 8000 }),
+            field("perimDebounce", base + "debounce_frames", { type: "number", min: 1, max: 20 }), field("perimCountWindow", base + "count_window", { type: "number", min: 1, max: 20 })),
+          field("perimStream", base + "stream", { type: "select", options: [["live", t("streamLive")], ["change", t("streamChange")], ["events", t("streamEvents")]] }), note(t("streamNote"), "info"),
+          field("perimStrict", base + "strict_entry", { type: "checkbox" })] : null),
+      p.enabled ? card(t("perimNightTitle"), field("perimNightEnabled", base + "night.enabled", { type: "checkbox", rerender: true }),
+        p.night.enabled ? el("div", { class: "row" }, timeField("perimNightFrom", base + "night.from_min"), timeField("perimNightTo", base + "night.to_min")) : null, note(t("perimNightNote"), "info")) : null,
+      p.enabled ? card(t("perimPetTitle"), field("perimPetEnabled", base + "pet.enabled", { type: "checkbox", rerender: true }),
+        p.pet.enabled ? el("div", { class: "row" }, field("perimPetDistance", base + "pet.distance_cm", { type: "number", min: 50, max: 400 }), field("perimPetEnergy", base + "pet.energy", { type: "number", min: 1, max: 100 })) : null, note(t("perimPetNote"), "info")) : null,
+      p.enabled ? card(t("perimMaskTitle"), field("perimMaskMinutes", base + "masking.minutes", { type: "number", min: 0, max: 1440 }), field("perimMaskArmedOnly", base + "masking.armed_only", { type: "checkbox" }),
+        field("perimJam", base + "jam_detection", { type: "checkbox" }), note(t("perimMaskNote"), "info")) : null),
+    p.enabled ? [
+      card(t("perimLive"), el("div", { id: "perim-live" }, perimeterLive())),
+      card(t("perimZones"), note(t("perimZonesNote", S.session.node_id), "info"), isAdmin() ? el("div", { class: "actions" },
+        el("button", { class: "b", disabled: detect >= 6 || zones.length >= 9, onclick: () => addZone(false) }, t("zoneAddDetect")), el("button", { class: "b", disabled: exclude >= 3 || zones.length >= 9, onclick: () => addZone(true) }, t("zoneAddExclude"))) : null),
+      el("div", { class: "grid wide" }, zones.map(([, i]) => zoneCard(i))),
+      card(t("perimLines"), note(t("perimLinesNote"), "info"), isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b", disabled: lines.length >= 3, onclick: addLine }, t("lineAdd"))) : null),
+      el("div", { class: "grid wide" }, lines.map(([, i]) => lineCard(i))),
+      card(t("perimPaths"), note(t("perimPathsNote"), "info"), isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b", disabled: paths.length >= 3 || detect < 2, onclick: addPath }, t("pathAdd"))) : null),
+      el("div", { class: "grid wide" }, paths.map(([, i]) => pathCard(i))),
+      learnerCard()] : null);
+}
+
+// ---- the transparent serial bridge ---------------------------------------------------------------------------------------------------------
+
+const bridgeUi = { sensor: 1, baud: 0, minutes: 10, token: "", status: null, error: "" };
+async function bridgeRefresh() {
+  if (!isAdmin()) return;
+  const r = await api("GET", "bridge");
+  if (r.ok) { bridgeUi.status = r.data; if (!r.data.active) bridgeUi.token = ""; }
+}
+async function bridgeOpen() {
+  const r = await api("POST", "bridge/open", { sensor: bridgeUi.sensor, baud: bridgeUi.baud, minutes: bridgeUi.minutes });
+  bridgeUi.error = r.ok ? "" : errorText(r.data.error);
+  bridgeUi.token = r.ok ? r.data.token : "";
+  await bridgeRefresh(); render();
+}
+async function bridgeClose() {
+  const r = await api("POST", "bridge/close", {});
+  bridgeUi.error = r.ok ? "" : errorText(r.data.error);
+  bridgeUi.token = "";
+  await bridgeRefresh(); render();
+}
+function bridgeStatusText() {
+  const s = bridgeUi.status;
+  return s && s.active ? t("bridgeOpenText", s.sensor, s.baud, s.by, s.seconds_left, s.to_sensor, s.from_sensor) : t("bridgeClosedText");
+}
+
+function toolsPage() {
+  if (!isAdmin()) return el("div", {}, note(t("bridgeAdminOnly"), "info"));
+  const s = bridgeUi.status || { active: false };
+  const radars = S.status ? S.status.radars : [];
+  const chosen = radars[bridgeUi.sensor - 1];
+  return el("div", { class: "grid wide" },
+    card(t("bridgeTitle"), el("p", { class: "muted" }, t("bridgeIntro")),
+      el("div", { class: "row" },
+        el("label", { class: "field" }, el("span", {}, t("bridgeSensor")), el("select", { disabled: s.active, onchange: e => { bridgeUi.sensor = Number(e.target.value); render(); } },
+          [1, 2, 3].map(n => el("option", { value: String(n), selected: bridgeUi.sensor === n }, t("sensorN", n) + (radars[n - 1] && radars[n - 1].enabled ? " · " + modelOf(radars[n - 1].model).label : " · " + t("state_disabled"))))) ),
+        el("label", { class: "field" }, el("span", {}, t("bridgeBaud")), el("select", { disabled: s.active, onchange: e => { bridgeUi.baud = Number(e.target.value); } },
+          [0].concat(SENSOR_BAUDS, [921600]).map(b => el("option", { value: String(b), selected: bridgeUi.baud === b }, String(b))))),
+        el("label", { class: "field" }, el("span", {}, t("bridgeMinutes")), el("input", { type: "number", min: 1, max: 30, value: bridgeUi.minutes, disabled: s.active, oninput: e => { bridgeUi.minutes = Number(e.target.value) || 10; } }))),
+      chosen && chosen.enabled && chosen.tx < 0 ? note(t("bridgeNoTx"), "warn") : null,
+      el("div", { class: "actions" },
+        el("button", { class: "b primary", disabled: s.active || !(chosen && chosen.enabled), onclick: bridgeOpen }, t("bridgeOpenBtn")),
+        el("button", { class: "b danger", disabled: !s.active, onclick: bridgeClose }, t("bridgeCloseBtn"))),
+      el("p", { class: "muted", id: "bridge-status" }, bridgeStatusText()),
+      bridgeUi.error ? el("p", { class: "err" }, bridgeUi.error) : null,
+      bridgeUi.token ? [el("h3", {}, t("bridgeTokenTitle")), el("p", { class: "muted mono" }, bridgeUi.token), el("p", { class: "hint" }, t("bridgeTokenHint"))] : null,
+      note(t("bridgeHow"), "info"), note(t("bridgePower"), "warn"), note(t("bridgeNoFlash"), "info"), el("p", { class: "hint" }, t("bridgeAudit"))));
 }
 
 // ---- users and system ------------------------------------------------------------------------------------------------------------------
@@ -737,7 +1003,7 @@ function aboutPage() {
       el("p", { class: "muted mono" }, "github.com/JuanenRac/ARMOR-RADAR")));
 }
 
-const HELP_TOPICS = ["overview", "network", "wifi", "broker", "radars", "map", "pins", "users", "update"];
+const HELP_TOPICS = ["overview", "network", "wifi", "broker", "radars", "map", "perimeter", "bridge", "pins", "users", "update"];
 let helpTopic = "overview";
 function helpPage() {
   const paragraphs = t("help_" + helpTopic + "_text").split("\n\n");
@@ -810,6 +1076,30 @@ function copyButton(getText) {
   return button;
 }
 
+// The core dump of the last crash: an administrator looks for it, downloads it or erases it (the node refuses anyone else).
+function coredumpCard() {
+  const result = el("p", { class: "muted", role: "status" });
+  const actions = el("div", { class: "actions" });
+  const look = async () => {
+    const r = await api("GET", "coredump/info");
+    actions.textContent = "";
+    actions.appendChild(el("button", { class: "b", disabled: !isAdmin(), onclick: look }, t("coredumpCheck")));
+    if (!r.ok) { result.textContent = errorText(r.data.error); result.className = "err"; return; }
+    if (!r.data.present) { result.textContent = t("coredumpNone"); result.className = "muted"; return; }
+    const sum = r.data.summary || {};
+    result.textContent = t("coredumpFound", r.data.size, sum.task || "?", sum.pc || "?"); result.className = "muted";
+    actions.appendChild(el("a", { class: "b", href: "api/v1/coredump", download: "coredump.bin" }, t("coredumpDownload")));
+    actions.appendChild(el("button", { class: "b danger", onclick: async () => {
+      if (!confirm(t("confirmAsk"))) return;
+      const e = await api("POST", "coredump/erase", {});
+      result.textContent = e.ok ? t("coredumpErased") : errorText(e.data.error); result.className = e.ok ? "muted" : "err";
+      if (e.ok) actions.textContent = "";
+    } }, t("coredumpErase")));
+  };
+  actions.appendChild(el("button", { class: "b", disabled: !isAdmin(), onclick: look }, t("coredumpCheck")));
+  return card(t("coredumpTitle"), el("p", { class: "muted" }, t("coredumpHelp")), actions, result);
+}
+
 function updatePage() {
   const s = S.status;
   const progress = el("i"), label = el("p", { class: "muted" }), file = el("input", { type: "file", accept: ".bin" });
@@ -841,6 +1131,7 @@ function updatePage() {
         const r = await api("POST", "factory-reset", { confirm: confirmBox.value });
         if (r.ok) { S.rebooting = true; render(); setTimeout(() => location.reload(), 6000); } else alert(errorText(r.data.error));
       } }, t("factoryTitle")))),
+    coredumpCard(),
     card(t("logTitle"), logBox, el("div", { class: "actions" }, el("button", { class: "b", onclick: async () => { S.log = { next: 0, text: "" }; await refreshLog(); } }, t("refresh")),
       copyButton(() => S.log.text))));
 }
@@ -851,6 +1142,8 @@ async function refreshLive() {
   const [status, pins] = await Promise.all([api("GET", "status"), api("GET", "pins")]);
   if (status.ok) S.status = status.data;
   if (pins.ok) { S.catalog = pins.data.catalog; S.live = pins.data.live; }
+  if (S.page === "perimeter") await refreshPerimeter();
+  if (S.page === "tools") await bridgeRefresh();
 }
 
 async function refreshLog() {
@@ -866,13 +1159,19 @@ async function poll() {
   if (!S.session || !S.session.authenticated || S.rebooting) return;
   await refreshLive();
   if (S.page === "overview") render(false);
-  else if (S.page === "radars" || S.page === "pins") patchLive();
+  else if (S.page === "radars" || S.page === "pins" || S.page === "perimeter" || S.page === "tools") patchLive();
   else if (S.page === "update") await refreshLog();
   updatePills();
 }
 
 // The radar and pin pages hold forms: only their live numbers are patched, so what is being typed is not lost.
 function patchLive() {
+  if (S.page === "perimeter") { const box = document.getElementById("perim-live"); if (box) box.replaceChildren(perimeterLive()); return; }
+  if (S.page === "tools") { const box = document.getElementById("bridge-status"); if (box) box.textContent = bridgeStatusText(); if (bridgeUi.status && !bridgeUi.status.active && bridgeUi.token) { bridgeUi.token = ""; render(); } return; }
+  if (S.page === "radars") {   // what a sensor says about itself changes by itself (its Bluetooth is closed a few seconds after start): draw the page again when it did and nothing is being typed
+    const signature = radarSignature();
+    if (signature !== S.radarSignature && !(document.activeElement && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName))) { S.radarSignature = signature; render(); return; }
+  }
   if (S.page === "radars" && S.status) S.status.radars.forEach((r, i) => {
     const node = document.getElementById("radar-live-" + i);
     if (node && r.enabled) node.textContent = liveText(r);
@@ -959,9 +1258,26 @@ function drawRadarMap(canvas) {
     ctx.font = "bold 11px sans-serif";
     ctx.fillText((i + 1) + (radar.name ? " " + radar.name : ""), ox + Math.cos(heading) * 22 - 4, oy + Math.sin(heading) * 22 + 4);
   });
+  const perimeter = S.cfg && S.cfg.perimeter;
+  if (perimeter && perimeter.enabled) {   // the zones (rotated rectangles; an exclusion zone is drawn dashed and dim) and the tripwire lines, on the same plane as the targets
+    const toCanvas = (px, py) => [cx + px * pxPerMm, cy - py * pxPerMm];
+    perimeter.zones.filter(z => z.enabled).forEach(z => {
+      const a = (z.angle_deg || 0) * Math.PI / 180, ux = Math.cos(a), uy = Math.sin(a), vx = -Math.sin(a), vy = Math.cos(a);
+      const corners = [[0, 0], [z.width_mm, 0], [z.width_mm, z.height_mm], [0, z.height_mm]].map(([u, v]) => toCanvas(z.x_mm + u * ux + v * vx, z.y_mm + u * uy + v * vy));
+      ctx.beginPath(); corners.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath();
+      ctx.fillStyle = z.exclude ? "#88888822" : "#e0b84a22"; ctx.fill();
+      ctx.strokeStyle = z.exclude ? "#888" : "#e0b84a"; ctx.setLineDash(z.exclude ? [4, 4] : []); ctx.lineWidth = 1.5; ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = z.exclude ? "#999" : "#e0b84a"; ctx.font = "10px sans-serif"; ctx.fillText(z.name, corners[0][0] + 3, corners[0][1] - 3);
+    });
+    perimeter.lines.filter(l => l.enabled).forEach(l => {
+      const [ax, ay] = toCanvas(l.ax_mm, l.ay_mm), [bx, by] = toCanvas(l.bx_mm, l.by_mm);
+      ctx.strokeStyle = "#5ad1e0"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      ctx.fillStyle = "#5ad1e0"; ctx.font = "10px sans-serif"; ctx.fillText("A", ax + 3, ay - 3); ctx.fillText("B " + l.name, bx + 3, by - 3);
+    });
+  }
   mapTargets.forEach(target => {
     const x = cx + target.x_mm * pxPerMm, y = cy - target.y_mm * pxPerMm;
-    ctx.fillStyle = RADAR_COLORS[(target.sensor_id - 1 + 3) % 3] || "#ddd"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5;
+    ctx.fillStyle = RADAR_COLORS[(target.sensor_id - 1 + 3) % 3] || "#ddd"; ctx.strokeStyle = target.movement === "running" ? "#ffd54a" : target.movement === "still" ? "#9fb3c8" : "#fff"; ctx.lineWidth = target.movement === "running" ? 3 : 1.5;
     ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     if (Math.abs(target.speed_mm_s) > 50) { ctx.fillStyle = "#fff"; ctx.font = "10px sans-serif"; ctx.fillText((target.speed_mm_s / 1000).toFixed(1) + " m/s", x + 10, y - 8); }
   });
@@ -1001,6 +1317,8 @@ function render(full = true) {
     case "broker": content = brokerPage(); break;
     case "radars": content = radarsPage(); break;
     case "map": content = mapPage(); break;
+    case "perimeter": content = perimeterPage(); break;
+    case "tools": content = toolsPage(); break;
     case "pins": content = pinsPage(); break;
     case "users": content = usersPage(); break;
     case "update": content = updatePage(); break;
@@ -1101,6 +1419,6 @@ async function start() {
 
 window.addEventListener("hashchange", () => {
   const id = location.hash.replace("#/", "");
-  if (PAGES.some(p => p.id === id) && S.session && S.session.authenticated) { if (S.page === "map" && id !== "map") closeMapSocket(); S.page = id; if (id === "update") refreshLog(); render(); }
+  if (PAGES.some(p => p.id === id) && S.session && S.session.authenticated) { if (S.page === "map" && id !== "map") closeMapSocket(); S.page = id; if (id === "update") refreshLog(); if (id === "perimeter") refreshPerimeter().then(() => render(false)); if (id === "tools") bridgeRefresh().then(() => render(false)); render(); }
 });
 start();

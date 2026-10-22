@@ -16,6 +16,8 @@
  */
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include <vector>
 extern "C" {
 #include "driver/gpio.h"
 #include "esp_app_desc.h"
@@ -27,10 +29,12 @@ extern "C" {
 #include "freertos/task.h"
 #include "sdkconfig.h"
 }
+#include "api_shared.hpp"
 #include "ble_provision.hpp"
 #include "clock_sync.hpp"
 #include "improv_serial.hpp"
 #include "core/network_plan.hpp"
+#include "core/radar_report.hpp"
 #include "gpio_manager.hpp"
 #include "light_sensor.hpp"
 #include "log_buffer.hpp"
@@ -40,7 +44,9 @@ extern "C" {
 #include "node_control.hpp"
 #include "network.hpp"
 #include "node_store.hpp"
+#include "perimeter_rt.hpp"
 #include "radar_manager.hpp"
+#include "sensor_bridge.hpp"
 #include "web_server.hpp"
 
 namespace {
@@ -133,6 +139,14 @@ extern "C" void app_main() {
     control.node_id = settings.node_id;
     control.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); };
     control.publish_retained = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish_retained(topic, payload); };
+    // The firmware of each sensor goes into the diagnostic package (name and version only, from the identity the node read from the sensor).
+    control.sensor_versions = []() {
+      std::vector<armor::diag::Sensor> out;
+      for (const armor::radarreport::Sensor& sensor : armor::radar::report_sensors()) {
+        if (sensor.firmware_known && !sensor.firmware.empty()) out.push_back({sensor.model + "-" + std::to_string(sensor.sensor_id), sensor.firmware});
+      }
+      return out;
+    };
     armor::node_control::start(control);
   }
   // The radars run first: on the bench their statistics are the first thing to look at, with or without a network.
@@ -153,12 +167,23 @@ extern "C" void app_main() {
   armor::improv_serial::start();   // Improv Wi-Fi over the USB cable (ESP Web Tools)
   const bool panel_ok = network_ok && armor::web::start(settings);
   armor::mqtt_link::start(settings);
+  // The node's own perimeter engine and the events it tells the server (zones, tripwire lines, paths, a covered sensor, a sensor whose own Bluetooth is open...), kept in flash while the broker cannot be reached.
+  {
+    armor::perimeter_rt::Hooks hooks;
+    hooks.connected = []() { return armor::mqtt_link::connected(); };
+    hooks.send = [](const std::string& topic, const std::string& payload) { return armor::mqtt_link::publish_event(topic, payload); };
+    hooks.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); };
+    hooks.wall_ms = []() { return armor::mqtt_link::wall_clock_ms(); };
+    armor::perimeter_rt::start(settings, hooks);
+  }
+  armor::sensor_bridge::start();
   // The health report every node says about itself (uptime, why it restarted, memory, link, broker reconnects, the last error): armor/health/<node>, see ARMOR-COMMON node_health.schema.json.
   if (!setup && settings.mqtt.enabled) {
     armor::node_health::Options health;
     health.node_id = settings.node_id;
     health.family = "radar";
-    health.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); };
+    // the report of the shared base, with the sensors (who they are, their firmware, their Bluetooth) and the perimeter engine added to it
+    health.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, armor::radarreport::splice(payload, armor::api::health_members_json())); };
     health.connected = []() { return armor::mqtt_link::connected(); };
     armor::node_health::start(health);
   }

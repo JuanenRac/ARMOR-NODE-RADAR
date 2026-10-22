@@ -4,6 +4,7 @@
 #include "node_control.hpp"
 
 #include <array>
+#include <atomic>
 #include <cstdio>
 #include <memory>
 #include <mutex>
@@ -21,7 +22,10 @@ extern "C" {
 #include "core/json.hpp"
 #include "core/ld2450.hpp"
 #include "core/ld2461.hpp"
+#include "core/pet_filter.hpp"
 #include "core/presence.hpp"
+#include "core/sensor_bluetooth.hpp"
+#include "core/sensor_identity.hpp"
 #include "core/sensor_model.hpp"
 #include "core/track_stabiliser.hpp"
 #include "node_guard.hpp"
@@ -48,6 +52,12 @@ struct Line {
   QueueHandle_t frame_answers = nullptr;                   // LD2461: the frames that are not reports
   std::mutex command_lock;                                 // one command at a time on a sensor
   std::string firmware;
+  sensorid::Identity identity;                             // who the sensor says it is (firmware, address, Bluetooth), guarded by g_data_lock
+  btguard::Guard guard;                                    // what to do about the sensor's own Bluetooth radio
+  std::atomic<bool> bridge{false};                         // the serial bridge has the port: nothing here reads or writes it
+  std::uint32_t baud = 0;                                  // the speed the sensor is read at
+  std::uint32_t pet_ignored = 0;
+  std::string gates;                                       // LD2412 with gates set: the state of that rule, for the panel
   int tracking_mode = 0;
   // frames per second over a sliding window
   std::uint32_t frames_at_window_start = 0;
@@ -68,8 +78,23 @@ std::mutex g_data_lock;          // the track set, the counters, the readings an
 // What a command learns about a sensor (its firmware text, its report mode) is written under the same lock that status() reads it with: a std::string written while another task reads it is not safe.
 void set_line_firmware(Line& line, const std::string& text) { std::lock_guard<std::mutex> guard(g_data_lock); line.firmware = text; }
 void set_line_mode(Line& line, int mode) { std::lock_guard<std::mutex> guard(g_data_lock); line.tracking_mode = mode; }
+void set_line_identity(Line& line, const sensorid::Firmware& firmware, std::uint64_t now) {
+  std::lock_guard<std::mutex> guard(g_data_lock);
+  line.identity.firmware = firmware;
+  line.identity.read_at_ms = now == 0 ? 1 : now;
+  line.firmware = firmware.known ? firmware.text : "";
+}
+void set_line_mac(Line& line, const sensorid::Mac& mac) {
+  std::lock_guard<std::mutex> guard(g_data_lock);
+  line.identity.mac = mac;
+  if (mac.bluetooth != sensorid::Bluetooth::kUnknown) line.identity.bluetooth = mac.bluetooth;
+}
+void set_line_serial(Line& line, const std::string& serial) { std::lock_guard<std::mutex> guard(g_data_lock); line.identity.serial = serial; }
 armor::TrackSet g_tracks;
 armor::RadarHealth g_health;
+pet::Rule g_pet_rule;               // guarded by g_data_lock
+bool g_close_bluetooth = true;      // guarded by g_data_lock
+EventSink g_event_sink;             // guarded by g_data_lock
 Publisher g_publish;
 std::string g_node_id;
 bool g_republish = false;        // set when the broker (re)connects: every presence sensor says its state again
@@ -180,7 +205,9 @@ void feed_report_family(Line& line, std::uint8_t sensor_id, presence::Family fam
     std::lock_guard<std::mutex> guard(g_data_lock);
     if (!presence::decode_report(family, bytes, length, reading)) { g_health.frame_bad(sensor_id); return; }
     g_health.frame_ok(sensor_id, monotonic_ms());
-    line.reading = reading;
+    bool was_pet = false;
+    line.reading = pet::filtered(reading, g_pet_rule, was_pet);   // a small, weak target near the sensor is nobody when the rule is on
+    if (was_pet) ++line.pet_ignored;
   });
 }
 
@@ -245,7 +272,7 @@ void reader_task(void*) {
   for (;;) {
     for (std::size_t i = 0; i < 3; ++i) {
       Line& line = g_lines[i];
-      if (!line.enabled) continue;
+      if (!line.enabled || line.bridge) continue;
       const int read = uart_read_bytes(kUarts[i], buffer, sizeof buffer, 0);
       if (read <= 0) continue;
       const std::uint8_t sensor_id = static_cast<std::uint8_t>(i + 1);
@@ -283,7 +310,7 @@ void reader_task(void*) {
 // ---- commands ------------------------------------------------------------------------------------------------------------------
 
 // Sends one frame and waits for the acknowledgement of `expected` (0: any). True when the module answered and the status said done.
-bool exchange(Line& line, std::size_t index, const std::uint8_t* frame, std::size_t length, std::uint16_t expected, ld2450cmd::Ack& ack, CommandResult& result) {
+bool exchange(Line& line, std::size_t index, const std::uint8_t* frame, std::size_t length, std::uint16_t expected, ld2450cmd::Ack& ack, CommandResult& result, bool status_is_data = false) {
   xQueueReset(line.answers);
   uart_write_bytes(kUarts[index], reinterpret_cast<const char*>(frame), length);
   const std::uint64_t deadline = monotonic_ms() + kAnswerTimeoutMs;
@@ -293,7 +320,7 @@ bool exchange(Line& line, std::size_t index, const std::uint8_t* frame, std::siz
     if (xQueueReceive(line.answers, &ack, pdMS_TO_TICKS(deadline - now)) != pdTRUE) { result.error = "no_answer"; return false; }
     result.last_answer_hex = hex_of(ack.data, ack.data_length);
     if (expected != 0 && ack.command != expected) continue;  // an answer to something older
-    if (!ack.ok) { result.error = "refused"; return false; }
+    if (!ack.ok && !status_is_data) { result.error = "refused"; return false; }
     return true;
   }
 }
@@ -338,8 +365,33 @@ CommandResult run_command_family(std::size_t index, Op op, bool flag, const ld24
   const bool ld2450 = line.model == sensors::Model::kLd2450;
   switch (op) {
     case Op::kReadInfo: {
-      if (simple(ld2450cmd::kReadFirmware, ld2450cmd::kReadFirmware)) { result.firmware = ld2450cmd::firmware_text(ack); set_line_firmware(line, result.firmware); }
-      else ok = false;
+      if (line.model == sensors::Model::kLd2410s) {   // its version answer carries no status word, and it has a serial number
+        length = ld2450cmd::build_simple(0x0000, frame, sizeof frame);
+        if (exchange(line, index, frame, length, 0, ack, result, true) && ack.command == 0x0000) {
+          const sensorid::Firmware fw = sensorid::firmware_from_ld2410s_ack(ack);
+          result.firmware_known = fw.known;
+          result.firmware = fw.text;
+          set_line_identity(line, fw, monotonic_ms());
+        } else ok = false;
+        if (ok && simple(ld2450cmd::kReadSerialNumber, ld2450cmd::kReadSerialNumber)) { result.serial = sensorid::serial_from_ack(ack); set_line_serial(line, result.serial); }
+        break;
+      }
+      if (simple(ld2450cmd::kReadFirmware, ld2450cmd::kReadFirmware)) {
+        const sensorid::Firmware fw = sensorid::firmware_from_ack(ack);   // zeros and ones (some firmware does not know its own version) are "unknown", never a number
+        result.firmware_known = fw.known;
+        result.firmware = fw.known ? fw.text : "";
+        set_line_identity(line, fw, monotonic_ms());
+      } else ok = false;
+      if (ok && sensorid::has_own_bluetooth(line.model)) {   // the Bluetooth address, which also tells whether the sensor's own radio is open
+        length = ld2450cmd::build_read_mac(frame, sizeof frame);
+        if (exchange(line, index, frame, length, ld2450cmd::kReadMac, ack, result)) {
+          const sensorid::Mac mac = sensorid::mac_from_ack(ack);
+          result.mac = mac.text;
+          result.bluetooth = sensorid::bluetooth_text(mac.bluetooth);
+          set_line_mac(line, mac);
+        }
+        result.error.clear();   // the address is extra: a sensor that does not answer it has still told its version
+      }
       if (ld2450 && ok && simple(ld2450cmd::kQueryTrackingMode, ld2450cmd::kQueryTrackingMode)) { result.tracking_mode = ld2450cmd::tracking_mode(ack); set_line_mode(line, result.tracking_mode); }
       if (ld2450 && ok && simple(ld2450cmd::kQueryZones, ld2450cmd::kQueryZones)) result.has_zones = ld2450cmd::zones_from_ack(ack, result.zones);
       break;
@@ -356,6 +408,7 @@ CommandResult run_command_family(std::size_t index, Op op, bool flag, const ld24
       break;
     case Op::kRestart: ok = simple(ld2450cmd::kRestart, ld2450cmd::kRestart); leaves_configuration = false; break;
     case Op::kFactoryReset: ok = simple(ld2450cmd::kRestoreFactory, ld2450cmd::kRestoreFactory); leaves_configuration = !ok; break;
+    case Op::kSecureBluetooth: break;   // run() does this one on its own
   }
   // 2. always leave configuration mode, so the module reports again
   if (leaves_configuration) {
@@ -386,7 +439,11 @@ CommandResult run_ld2461(std::size_t index, Op op, const ld2450cmd::ZoneFilter* 
         char text[48];
         std::snprintf(text, sizeof text, "%u.%u (%02u-%02u, id %08X)", version.major, version.minor, version.month, version.day, static_cast<unsigned>(version.identifier));
         result.firmware = version.ok ? text : "";
-        set_line_firmware(line, result.firmware);
+        result.firmware_known = version.ok;
+        sensorid::Firmware fw;
+        fw.known = version.ok;
+        fw.text = result.firmware;
+        set_line_identity(line, fw, monotonic_ms());
       } else ok = false;
       if (ok && ask(ld2461::build_query(ld2461::kReadReportFormat, frame, sizeof frame), ld2461::kReadReportFormat) && answer.value_length >= 1) {
         result.tracking_mode = answer.value[0];
@@ -451,12 +508,238 @@ void ld2461_format_task(void* argument) {
   }
   vTaskDelete(nullptr);
 }
+
+// The sensor as the Bluetooth procedure (core/sensor_bluetooth.hpp) sees it: the command family over this port. The caller holds the sensor's command lock.
+class UartLink : public btguard::Link {
+ public:
+  UartLink(Line& line, std::size_t index) : line_(line), index_(index) {}
+  bool enter_config() override {
+    std::uint8_t frame[ld2450cmd::kMaxFrame];
+    const std::size_t length = ld2450cmd::build_enable_configuration(frame, sizeof frame);
+    return exchange(line_, index_, frame, length, ld2450cmd::kEnableConfiguration, ack_, scratch_);
+  }
+  bool end_config() override {
+    std::uint8_t frame[ld2450cmd::kMaxFrame];
+    const std::size_t length = ld2450cmd::build_simple(ld2450cmd::kEndConfiguration, frame, sizeof frame);
+    return exchange(line_, index_, frame, length, ld2450cmd::kEndConfiguration, ack_, scratch_);
+  }
+  bool read_mac(sensorid::Mac& out) override {
+    std::uint8_t frame[ld2450cmd::kMaxFrame];
+    const std::size_t length = ld2450cmd::build_read_mac(frame, sizeof frame);
+    if (!exchange(line_, index_, frame, length, ld2450cmd::kReadMac, ack_, scratch_)) return false;
+    out = sensorid::mac_from_ack(ack_);
+    return out.known;
+  }
+  bool set_bluetooth(bool on) override {
+    std::uint8_t frame[ld2450cmd::kMaxFrame];
+    const std::size_t length = ld2450cmd::build_bluetooth(on, frame, sizeof frame);
+    return exchange(line_, index_, frame, length, ld2450cmd::kBluetooth, ack_, scratch_);
+  }
+  bool restart() override {
+    std::uint8_t frame[ld2450cmd::kMaxFrame];
+    const std::size_t length = ld2450cmd::build_simple(ld2450cmd::kRestart, frame, sizeof frame);
+    return exchange(line_, index_, frame, length, ld2450cmd::kRestart, ack_, scratch_);
+  }
+  void pause_ms(unsigned ms) override { vTaskDelay(pdMS_TO_TICKS(ms)); }
+  const std::string& last_error() const { return scratch_.error; }
+
+ private:
+  Line& line_;
+  std::size_t index_;
+  ld2450cmd::Ack ack_;
+  CommandResult scratch_;
+};
+
+// Asks an MR24HPC1 for its firmware and waits for the answer (the module speaks when it likes; it answers a question within a moment).
+bool mr24_read_firmware(Line& line, std::size_t index, CommandResult& result) {
+  std::uint8_t frame[16];
+  const std::size_t length = presence::mr24_build_firmware_query(frame, sizeof frame);
+  { std::lock_guard<std::mutex> guard(g_data_lock); line.mr24.firmware.clear(); }
+  uart_write_bytes(kUarts[index], reinterpret_cast<const char*>(frame), length);
+  const std::uint64_t deadline = monotonic_ms() + kAnswerTimeoutMs;
+  while (monotonic_ms() < deadline) {
+    vTaskDelay(pdMS_TO_TICKS(25));
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    if (!line.mr24.firmware.empty()) {
+      sensorid::Firmware fw;
+      fw.known = true;
+      fw.text = line.mr24.firmware;
+      line.identity.firmware = fw;
+      line.identity.read_at_ms = monotonic_ms() == 0 ? 1 : monotonic_ms();
+      line.firmware = fw.text;
+      result.firmware = fw.text;
+      result.firmware_known = true;
+      return true;
+    }
+  }
+  result.error = "no_answer";
+  return false;
+}
+
 }  // namespace
 
 // What the panel once told each sensor (settings: radars[].zones and .target_mode), told to it again at every start: a module that was reset, or
 // a spare one swapped in, would otherwise silently lose it. A radar with nothing set is left exactly as it is.
-struct StoredCommands { int zone_type = 0; std::array<config::ZoneRect, config::kZonesPerRadar> zones{}; int target_mode = 0; };
+struct StoredCommands { int zone_type = 0; std::array<config::ZoneRect, config::kZonesPerRadar> zones{}; int target_mode = 0; int gate_min = 1, gate_max = 0, unmanned_s = 5; };
 StoredCommands g_stored[3];
+
+namespace {
+// ---- the Bluetooth of the sensors themselves -------------------------------------------------------------------------------------------------------
+
+// The state in words, for the answers.
+const char* bluetooth_word(sensorid::Bluetooth state) { return sensorid::bluetooth_text(state); }
+
+// Runs the procedure on a sensor whose command lock the caller holds.
+btguard::Result bluetooth_procedure(Line& line, std::size_t index, bool closing) {
+  UartLink link(line, index);
+  return closing ? btguard::close(link) : btguard::check(link);
+}
+
+// What an attempt found goes into the sensor's record; the events (found open, now closed) are told outside the lock. Returns the state after.
+void note_bluetooth(Line& line, std::size_t index, const btguard::Result& result, bool closing, bool manual) {
+  bool new_open = false, closed_now = false;
+  sensorid::Bluetooth was, now_state;
+  const std::uint64_t now = monotonic_ms();
+  {
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    was = line.guard.state();
+    if (manual) line.guard.allow_again();
+    new_open = line.guard.record(now, result, closing);
+    now_state = line.guard.state();
+    if (result.mac.known || result.after != sensorid::Bluetooth::kUnknown) line.identity.mac = result.mac;
+    line.identity.bluetooth = now_state;
+    closed_now = was == sensorid::Bluetooth::kOpen && now_state == sensorid::Bluetooth::kClosed;
+  }
+  EventSink sink;
+  { std::lock_guard<std::mutex> guard(g_data_lock); sink = g_event_sink; }
+  const std::string model = sensors::to_text(line.model);
+  if (new_open) {
+    ESP_LOGW(kTag, "sensor %u (%s): its own Bluetooth was found OPEN (anybody near with the maker's phone app can read it and change its filters)", static_cast<unsigned>(index + 1), model.c_str());
+    if (sink) sink(static_cast<int>(index + 1), radarevent::Kind::kSensorBluetoothOpen, model);
+  }
+  if (closed_now) {
+    ESP_LOGI(kTag, "sensor %u (%s): its own Bluetooth is now closed", static_cast<unsigned>(index + 1), model.c_str());
+    if (sink) sink(static_cast<int>(index + 1), radarevent::Kind::kSensorBluetoothClosed, model);
+  }
+}
+
+// The background look at one sensor's Bluetooth: what the rule says to do now, at most one thing, never more than the limits of the guard allow.
+void care_bluetooth(std::size_t index, std::uint64_t now) {
+  Line& line = g_lines[index];
+  if (!sensorid::has_own_bluetooth(line.model)) return;
+  btguard::Action action;
+  {
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    line.guard.set_close_after_setup(g_close_bluetooth);
+    action = line.guard.due(now);
+  }
+  if (action == btguard::Action::kNone) return;
+  const bool closing = action == btguard::Action::kClose;
+  btguard::Result result;
+  {
+    std::unique_lock<std::mutex> command(line.command_lock, std::try_to_lock);
+    if (!command.owns_lock() || line.bridge) return;   // busy: next time
+    result = bluetooth_procedure(line, index, closing);
+  }
+  note_bluetooth(line, index, result, closing, false);
+}
+
+// ---- the distance gates of an LD2412 ---------------------------------------------------------------------------------------------------------------
+
+enum class GateResult : std::uint8_t { kMatches, kDiffers, kNoAnswer };
+
+// Reads the gates the sensor has and, when `write` and they differ from the wanted ones, writes them and reads them back (the answer to the write is not trusted: some firmware says yes and forgets).
+GateResult gates_check(Line& line, std::size_t index, const StoredCommands& want, bool write) {
+  std::unique_lock<std::mutex> command(line.command_lock, std::try_to_lock);
+  if (!command.owns_lock() || line.bridge) return GateResult::kNoAnswer;
+  UartLink link(line, index);
+  if (!link.enter_config()) { link.pause_ms(200); if (!link.enter_config()) return GateResult::kNoAnswer; }
+  GateResult outcome = GateResult::kNoAnswer;
+  CommandResult scratch;
+  ld2450cmd::Ack ack;
+  ld2450cmd::BaseParameters have;
+  std::uint8_t frame[ld2450cmd::kMaxFrame];
+  const auto read = [&]() {
+    const std::size_t length = ld2450cmd::build_simple(ld2450cmd::kReadBaseParameters, frame, sizeof frame);
+    return exchange(line, index, frame, length, ld2450cmd::kReadBaseParameters, ack, scratch) && ld2450cmd::base_parameters_from_ack(ack, have);
+  };
+  const auto same = [&]() { return have.nearest == want.gate_min && have.farthest == want.gate_max && have.unmanned_s == want.unmanned_s; };
+  if (read()) {
+    outcome = same() ? GateResult::kMatches : GateResult::kDiffers;
+    if (outcome == GateResult::kDiffers && write) {
+      const std::size_t length = ld2450cmd::build_ld2412_base_parameters(static_cast<std::uint8_t>(want.gate_min), static_cast<std::uint8_t>(want.gate_max), static_cast<std::uint16_t>(want.unmanned_s), have.polarity, frame, sizeof frame);
+      if (length != 0) exchange(line, index, frame, length, ld2450cmd::kSetBaseParameters, ack, scratch);
+      link.pause_ms(300);
+      if (read()) outcome = same() ? GateResult::kMatches : GateResult::kDiffers;
+      else outcome = GateResult::kNoAnswer;
+    }
+  }
+  link.end_config();
+  return outcome;
+}
+
+struct GateCare { int stage = 0; std::uint64_t applied_ms = 0; };
+GateCare g_gate_care[3];
+
+// The gates of an LD2412 that has them set in the settings: written a few seconds after start; on the firmware versions that forget them, read back ~40 s later and written once more.
+void care_gates(std::size_t index, std::uint64_t now) {
+  Line& line = g_lines[index];
+  const StoredCommands& want = g_stored[index];
+  if (line.model != sensors::Model::kLd2412 || want.gate_max == 0) return;
+  GateCare& care = g_gate_care[index];
+  sensorid::Ld2412Policy policy;
+  {
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    policy = sensorid::ld2412_policy(line.model, line.identity.firmware);
+    if (line.identity.read_at_ms == 0 && care.stage == 0 && now < 60000) return;   // wait until the sensor has been asked who it is (or a minute went by)
+  }
+  const auto say = [&](const char* text) { std::lock_guard<std::mutex> guard(g_data_lock); line.gates = text; };
+  if (care.stage == 0) {
+    const GateResult result = gates_check(line, index, want, true);
+    if (result == GateResult::kNoAnswer) return;   // tried again at the next turn
+    care.applied_ms = now;
+    care.stage = policy.verify_gates ? 1 : 3;
+    say(result == GateResult::kMatches ? (policy.verify_gates ? "applied" : "verified") : "mismatch");
+    ESP_LOGI(kTag, "sensor %u (ld2412): gates %d to %d set%s", static_cast<unsigned>(index + 1), want.gate_min, want.gate_max, policy.verify_gates ? "; they are read back in about 40 s (this firmware forgets them)" : "");
+    return;
+  }
+  if (care.stage == 1 && now - care.applied_ms >= policy.verify_after_ms) {
+    GateResult result = gates_check(line, index, want, false);
+    if (result == GateResult::kNoAnswer) return;
+    if (result == GateResult::kMatches) { care.stage = 3; say("verified"); return; }
+    ESP_LOGW(kTag, "sensor %u (ld2412): the gates changed by themselves; writing them once more", static_cast<unsigned>(index + 1));
+    result = gates_check(line, index, want, true);
+    care.stage = 3;   // once is all: a sensor that keeps forgetting is told in the panel, never written to in a loop
+    say(result == GateResult::kMatches ? "reapplied" : "mismatch");
+    return;
+  }
+}
+
+// Who each sensor is, its Bluetooth, its gates: a look every few seconds, a few tries each.
+void care_task(void*) {
+  vTaskDelay(pdMS_TO_TICKS(7000));   // the sensors need a moment after power-up
+  unsigned tries[3] = {0, 0, 0};
+  std::uint64_t next_try[3] = {0, 0, 0};
+  for (;;) {
+    const std::uint64_t now = monotonic_ms();
+    for (std::size_t i = 0; i < 3; ++i) {
+      Line& line = g_lines[i];
+      if (!line.enabled || line.tx < 0 || line.bridge) continue;
+      bool known;
+      { std::lock_guard<std::mutex> guard(g_data_lock); known = line.identity.read_at_ms != 0; }
+      if (!known && tries[i] < 5 && now >= next_try[i]) {
+        const CommandResult result = run(i, Op::kReadInfo);
+        ++tries[i];
+        next_try[i] = now + 30000;
+        if (!result.ok) ESP_LOGW(kTag, "sensor %u: could not read who it is (%s)", static_cast<unsigned>(i + 1), result.error.c_str());
+      }
+      care_bluetooth(i, now);
+      care_gates(i, now);
+    }
+    vTaskDelay(pdMS_TO_TICKS(5000));
+  }
+}
+}  // namespace
 
 void apply_stored_task(void*) {
   vTaskDelay(pdMS_TO_TICKS(6000));   // the modules need a moment after power-up before they listen to commands
@@ -485,6 +768,10 @@ void apply_stored_task(void*) {
 void start(const config::Settings& settings, Publisher publisher) {
   g_publish = std::move(publisher);
   g_node_id = settings.node_id;
+  g_close_bluetooth = settings.sensor_bluetooth_off;
+  g_pet_rule.enabled = settings.perimeter.pet_immunity;
+  g_pet_rule.max_distance_cm = settings.perimeter.pet_distance_cm;
+  g_pet_rule.max_energy = settings.perimeter.pet_energy;
   for (std::size_t i = 0; i < 3; ++i) {
     Line& line = g_lines[i];
     const config::RadarLine& wanted = settings.radars[i];
@@ -492,7 +779,7 @@ void start(const config::Settings& settings, Publisher publisher) {
     line.rx = wanted.rx;
     line.tx = wanted.tx;
     line.name = wanted.name;
-    g_stored[i] = {wanted.zone_type, wanted.zones, wanted.target_mode};
+    g_stored[i] = {wanted.zone_type, wanted.zones, wanted.target_mode, wanted.gate_min, wanted.gate_max, wanted.unmanned_s};
     if (!sensors::from_text(wanted.model, line.model)) line.model = sensors::Model::kLd2450;
     if (!line.enabled) continue;
     const sensors::ModelInfo& model = sensors::info(line.model);
@@ -511,6 +798,11 @@ void start(const config::Settings& settings, Publisher publisher) {
     }
     line.answers = xQueueCreate(6, sizeof(ld2450cmd::Ack));
     line.frame_answers = xQueueCreate(4, sizeof(ld2461::Frame));
+    line.baud = static_cast<std::uint32_t>(baud);
+    line.guard.set_model(line.model);
+    line.guard.set_close_after_setup(settings.sensor_bluetooth_off);
+    line.identity = sensorid::Identity{};
+    line.identity.bluetooth = sensorid::initial_bluetooth(line.model);
     configure_uart(i, wanted.rx, wanted.tx, baud);
     ESP_LOGI(kTag, "sensor %u (%s) on UART%u at %d baud: RX GPIO %d, TX GPIO %d%s%s", static_cast<unsigned>(i + 1), model.label, static_cast<unsigned>(i), baud, wanted.rx, wanted.tx,
              model.tracker ? "" : ", device ", model.tracker ? "" : wanted.name.c_str());
@@ -518,6 +810,7 @@ void start(const config::Settings& settings, Publisher publisher) {
   nodeguard::expect_task("radar");   // the node is worth nothing without the task that reads its sensors: the guard looks for it
   xTaskCreate(reader_task, "radar", 6144, nullptr, 5, nullptr);
   xTaskCreate(apply_stored_task, "radar-stored", 4096, nullptr, 2, nullptr);
+  xTaskCreate(care_task, "radar-care", 6144, nullptr, 2, nullptr);   // who each sensor is, its own Bluetooth radio, the gates of an LD2412
   for (std::size_t i = 0; i < 3; ++i) {
     if (g_lines[i].enabled && g_lines[i].model == sensors::Model::kLd2461) {
       if (g_lines[i].tx >= 0) xTaskCreate(ld2461_format_task, "ld2461-fmt", 4096, reinterpret_cast<void*>(i), 3, nullptr);
@@ -566,6 +859,19 @@ Status status(std::size_t index) {
   s.bad_frames = counters.bad_frames;
   s.frames_per_second = line.fps;
   s.firmware = line.firmware;
+  s.firmware_known = line.identity.firmware.known;
+  s.serial = line.identity.serial;
+  s.bluetooth = sensorid::bluetooth_text(line.identity.bluetooth);
+  s.mac = line.identity.bluetooth == sensorid::Bluetooth::kOpen ? line.identity.mac.text : "";
+  s.bluetooth_alert = line.guard.alert();
+  s.bluetooth_found_open = line.guard.found_open();
+  s.bluetooth_attempts = line.guard.attempts();
+  s.bluetooth_gave_up = line.guard.gave_up();
+  s.quirk = armor::radarreport::quirk_of(line.model, line.identity.firmware);
+  s.gates = line.gates;
+  s.pet_ignored = line.pet_ignored;
+  s.bridge = line.bridge;
+  if (line.bridge) { s.state = "bridge"; s.state_text = "the serial bridge has this sensor"; }
   s.tracking_mode = line.tracking_mode;
   int present = -1, distance = -1;
   presence_now(line, present, distance);
@@ -585,7 +891,7 @@ Status status(std::size_t index) {
     case sensors::Model::kLd2410: case sensors::Model::kLd2412:
       if (line.reading.valid) {
         w.begin_object().field("state", static_cast<int>(line.reading.state)).field("moving_cm", line.reading.moving_cm).field("moving_energy", line.reading.moving_energy)
-            .field("static_cm", line.reading.static_cm).field("static_energy", line.reading.static_energy).field("calibrating", line.reading.calibrating);
+            .field("static_cm", line.reading.static_cm).field("static_energy", line.reading.static_energy).field("calibrating", line.reading.calibrating).field("pet_ignored", static_cast<long long>(line.pet_ignored));
         if (line.reading.detection_cm >= 0) w.field("detection_cm", line.reading.detection_cm);
         w.end_object();
       }
@@ -611,15 +917,129 @@ CommandResult run(std::size_t index, Op op, bool flag, const ld2450cmd::ZoneFilt
   switch (line.model) {
     case sensors::Model::kLd2450: supported = true; break;
     case sensors::Model::kLd2461: supported = op == Op::kReadInfo || op == Op::kSetZones || op == Op::kFactoryReset; break;
-    case sensors::Model::kLd2410: case sensors::Model::kLd2412: supported = op == Op::kReadInfo || op == Op::kRestart || op == Op::kFactoryReset || op == Op::kBluetooth; break;
-    default: supported = false; break;
+    case sensors::Model::kLd2410: case sensors::Model::kLd2412: supported = op == Op::kReadInfo || op == Op::kRestart || op == Op::kFactoryReset || op == Op::kBluetooth || op == Op::kSecureBluetooth; break;
+    case sensors::Model::kLd2410s: case sensors::Model::kMr24hpc1: supported = op == Op::kReadInfo; break;   // only to learn who they are
   }
+  if (op == Op::kSecureBluetooth && !sensorid::has_own_bluetooth(line.model)) supported = false;
   if (!supported) { result.error = "unsupported"; return result; }
   if (line.tx < 0) { result.error = "no_tx"; return result; }
   if (op == Op::kSetZones && (zones == nullptr || zones->type > 2)) { result.error = "bad_argument"; return result; }
   std::unique_lock<std::mutex> command(line.command_lock, std::try_to_lock);
   if (!command.owns_lock()) { result.error = "busy"; return result; }
-  return line.model == sensors::Model::kLd2461 ? run_ld2461(index, op, zones) : run_command_family(index, op, flag, zones);
+  if (line.bridge) { result.error = "bridge_active"; return result; }
+  if (op == Op::kSecureBluetooth) {
+    // close the radio of the sensor and read it back; a person asked, so another bounded round is allowed
+    const btguard::Result r = bluetooth_procedure(line, index, true);
+    note_bluetooth(line, index, r, true, true);
+    result.mac = r.mac.text;
+    result.bluetooth = bluetooth_word(r.after != sensorid::Bluetooth::kUnknown ? r.after : r.before);
+    switch (r.outcome) {
+      case btguard::Outcome::kClosed: case btguard::Outcome::kAlreadyClosed: result.ok = true; break;
+      case btguard::Outcome::kStillOpen: result.error = "still_open"; break;
+      case btguard::Outcome::kRefused: result.error = "refused"; break;
+      default: result.error = "no_answer"; break;
+    }
+    return result;
+  }
+  if (op == Op::kReadInfo && line.model == sensors::Model::kMr24hpc1) {
+    result.ok = mr24_read_firmware(line, index, result);
+    if (result.ok) result.error.clear();
+    return result;
+  }
+  const bool opened_by_hand = op == Op::kBluetooth && flag;
+  const CommandResult answer = line.model == sensors::Model::kLd2461 ? run_ld2461(index, op, zones) : run_command_family(index, op, flag, zones);
+  if (opened_by_hand && answer.ok) {   // somebody opened the radio on purpose (to use the maker's phone app): the rule waits half an hour, then closes it again
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    line.guard.suspend_until(monotonic_ms() + 30ULL * 60ULL * 1000ULL);
+  }
+  return answer;
+}
+
+void set_pet_rule(const pet::Rule& rule) { std::lock_guard<std::mutex> guard(g_data_lock); g_pet_rule = rule; }
+
+void set_close_bluetooth(bool close_after_setup) {
+  std::lock_guard<std::mutex> guard(g_data_lock);
+  g_close_bluetooth = close_after_setup;
+  for (Line& line : g_lines) line.guard.set_close_after_setup(close_after_setup);
+}
+
+bool close_bluetooth_rule() { std::lock_guard<std::mutex> guard(g_data_lock); return g_close_bluetooth; }
+
+void set_event_sink(EventSink sink) { std::lock_guard<std::mutex> guard(g_data_lock); g_event_sink = std::move(sink); }
+
+std::vector<radarreport::Sensor> report_sensors() {
+  std::vector<radarreport::Sensor> out;
+  std::lock_guard<std::mutex> guard(g_data_lock);
+  const std::uint64_t now = monotonic_ms();
+  for (std::size_t i = 0; i < 3; ++i) {
+    const Line& line = g_lines[i];
+    if (!line.enabled) continue;
+    radarreport::Sensor sensor;
+    sensor.sensor_id = static_cast<int>(i + 1);
+    sensor.model = sensors::to_text(line.model);
+    const armor::RadarState state = g_health.state(static_cast<std::uint8_t>(i + 1), now);
+    sensor.state = line.bridge ? "bridge" : state == armor::RadarState::kReporting ? "reporting" : state == armor::RadarState::kNoData ? "no_data" : state == armor::RadarState::kGarbled ? "garbled" : "silent";
+    if (line.model == sensors::Model::kMr24hpc1 && state == armor::RadarState::kSilent && g_health.counters(static_cast<std::uint8_t>(i + 1)).frames > 0) sensor.state = "reporting";
+    sensor.firmware_known = line.identity.firmware.known;
+    sensor.firmware = line.identity.firmware.known ? line.identity.firmware.text : "";
+    sensor.bluetooth = line.identity.bluetooth;
+    sensor.mac = line.identity.bluetooth == sensorid::Bluetooth::kOpen ? line.identity.mac.text : "";
+    sensor.bluetooth_alert = line.guard.alert();
+    sensor.quirk = armor::radarreport::quirk_of(line.model, line.identity.firmware);
+    out.push_back(sensor);
+  }
+  return out;
+}
+
+// ---- the serial bridge ------------------------------------------------------------------------------------------------------------------------------
+
+bool bridge_begin(std::size_t index, std::uint32_t baud) {
+  if (index >= 3 || !g_lines[index].enabled || g_lines[index].tx < 0) return false;
+  Line& line = g_lines[index];
+  {
+    std::unique_lock<std::mutex> command(line.command_lock, std::try_to_lock);   // no command may be halfway; once the flag is up, none starts
+    if (!command.owns_lock()) return false;
+    line.bridge = true;
+  }
+  uart_flush_input(kUarts[index]);
+  uart_set_baudrate(kUarts[index], baud);
+  ESP_LOGW(kTag, "sensor %u: the serial bridge has the port at %u baud (the node does not read this sensor meanwhile)", static_cast<unsigned>(index + 1), static_cast<unsigned>(baud));
+  return true;
+}
+
+std::size_t bridge_exchange(std::size_t index, const std::uint8_t* write, std::size_t write_length, std::uint8_t* out, std::size_t capacity, unsigned wait_ms) {
+  if (index >= 3 || !g_lines[index].bridge) return 0;
+  if (write_length > 0) uart_write_bytes(kUarts[index], reinterpret_cast<const char*>(write), write_length);
+  std::size_t got = 0;
+  if (capacity == 0) return 0;
+  // the first byte: wait for it; the rest: what has arrived by now
+  const int first = uart_read_bytes(kUarts[index], out, 1, pdMS_TO_TICKS(wait_ms));
+  if (first <= 0) return 0;
+  got = 1;
+  std::size_t buffered = 0;
+  uart_get_buffered_data_len(kUarts[index], &buffered);
+  if (buffered > capacity - got) buffered = capacity - got;
+  if (buffered > 0) {
+    const int more = uart_read_bytes(kUarts[index], out + got, static_cast<std::uint32_t>(buffered), 0);
+    if (more > 0) got += static_cast<std::size_t>(more);
+  }
+  return got;
+}
+
+void bridge_end(std::size_t index) {
+  if (index >= 3 || !g_lines[index].bridge) return;
+  Line& line = g_lines[index];
+  uart_flush_input(kUarts[index]);
+  uart_set_baudrate(kUarts[index], line.baud);
+  {
+    std::lock_guard<std::mutex> guard(g_data_lock);
+    line.framer = armor::FrameFramer(armor::ld2450::protocol());
+    if (line.var) line.var->reset();
+    line.acks.reset();
+    line.stabiliser.reset();
+    line.bridge = false;
+  }
+  ESP_LOGI(kTag, "sensor %u: the serial bridge gave the port back (%u baud)", static_cast<unsigned>(index + 1), static_cast<unsigned>(line.baud));
 }
 
 }  // namespace armor::radar

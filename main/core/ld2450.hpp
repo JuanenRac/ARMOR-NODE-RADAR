@@ -50,8 +50,20 @@ inline ProtocolSpec protocol() {
   return spec;
 }
 
+// What the module can really report (from its own specification and from what other drivers had to learn): a value beyond these is a garbled frame, not a target.
+constexpr int kMaxAbsXMm = 6500;
+constexpr int kMinYMm = -500;   // the module can report a target a few centimetres behind itself; the node's range setting decides what is looked at
+constexpr int kMaxYMm = 8500;
+constexpr int kMaxAbsSpeedCmS = 1000;
+
+// Why a target that is in the frame is not used: it has no resolution (the module's way of saying "no target" with the rest of the bytes left over), it is beyond
+// what the module can measure, or it sits exactly at the origin with a resolution (what the 2.14 firmware does for an empty slot).
+enum class Reject : std::uint8_t { kNone, kNoResolution, kOutOfRange, kOrigin };
+
 struct Target {
-  bool present = false;
+  bool present = false;            // the eight bytes are not all zero
+  bool valid = false;              // present, and not rejected: the only kind that becomes a track
+  Reject rejected = Reject::kNone;
   std::int16_t x_mm = 0;
   std::int16_t y_mm = 0;
   std::int16_t speed_cm_s = 0;
@@ -65,7 +77,21 @@ struct Frame {
     for (const Target& target : targets) n += target.present ? 1 : 0;
     return n;
   }
+  std::size_t valid_count() const {
+    std::size_t n = 0;
+    for (const Target& target : targets) n += target.valid ? 1 : 0;
+    return n;
+  }
 };
+
+// The decision about one decoded target (see Reject).
+inline Reject judge(const Target& target) {
+  if (!target.present) return Reject::kNone;
+  if (target.resolution_mm == 0) return Reject::kNoResolution;
+  if (target.x_mm > kMaxAbsXMm || target.x_mm < -kMaxAbsXMm || target.y_mm < kMinYMm || target.y_mm > kMaxYMm || target.speed_cm_s > kMaxAbsSpeedCmS || target.speed_cm_s < -kMaxAbsSpeedCmS) return Reject::kOutOfRange;
+  if (target.x_mm == 0 && target.y_mm == 0) return Reject::kOrigin;
+  return Reject::kNone;
+}
 
 // Bit 15 set means positive, clear means negative; the other 15 bits are the magnitude.
 inline std::int16_t decode_signed(std::uint16_t raw) {
@@ -93,18 +119,20 @@ inline bool decode_frame(const std::uint8_t* data, std::size_t length, Frame& ou
     target.y_mm = decode_signed(little_endian(raw + 2));
     target.speed_cm_s = decode_signed(little_endian(raw + 4));
     target.resolution_mm = little_endian(raw + 6);
+    target.rejected = judge(target);
+    target.valid = target.rejected == Reject::kNone;
   }
   return true;
 }
 
-// The tracks of one frame, in the units of the message contract (speed in mm/s). The slot number
+// The tracks of one frame, in the units of the message contract (speed in mm/s). Only a valid target (see judge) becomes a track. The slot number
 // (1 to 3) is the track id. A speed that would not fit the contract's range is clamped, which
 // a real target can not reach. `out` must hold kTargetsPerFrame entries.
 inline std::size_t to_tracks(std::uint8_t sensor_id, const Frame& frame, Track* out) {
   std::size_t count = 0;
   for (std::size_t slot = 0; slot < kTargetsPerFrame; ++slot) {
     const Target& target = frame.targets[slot];
-    if (!target.present) continue;
+    if (!target.valid) continue;
     int speed = target.speed_cm_s * 10;
     if (speed > 32767) speed = 32767;
     if (speed < -32768) speed = -32768;

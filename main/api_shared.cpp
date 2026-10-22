@@ -2,6 +2,7 @@
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "api_shared.hpp"
 
+#include <cmath>
 #include <memory>
 #include <mutex>
 #include <new>
@@ -20,8 +21,13 @@ extern "C" {
 }
 #include "clock_sync.hpp"
 #include "github_update.hpp"
+#include "chip_temp.hpp"
+#include "core/config_transfer.hpp"
 #include "core/json.hpp"
+#include "core/radar_report.hpp"
 #include "light_sensor.hpp"
+#include "perimeter_rt.hpp"
+#include "sensor_bridge.hpp"
 #include "mqtt_link.hpp"
 #include "network.hpp"
 #include "psram_mem.hpp"
@@ -77,7 +83,9 @@ void write_radar(json::Writer& w, std::size_t index) {
   w.begin_object().field("radar", static_cast<int>(index + 1)).field("enabled", s.enabled).field("model", s.model).field("tracker", s.tracker).field("name", s.name).field("rx", s.rx).field("tx", s.tx)
       .field("state", s.state).field("state_text", s.state_text).field("bytes", static_cast<long long>(s.bytes)).field("frames", static_cast<long long>(s.frames))
       .field("bad_frames", static_cast<long long>(s.bad_frames)).key("fps").number(s.frames_per_second, 1).field("firmware", s.firmware).field("tracking_mode", s.tracking_mode)
-      .field("present", s.present).field("distance_cm", s.distance_cm);
+      .field("present", s.present).field("distance_cm", s.distance_cm).field("firmware_known", s.firmware_known).field("serial", s.serial).field("mac", s.mac).field("bluetooth", s.bluetooth)
+      .field("bluetooth_alert", s.bluetooth_alert).field("bluetooth_found_open", s.bluetooth_found_open).field("bluetooth_attempts", static_cast<long long>(s.bluetooth_attempts))
+      .field("bluetooth_gave_up", s.bluetooth_gave_up).field("quirk", s.quirk).field("gates", s.gates).field("pet_ignored", static_cast<long long>(s.pet_ignored)).field("bridge", s.bridge);
   if (!s.detail.empty()) w.key("detail").raw(s.detail);
   w.end_object();
 }
@@ -147,6 +155,14 @@ std::string status_json() {
   write_flash(w);
   write_network(w);
   w.key("mqtt").begin_object().field("enabled", m.enabled).field("connected", m.connected).field("clock_set", m.clock_set).field("published", static_cast<long long>(m.published)).field("withheld", m.withheld).end_object();
+  const float chip_celsius = chip::temperature_c();
+  w.key("chip_temperature_c");
+  if (std::isfinite(chip_celsius)) w.number(chip_celsius, 1); else w.null();
+  const perimeter_rt::Summary perimeter_now = perimeter_rt::summary();
+  w.key("perimeter").begin_object().field("enabled", perimeter_now.enabled).field("masked", perimeter_now.masked).field("wifi_jam", perimeter_now.wifi_jam).field("buffered", static_cast<long long>(perimeter_now.buffered))
+      .field("sent", static_cast<long long>(perimeter_now.sent)).field("targets", static_cast<long long>(perimeter_now.targets)).end_object();
+  const sensor_bridge::Status bridge_now = sensor_bridge::status();
+  w.key("bridge").begin_object().field("active", bridge_now.active).field("sensor", bridge_now.sensor).field("seconds_left", static_cast<long long>(bridge_now.seconds_left)).end_object();
   const float lux = light_lux();
   const web::TlsStatus tls = web::tls_status();
   w.key("web").begin_object().field("mode", tls.mode).field("https", tls.running).field("cert_sha256", tls.fingerprint).end_object();
@@ -178,9 +194,7 @@ std::string config_get_json() {
 
 std::string config_export_json() {
   const config::Settings s = store::settings();
-  json::Writer w;
-  w.begin_object().key("config").raw(config::to_json(s, true)).field("firmware", version_text()).end_object();
-  return w.str();
+  return config::export_document(s, version_text());
 }
 
 std::string problems_json(const config::Problems& problems) {
@@ -201,7 +215,39 @@ PutResult put_config(std::string_view document, config::Problems& problems, bool
   if (!store::save_settings(*after)) return PutResult::kStorage;
   restart_required = config::needs_restart(*before, *after);
   if (before->time.zone != after->time.zone) clocksync::set_zone(after->time.zone);
+  perimeter_rt::apply(*after);   // the perimeter engine, the pet rule and the rule for the sensors' Bluetooth apply at once
   return PutResult::kSaved;
+}
+
+ImportResult import_config(std::string_view document, bool dry_run, config::Problems& problems, bool& restart_required) {
+  const std::unique_ptr<config::Settings> before(new (std::nothrow) config::Settings(store::settings()));
+  const std::unique_ptr<config::Settings> after(new (std::nothrow) config::Settings());
+  if (!before || !after) return ImportResult::kStorage;
+  problems.clear();
+  // A file loaded onto a node starts from a node that has never been set up, not from this one: what the file does not say is not kept from here (a clone is a clone).
+  const std::unique_ptr<config::Settings> fresh(new (std::nothrow) config::Settings(config::default_settings(store::mac_tail())));
+  if (!fresh) return ImportResult::kStorage;
+  if (!config::import_document(document, *fresh, *after, problems)) return ImportResult::kInvalid;
+  after->node_id = before->node_id;
+  // The node keeps its own id (two nodes with one id would answer for each other); everything else the file says is applied, its name included.
+  if (dry_run) { restart_required = config::needs_restart(*before, *after); return ImportResult::kChecked; }
+  if (!store::save_settings(*after)) return ImportResult::kStorage;
+  restart_required = config::needs_restart(*before, *after);
+  if (before->time.zone != after->time.zone) clocksync::set_zone(after->time.zone);
+  perimeter_rt::apply(*after);
+  return ImportResult::kApplied;
+}
+
+std::string health_members_json() {
+  radarreport::Radar radar;
+  const perimeter_rt::Summary perimeter_now = perimeter_rt::summary();
+  radar.perimeter_enabled = perimeter_now.enabled;
+  radar.masked = perimeter_now.masked;
+  radar.wifi_jam = perimeter_now.wifi_jam;
+  radar.events_buffered = perimeter_now.buffered;
+  radar.bridge_open = sensor_bridge::status().active;
+  radar.sensor_bluetooth_off = radar::close_bluetooth_rule();
+  return radarreport::members_json(radar::report_sensors(), radar);
 }
 
 bool wifi_scan_json(std::string& data, std::string& error) {
