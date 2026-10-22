@@ -6,6 +6,20 @@ All notable changes to this project are documented here.
 
 - The repository has a security policy, a code of conduct, a contributing guide and a support file.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
+## [0.7.9] - Perimeter engine, sensor identity and diagnostics
+
+- **Perimeter engine on the node (off by default):** six detection zones and three exclusion zones, each a rectangle turned by an angle; three tripwire lines that count crossings by direction; three entry paths with strict entry; range, debounce, still/walking/running per target, pet immunity for presence sensors that report energy and masking detection. It runs next to the sensors, so it works when the broker cannot be reached; the events go out on `armor/radar/<node>/events` (QoS 1, a fixed list of words) and an offline ring keeps them while the broker is away.
+- **Who each sensor is:** at start, and when a sensor is plugged in, the node reads its firmware version and Bluetooth address (LD2450, LD2410B/C, LD2412, LD2410S) and shows them in the panel.
+- **The sensors' own Bluetooth is closed by default** (`sensor_security.bluetooth_off`), because it asks for no PIN; the node never changes the serial speed of a sensor and knows which LD2412 versions acknowledge commands they do not carry out.
+- **Transparent serial bridge:** an administrator can hand the serial line of one sensor to a PC tool for a few minutes (`/api/v1/bridge/*` and the *Serial bridge* card of the panel); `tools/serial_bridge_client.py` is the client.
+- **The LD2450 parser keeps the sign of Y** (targets a few centimetres behind the module) and the trackers feed the perimeter with the origin of each target.
+- **`GET /metrics` for administrators** in the Prometheus text format, the settings as a file (export, and an all-or-nothing import with a dry run) and the recovery of the settings store.
+- **The zone editor is in the node's panel (*Perimeter*),** in the eight languages.
+- **How the last run ended:** after a start that was not clean (a crash, a watchdog, a sag of the supply, a failed allocation, a restart by the node's own guard) the health report carries the cause for the first ten minutes, so nobody has to be at the board with a cable.
+- **The memory gate and the core dump in the health report:** whether new panel connections are being refused now and whether a core dump is waiting.
+- **Crash report in the panel:** a crash writes its core dump (ELF, with a checksum, up to 32 tasks) to the `coredump` partition (128 KB in the table of the repository); the Update page has a *Crash report (core dump)* card for administrators to look at it, download it or erase it. A node flashed before with the older 64 KB table keeps it and may not fit a long dump.
+- **Settings that survive an update:** right before a firmware is installed the node keeps a copy of the stored settings next to them, with the version that wrote it and a check number, and reads both with the tolerant reader at every start.
+- **Diagnostic package and log on request:** an administrator can ask the node, through the server, for its `diagnostics` with `detail` `package` or `log` (the same two steps and one-time token as the other orders); the answer carries the memory as it is now and the tasks with the least stack they have had free.
 
 ## [0.7.8] - The node protects its memory, and the server can control it
 
