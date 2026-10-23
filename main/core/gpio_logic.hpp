@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the logic of the mapped pins: commands from the server, debouncing, the fall-back to a safe state, topics and reports.
+// ARMOR-NODE-RADAR - the logic of the mapped pins: commands from the server, debouncing, the fall-back to a safe state, topics and reports.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A pin the operator maps in the panel becomes a device of A.R.M.O.R.'s device layer (ARMOR-SERVER, armor/device/...): it reports

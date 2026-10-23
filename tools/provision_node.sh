@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ARMOR-RADAR - gives a node its identity on the bench broker and writes its settings file.
+# ARMOR-NODE-RADAR - gives a node its identity on the bench broker and writes its settings file.
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #
 #   tools/provision_node.sh perimetro-1 --host 192.168.0.180 --user <user> --key ~/.ssh/id_key [--broker-host 192.168.0.180]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ARMOR-RADAR - makes the fleet secret and the files that use it (once).
+"""ARMOR-NODE-RADAR - makes the fleet secret and the files that use it (once).
 
 Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 

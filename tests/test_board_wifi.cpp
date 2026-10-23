@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests of the s3-wifi board profile (an ESP32-S3-WROOM-1 N16R8 with no Ethernet): its pin table, its defaults, the refusal of the Ethernet way in and the
+// ARMOR-NODE-RADAR - host tests of the s3-wifi board profile (an ESP32-S3-WROOM-1 N16R8 with no Ethernet): its pin table, its defaults, the refusal of the Ethernet way in and the
 // layouts of its network. It is built with ARMOR_BOARD_S3_WIFI defined (tests/CMakeLists.txt); test_node.cpp covers the s3-eth profile (the Waveshare board).
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cstdio>

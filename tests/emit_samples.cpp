@@ -1,4 +1,4 @@
-// ARMOR-RADAR - prints the payloads the firmware would publish, one per line, so the
+// ARMOR-NODE-RADAR - prints the payloads the firmware would publish, one per line, so the
 // message contract (ARMOR-COMMON) can validate the firmware's real serialiser.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cstdio>

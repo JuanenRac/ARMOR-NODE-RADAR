@@ -1,4 +1,4 @@
-// ARMOR-RADAR - conversion and range selection for the Vishay VEML7700 ambient-light sensor.
+// ARMOR-NODE-RADAR - conversion and range selection for the Vishay VEML7700 ambient-light sensor.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Source: the Vishay VEML7700 datasheet and its application note "Designing the VEML7700 into an

@@ -1,4 +1,4 @@
-// ARMOR-RADAR - a resynchronising byte-stream framer for fixed-length radar frames.
+// ARMOR-NODE-RADAR - a resynchronising byte-stream framer for fixed-length radar frames.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A UART delivers bytes, not frames: it starts mid-frame, loses bytes and picks

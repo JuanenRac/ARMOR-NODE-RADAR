@@ -1,4 +1,4 @@
-// ARMOR-RADAR - a resynchronising framer for variable-length frames that carry their own length.
+// ARMOR-NODE-RADAR - a resynchronising framer for variable-length frames that carry their own length.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The radars of the Hi-Link family (LD2461, LD2410, LD2412, LD2410S) and the MR24 module report frames whose length is inside the frame:

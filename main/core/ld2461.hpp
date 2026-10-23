@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the HLK-LD2461 (2T4R tracking radar): its report frames and its command frames.
+// ARMOR-NODE-RADAR - the HLK-LD2461 (2T4R tracking radar): its report frames and its command frames.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Source: Hi-Link "HLK-LD2461 serial communication protocol" V1.1 and the module's specification V1.1 (ARMOR's sensors folder); the worked examples

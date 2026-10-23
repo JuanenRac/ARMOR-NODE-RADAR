@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the pins the operator mapped in the panel.
+// ARMOR-NODE-RADAR - the pins the operator mapped in the panel.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "gpio_manager.hpp"
 

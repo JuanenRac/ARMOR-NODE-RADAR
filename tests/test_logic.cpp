@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests of the small decisions the other tests only reach through the settings: the framer that finds radar frames in a byte stream, the names and report fields of
+// ARMOR-NODE-RADAR - host tests of the small decisions the other tests only reach through the settings: the framer that finds radar frames in a byte stream, the names and report fields of
 // mapped pins, the broker password that belongs to its broker, and the limits of the climate and light checks.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 // No serial line, pin or broker is used: the bytes and the settings documents are written out in the tests.

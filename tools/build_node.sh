@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ARMOR-RADAR - builds the firmware of one node in the official ESP-IDF container.
+# ARMOR-NODE-RADAR - builds the firmware of one node in the official ESP-IDF container.
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #
 #   tools/build_node.sh generic                # the UNIVERSAL image for the default board (s3-eth): no node's data inside, writes dist/generic-s3-eth.bin

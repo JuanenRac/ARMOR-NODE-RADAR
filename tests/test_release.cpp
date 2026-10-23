@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests of the comparison of versions and of the choice of a release's firmware image: the update from GitHub never installs what is not this board's.
+// ARMOR-NODE-RADAR - host tests of the comparison of versions and of the choice of a release's firmware image: the update from GitHub never installs what is not this board's.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cstdio>
 #include <string>

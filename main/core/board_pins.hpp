@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the two boards this firmware is built for, and which of their GPIO pins may be handed to the operator.
+// ARMOR-NODE-RADAR - the two boards this firmware is built for, and which of their GPIO pins may be handed to the operator.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // One firmware, two board profiles (chosen when the image is built, tools/build_node.sh NODE BOARD; the host tests build both):

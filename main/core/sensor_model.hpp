@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the millimetre-wave sensors a node's serial ports can carry, and what each one is.
+// ARMOR-NODE-RADAR - the millimetre-wave sensors a node's serial ports can carry, and what each one is.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Two kinds. A TRACKER reports where the targets are (x, y): the LD2450 and the LD2461. They feed the perimeter's tracks, so the server and

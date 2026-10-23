@@ -1,4 +1,4 @@
-// ARMOR-RADAR - decides how the node's network is built from its settings: which interfaces, which are bridged, and the access point.
+// ARMOR-NODE-RADAR - decides how the node's network is built from its settings: which interfaces, which are bridged, and the access point.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The five layouts (a board with no Ethernet port, the s3-wifi profile, only ever has the last two):

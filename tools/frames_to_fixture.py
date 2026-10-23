@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ARMOR-RADAR - turns the serial log of a node into a test fixture of real LD2450 frames.
+"""ARMOR-NODE-RADAR - turns the serial log of a node into a test fixture of real LD2450 frames.
 
 Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 

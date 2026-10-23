@@ -1,4 +1,4 @@
-// ARMOR-RADAR - dew point, the anti-fog PTC heater and the local day/night decision.
+// ARMOR-NODE-RADAR - dew point, the anti-fog PTC heater and the local day/night decision.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Pure functions with no hardware in them, so the decisions can be tested on a

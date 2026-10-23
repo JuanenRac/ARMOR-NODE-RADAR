@@ -1,4 +1,4 @@
-// ARMOR-RADAR - what each radar has reported, to tell a live radar from a silent or a garbled one.
+// ARMOR-NODE-RADAR - what each radar has reported, to tell a live radar from a silent or a garbled one.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // On the bench the first question is always "is this radar wired right?": bytes arriving without frames mean the wrong baud rate or

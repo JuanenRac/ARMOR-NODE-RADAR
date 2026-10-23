@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ARMOR-RADAR - adopts a freshly flashed node over the network: administrator, name, broker identity and the settings every node shares.
+"""ARMOR-NODE-RADAR - adopts a freshly flashed node over the network: administrator, name, broker identity and the settings every node shares.
 
 Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 

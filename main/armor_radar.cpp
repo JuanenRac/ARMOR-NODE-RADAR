@@ -1,4 +1,4 @@
-// ARMOR-RADAR — field-node configuration guard.
+// ARMOR-NODE-RADAR — field-node configuration guard.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "radar_tracks.hpp"
 

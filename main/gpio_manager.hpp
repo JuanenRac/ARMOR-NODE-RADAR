@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the pins the operator mapped in the panel: inputs, outputs, PWM and analogue readings that A.R.M.O.R. can read and switch.
+// ARMOR-NODE-RADAR - the pins the operator mapped in the panel: inputs, outputs, PWM and analogue readings that A.R.M.O.R. can read and switch.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once
 #include <functional>

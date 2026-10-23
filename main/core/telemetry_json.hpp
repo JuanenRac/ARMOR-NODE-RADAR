@@ -1,4 +1,4 @@
-// ARMOR-RADAR - serialisation of the message contract (telemetry and health).
+// ARMOR-NODE-RADAR - serialisation of the message contract (telemetry and health).
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Produces exactly the payloads ARMOR-COMMON publishes as JSON Schemas:

@@ -1,4 +1,4 @@
-// ARMOR-RADAR - unifying three radars' own local coordinates onto one shared plane.
+// ARMOR-NODE-RADAR - unifying three radars' own local coordinates onto one shared plane.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Each LD2450 reports X/Y in millimetres from its own position, facing its own direction. With three of them aimed in different

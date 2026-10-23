@@ -1,4 +1,4 @@
-"""Tests of ARMOR-RADAR's bench tools (python -m unittest discover tests)."""
+"""Tests of ARMOR-NODE-RADAR's bench tools (python -m unittest discover tests)."""
 import importlib.util
 import pathlib
 import unittest

@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests for the other sensors: the LD2461 tracker and the LD2410, LD2412, LD2410S and MR24HPC1 presence sensors.
+// ARMOR-NODE-RADAR - host tests for the other sensors: the LD2461 tracker and the LD2410, LD2412, LD2410S and MR24HPC1 presence sensors.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 // The frames marked "manual" are the worked examples of the manufacturers' documents; the others are built from the documented layout.
 #include <algorithm>

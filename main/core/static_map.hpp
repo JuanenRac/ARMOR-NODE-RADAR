@@ -1,4 +1,4 @@
-// ARMOR-RADAR - suppression of static reflectors learned during an explicit calibration.
+// ARMOR-NODE-RADAR - suppression of static reflectors learned during an explicit calibration.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A fence post or a metal door reflects the same echo every frame. Suppressing
