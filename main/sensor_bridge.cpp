@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the transparent serial bridge to one sensor (see sensor_bridge.hpp). Nothing here has run on a board; the rules are in core/serial_bridge.hpp and are tested on a computer.
+// ARMOR-NODE-RADAR - the transparent serial bridge to one sensor (see sensor_bridge.hpp). Nothing here has run on a board; the rules are in core/serial_bridge.hpp and are tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "sensor_bridge.hpp"
 

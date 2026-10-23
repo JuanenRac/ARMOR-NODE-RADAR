@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the transparent serial bridge to one sensor, for the maker's PC tools. The rules are in core/serial_bridge.hpp (tested on a computer); this file joins them to the serial port.
+// ARMOR-NODE-RADAR - the transparent serial bridge to one sensor, for the maker's PC tools. The rules are in core/serial_bridge.hpp (tested on a computer); this file joins them to the serial port.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // An administrator opens a session for one sensor (the panel, or tools/serial_bridge_client.py on the PC where the maker's tool runs); the node stops reading that sensor, and every exchange of

@@ -1,4 +1,4 @@
-// ARMOR-RADAR - what the node does when the store of its settings cannot be opened. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - what the node does when the store of its settings cannot be opened. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The settings store holds the node's settings and its users: erasing it sends the node back to set-up. A store that failed to open once may open after a restart (a power sag during a write is

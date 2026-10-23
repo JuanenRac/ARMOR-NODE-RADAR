@@ -1,5 +1,5 @@
 /*
- * ARMOR-RADAR - ESP32-S3 field node (Waveshare ESP32-S3-ETH, up to three HLK-LD2450 radars, wired Ethernet and a Wi-Fi access point).
+ * ARMOR-NODE-RADAR - ESP32-S3 field node (Waveshare ESP32-S3-ETH, up to three HLK-LD2450 radars, wired Ethernet and a Wi-Fi access point).
  * Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
  *
  * The hardware-independent core under main/core is built and tested on a computer (tests/); the files beside this one are built with

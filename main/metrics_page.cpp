@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the node's numbers for Prometheus (see metrics_page.hpp). Nothing here has run on a board.
+// ARMOR-NODE-RADAR - the node's numbers for Prometheus (see metrics_page.hpp). Nothing here has run on a board.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "metrics_page.hpp"
 

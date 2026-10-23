@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ARMOR-RADAR - a stand-in for a node, to work on the web panel without a board.
+ * ARMOR-NODE-RADAR - a stand-in for a node, to work on the web panel without a board.
  * Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
  *
  *   node tools/panel_mock.mjs [port]          (default 8090)     open http://127.0.0.1:8090/

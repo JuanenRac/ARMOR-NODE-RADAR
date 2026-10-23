@@ -1,4 +1,4 @@
-// ARMOR-RADAR - decoder for the HLK-LD2450 target report frame.
+// ARMOR-NODE-RADAR - decoder for the HLK-LD2450 target report frame.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Source: Hi-Link "HLK-LD2450 Motion target detection and tracking module, Instruction

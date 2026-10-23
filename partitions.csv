@@ -1,4 +1,4 @@
-# ARMOR-RADAR partition table for the 16 MB flash of the Waveshare ESP32-S3-ETH.
+# ARMOR-NODE-RADAR partition table for the 16 MB flash of the Waveshare ESP32-S3-ETH.
 # Two application slots (over-the-air updates with rollback), the settings store, and room to grow.
 # Name,     Type, SubType,  Offset,   Size,     Flags
 nvs,        data, nvs,      0x9000,   0x10000,

@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the perimeter engine at run time. What it decides is in core/perimeter.hpp, core/offline_ring.hpp, core/jam_detector.hpp and core/reflector_learner.hpp (all tested on a computer);
+// ARMOR-NODE-RADAR - the perimeter engine at run time. What it decides is in core/perimeter.hpp, core/offline_ring.hpp, core/jam_detector.hpp and core/reflector_learner.hpp (all tested on a computer);
 // this file feeds them the node's targets and hands their events to the broker.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "perimeter_rt.hpp"

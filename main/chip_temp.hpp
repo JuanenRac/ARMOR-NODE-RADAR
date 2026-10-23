@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the temperature of the chip, from the sensor that is inside it.
+// ARMOR-NODE-RADAR - the temperature of the chip, from the sensor that is inside it.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once
 

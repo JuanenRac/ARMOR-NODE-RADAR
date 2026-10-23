@@ -1,4 +1,4 @@
-// ARMOR-RADAR - what the radar node adds to its health report: one entry per sensor (who it is, its firmware, its Bluetooth) and a few facts about the perimeter engine. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - what the radar node adds to its health report: one entry per sensor (who it is, its firmware, its Bluetooth) and a few facts about the perimeter engine. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The health report every node says about itself (core/node_health.hpp, shared with the other nodes) is left as it is; the radar node adds two optional members to it before it is sent,

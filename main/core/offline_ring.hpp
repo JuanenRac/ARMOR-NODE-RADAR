@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the messages a node keeps while the broker cannot be reached, in flash, and sends when it comes back. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the messages a node keeps while the broker cannot be reached, in flash, and sends when it comes back. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // An alarm event that happens while the broker is down must not be lost, nor lost because the node restarted meanwhile. The node keeps the last 30 of them (the oldest goes when the 31st comes),

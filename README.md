@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-RADAR banner" width="100%">
+  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-NODE-RADAR banner" width="100%">
 </p>
 
-# 📡 ARMOR-RADAR
+# 📡 ARMOR-NODE-RADAR
 
 <p align="center">
   🇺🇸 <b>English</b> |
@@ -75,12 +75,12 @@ Captured at 1920×1080 on a test bench, with sample data and no real installatio
 
 ## 🧩 Role in A.R.M.O.R.
 
-ARMOR-RADAR is the eyes of the perimeter. Each node reads up to three radars or presence sensors and publishes tracks, light and health to [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) over MQTT; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) draws them on the site plan and [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) weighs them against the cameras. Its firmware shares a base with the other nodes (the panel, Bluetooth set-up, signed updates, sign-in and the clock come from the firmware base of [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), so what you learn on one node holds on all of them.
+ARMOR-NODE-RADAR is the eyes of the perimeter. Each node reads up to three radars or presence sensors and publishes tracks, light and health to [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) over MQTT; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) draws them on the site plan and [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) weighs them against the cameras. Its firmware shares a base with the other nodes (the panel, Bluetooth set-up, signed updates, sign-in and the clock come from the firmware base of [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), so what you learn on one node holds on all of them.
 
 ## 📂 Repository Structure
 
 ```text
-ARMOR-RADAR/
+ARMOR-NODE-RADAR/
 ├── main/
 │   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
 │   ├── node_store.cpp      settings and users in flash
@@ -131,11 +131,11 @@ The host tests need any C++17 compiler (Linux, WSL, MSYS2). See the [bench bring
 **A.R.M.O.R.** (Autonomous Radar & Multimodal Observation Range) is a perimeter-security system made of independent repositories. Each one has its own version, its own tests and its own README; this is the family:
 
 * **[ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)** - Message contracts, validators, conformance vectors and generated types
-* **ARMOR-RADAR** (this repository) - Field-node firmware for ESP32-S3 with three radars and its own web panel
-* **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Solar inverter and battery protocols and the messages of a gateway node
-* **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Electrical node: meters, the message of the network's readings and the rules for switching
-* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Alarm node and panel: zones, arming, delays, siren and PIN, with the server or without it
-* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Touch panel: the state of the system on a wall screen, arming and acknowledging, and the home of the voice assistant
+* **ARMOR-NODE-RADAR** (this repository) - Field-node firmware for ESP32-S3 with three radars and its own web panel
+* **[ARMOR-NODE-SOLAR](https://github.com/JuanenRac/ARMOR-NODE-SOLAR)** - Solar inverter and battery protocols and the messages of a gateway node
+* **[ARMOR-NODE-ELECTRICAL](https://github.com/JuanenRac/ARMOR-NODE-ELECTRICAL)** - Electrical node: meters, the message of the network's readings and the rules for switching
+* **[ARMOR-NODE-ALARM](https://github.com/JuanenRac/ARMOR-NODE-ALARM)** - Alarm node and panel: zones, arming, delays, siren and PIN, with the server or without it
+* **[ARMOR-NODE-HMI](https://github.com/JuanenRac/ARMOR-NODE-HMI)** - Touch panel: the state of the system on a wall screen, arming and acknowledging, and the home of the voice assistant
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - The local network: its devices, the internet and what changes
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Central coordinator: telemetry, alarms, devices, solar readings and cameras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web console: cameras, radar, alarms, solar energy and the 2D/3D site designer

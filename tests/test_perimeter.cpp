@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests for the node's perimeter engine and its helpers: zones, lines, paths, masking, the count without flicker, the reflector learner, Wi-Fi jamming, the offline
+// ARMOR-NODE-RADAR - host tests for the node's perimeter engine and its helpers: zones, lines, paths, masking, the count without flicker, the reflector learner, Wi-Fi jamming, the offline
 // ring in flash, the Prometheus page, the events and the stream gate.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cmath>

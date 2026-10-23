@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the node's web panel and its JSON API.
+// ARMOR-NODE-RADAR - the node's web panel and its JSON API.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // One dispatcher serves /api/v1/*: it checks the session, reads a bounded body, calls the handler for the method and path and answers

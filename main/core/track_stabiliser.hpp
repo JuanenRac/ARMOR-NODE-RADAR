@@ -1,4 +1,4 @@
-// ARMOR-RADAR - stable track identities for a radar whose slots are not identities.
+// ARMOR-NODE-RADAR - stable track identities for a radar whose slots are not identities.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A radar reports "target in slot 1, slot 2, slot 3", and nothing says that slot 1 is the same person from one frame to the next: when a target

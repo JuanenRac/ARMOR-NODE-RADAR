@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the command channel of the HLK-LD2450: builds the configuration commands and reads their acknowledgements.
+// ARMOR-NODE-RADAR - the command channel of the HLK-LD2450: builds the configuration commands and reads their acknowledgements.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // SOURCE AND STATUS. The report frame (ld2450.hpp) is written from Hi-Link's Instruction manual V1.00. The command channel is NOT in

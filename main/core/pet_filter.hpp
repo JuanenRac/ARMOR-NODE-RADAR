@@ -1,4 +1,4 @@
-// ARMOR-RADAR - pet immunity for the presence sensors that report the energy of what they see. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - pet immunity for the presence sensors that report the energy of what they see. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A cat or a small dog near the sensor makes a weak reflection: a short distance and a low energy, both for the moving and for the stationary target. The LD2410 and the LD2412 give both

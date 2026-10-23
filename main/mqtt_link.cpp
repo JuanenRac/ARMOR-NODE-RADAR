@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the node's link to the broker: the clock, the health message, the radar telemetry and the mapped pins' topics.
+// ARMOR-NODE-RADAR - the node's link to the broker: the clock, the health message, the radar telemetry and the mapped pins' topics.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // What it does, as before: it publishes an "online" health message every heartbeat, with an MQTT last will that says "offline", and

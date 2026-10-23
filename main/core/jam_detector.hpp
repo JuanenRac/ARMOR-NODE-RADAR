@@ -1,4 +1,4 @@
-// ARMOR-RADAR - tells when the Wi-Fi signal collapses the way a jammer makes it. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - tells when the Wi-Fi signal collapses the way a jammer makes it. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The signal strength of the access point the node uses is followed with a slow average (the baseline, which only moves on samples that look normal). A sample far under the baseline, or no

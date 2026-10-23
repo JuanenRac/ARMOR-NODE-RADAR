@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the sensors on the three serial ports: the UARTs, the report frames, their health, and the command channel of each model.
+// ARMOR-NODE-RADAR - the sensors on the three serial ports: the UARTs, the report frames, their health, and the command channel of each model.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "radar_manager.hpp"
 #include "node_control.hpp"

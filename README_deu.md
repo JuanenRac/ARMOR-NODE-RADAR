@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-RADAR banner" width="100%">
+  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-NODE-RADAR banner" width="100%">
 </p>
 
-# 📡 ARMOR-RADAR
+# 📡 ARMOR-NODE-RADAR
 
 <p align="center">
   <a href="README.md">🇺🇸 English</a> |
@@ -75,12 +75,12 @@ Aufgenommen mit 1920×1080 auf einem Prüfstand, mit Beispieldaten und ohne eine
 
 ## 🧩 Rolle in A.R.M.O.R.
 
-ARMOR-RADAR sind die Augen des Perimeters. Jeder Knoten liest bis zu drei Radare oder Präsenzsensoren und veröffentlicht Spuren, Licht und Zustand per MQTT an [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER); [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) zeichnet sie in den Standortplan, und [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) wägt sie gegen die Kameras ab. Seine Firmware teilt eine Basis mit den anderen Knoten (Panel, Bluetooth-Einrichtung, signierte Updates, Anmeldung und Uhr stammen aus der Firmware-Basis von [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), sodass das, was man an einem Knoten lernt, für alle gilt.
+ARMOR-NODE-RADAR sind die Augen des Perimeters. Jeder Knoten liest bis zu drei Radare oder Präsenzsensoren und veröffentlicht Spuren, Licht und Zustand per MQTT an [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER); [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) zeichnet sie in den Standortplan, und [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) wägt sie gegen die Kameras ab. Seine Firmware teilt eine Basis mit den anderen Knoten (Panel, Bluetooth-Einrichtung, signierte Updates, Anmeldung und Uhr stammen aus der Firmware-Basis von [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), sodass das, was man an einem Knoten lernt, für alle gilt.
 
 ## 📂 Struktur des Repositorys
 
 ```text
-ARMOR-RADAR/
+ARMOR-NODE-RADAR/
 ├── main/
 │   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
 │   ├── node_store.cpp      settings and users in flash
@@ -131,11 +131,11 @@ Die Rechnertests brauchen einen C++17-Compiler (Linux, WSL, MSYS2). Siehe die [I
 **A.R.M.O.R.** (Autonomous Radar & Multimodal Observation Range) ist ein Perimeter-Sicherheitssystem aus unabhängigen Repositorys. Jedes hat eine eigene Version, eigene Tests und ein eigenes README; hier ist die Familie:
 
 * **[ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)** - Nachrichtenverträge, Validierer, Konformitätsvektoren und generierte Typen
-* **ARMOR-RADAR** (dieses Repository) - Feldknoten-Firmware für ESP32-S3 mit drei Radaren und eigenem Web-Panel
-* **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protokolle für Solar-Wechselrichter und -Batterien und die Nachrichten eines Gateway-Knotens
-* **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Elektroknoten: Zähler, die Nachricht der Netzmesswerte und die Regeln fürs Schalten
-* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Alarmknoten und Alarmzentrale: Zonen, Scharfschalten, Verzögerungen, Sirene und PIN, mit dem Server oder ohne ihn
-* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Touch-Panel: der Systemzustand auf einem Wandbildschirm, Scharf- und Quittieren sowie das Zuhause des Sprachassistenten
+* **ARMOR-NODE-RADAR** (dieses Repository) - Feldknoten-Firmware für ESP32-S3 mit drei Radaren und eigenem Web-Panel
+* **[ARMOR-NODE-SOLAR](https://github.com/JuanenRac/ARMOR-NODE-SOLAR)** - Protokolle für Solar-Wechselrichter und -Batterien und die Nachrichten eines Gateway-Knotens
+* **[ARMOR-NODE-ELECTRICAL](https://github.com/JuanenRac/ARMOR-NODE-ELECTRICAL)** - Elektroknoten: Zähler, die Nachricht der Netzmesswerte und die Regeln fürs Schalten
+* **[ARMOR-NODE-ALARM](https://github.com/JuanenRac/ARMOR-NODE-ALARM)** - Alarmknoten und Alarmzentrale: Zonen, Scharfschalten, Verzögerungen, Sirene und PIN, mit dem Server oder ohne ihn
+* **[ARMOR-NODE-HMI](https://github.com/JuanenRac/ARMOR-NODE-HMI)** - Touch-Panel: der Systemzustand auf einem Wandbildschirm, Scharf- und Quittieren sowie das Zuhause des Sprachassistenten
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - Das lokale Netzwerk: seine Geräte, das Internet und was sich ändert
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Zentraler Koordinator: Telemetrie, Alarme, Geräte, Solarmesswerte und Kameras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web-Konsole: Kameras, Radar, Alarme, Solarenergie und 2D/3D-Standortdesigner

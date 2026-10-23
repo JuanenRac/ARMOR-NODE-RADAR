@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-RADAR banner" width="100%">
+  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-NODE-RADAR banner" width="100%">
 </p>
 
-# 📡 ARMOR-RADAR
+# 📡 ARMOR-NODE-RADAR
 
 <p align="center">
   <a href="README.md">🇺🇸 English</a> |
@@ -75,12 +75,12 @@
 
 ## 🧩 A.R.M.O.R. での役割
 
-ARMOR-RADAR は境界の目です。各ノードは最大 3 台のレーダーまたは人感センサーを読み取り、軌跡・照度・状態を MQTT で [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) に送ります。[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) はそれをサイト図に描き、[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) はカメラと照らし合わせます。ファームウェアは他のノードと土台を共有し（パネル、Bluetooth 設定、署名付きアップデート、サインイン、時計は [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) のファームウェア基盤から）、1 つのノードで覚えたことがすべてに通用します。
+ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダーまたは人感センサーを読み取り、軌跡・照度・状態を MQTT で [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) に送ります。[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) はそれをサイト図に描き、[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) はカメラと照らし合わせます。ファームウェアは他のノードと土台を共有し（パネル、Bluetooth 設定、署名付きアップデート、サインイン、時計は [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON) のファームウェア基盤から）、1 つのノードで覚えたことがすべてに通用します。
 
 ## 📂 リポジトリの構成
 
 ```text
-ARMOR-RADAR/
+ARMOR-NODE-RADAR/
 ├── main/
 │   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
 │   ├── node_store.cpp      settings and users in flash
@@ -131,11 +131,11 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 **A.R.M.O.R.**（Autonomous Radar & Multimodal Observation Range）は、独立したリポジトリで構成される周辺警備システムです。それぞれに独自のバージョン、テスト、README があります。ファミリーは次のとおりです：
 
 * **[ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)** - メッセージ契約、検証器、適合性ベクトル、生成された型
-* **ARMOR-RADAR** (このリポジトリ) - ESP32-S3 用フィールドノードのファームウェア。レーダー 3 基と独自の Web パネル付き
-* **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - 太陽光インバーターとバッテリーのプロトコル、およびゲートウェイノードのメッセージ
-* **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - 電気ノード：電力量計、電力網の計測メッセージ、開閉のルール
-* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - 警報ノードと警報盤：警戒区域、警戒セット、遅延、サイレン、PIN。サーバーがあってもなくても
-* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - タッチパネル：壁面ディスプレイでのシステム状態表示、警戒・確認操作、音声アシスタントの拠点
+* **ARMOR-NODE-RADAR** (このリポジトリ) - ESP32-S3 用フィールドノードのファームウェア。レーダー 3 基と独自の Web パネル付き
+* **[ARMOR-NODE-SOLAR](https://github.com/JuanenRac/ARMOR-NODE-SOLAR)** - 太陽光インバーターとバッテリーのプロトコル、およびゲートウェイノードのメッセージ
+* **[ARMOR-NODE-ELECTRICAL](https://github.com/JuanenRac/ARMOR-NODE-ELECTRICAL)** - 電気ノード：電力量計、電力網の計測メッセージ、開閉のルール
+* **[ARMOR-NODE-ALARM](https://github.com/JuanenRac/ARMOR-NODE-ALARM)** - 警報ノードと警報盤：警戒区域、警戒セット、遅延、サイレン、PIN。サーバーがあってもなくても
+* **[ARMOR-NODE-HMI](https://github.com/JuanenRac/ARMOR-NODE-HMI)** - タッチパネル：壁面ディスプレイでのシステム状態表示、警戒・確認操作、音声アシスタントの拠点
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - ローカルネットワーク：機器、インターネット、そして変化
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央コーディネーター：テレメトリ、アラーム、デバイス、太陽光の測定値、カメラ
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Web コンソール：カメラ、レーダー、アラーム、太陽光発電、2D/3D サイト設計

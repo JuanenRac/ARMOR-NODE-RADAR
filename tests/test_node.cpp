@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests for the node's settings, pins, panel logins, mapped pins and the LD2450 command channel.
+// ARMOR-NODE-RADAR - host tests for the node's settings, pins, panel logins, mapped pins and the LD2450 command channel.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cstdio>
 #include <cstring>

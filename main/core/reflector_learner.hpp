@@ -1,4 +1,4 @@
-// ARMOR-RADAR - learns where the static reflectors of a yard are, and suggests exclusion zones for them. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - learns where the static reflectors of a yard are, and suggests exclusion zones for them. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A metal gate, a ventilation grille or a ceiling fan makes the radar report a target that never moves. The operator starts a learning run with the area empty (a few minutes); the learner counts,

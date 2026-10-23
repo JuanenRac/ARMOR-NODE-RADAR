@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests for the hardware-independent core.
+// ARMOR-NODE-RADAR - host tests for the hardware-independent core.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include <cmath>
 #include <cstdio>

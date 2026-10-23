@@ -1,4 +1,4 @@
-// ARMOR-RADAR - host tests for the sensor family: identity (firmware, Bluetooth address), the quirks of some firmware versions, closing the sensors' own Bluetooth with a fake sensor,
+// ARMOR-NODE-RADAR - host tests for the sensor family: identity (firmware, Bluetooth address), the quirks of some firmware versions, closing the sensors' own Bluetooth with a fake sensor,
 // the transparent serial bridge, the hardened LD2450 parser and the tracking.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 // The frames marked "manual" are the worked examples of the manufacturers' documents.

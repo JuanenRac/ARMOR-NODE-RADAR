@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the perimeter engine at run time: it takes the node's targets ten times a second, runs the rules of core/perimeter.hpp and tells what happened to the server (events), keeping the
+// ARMOR-NODE-RADAR - the perimeter engine at run time: it takes the node's targets ten times a second, runs the rules of core/perimeter.hpp and tells what happened to the server (events), keeping the
 // events in flash while the broker cannot be reached. It also watches the Wi-Fi signal for jamming, learns static reflectors on request, and answers the orders a zone takes from the server.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once

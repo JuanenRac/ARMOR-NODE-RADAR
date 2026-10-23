@@ -1,4 +1,4 @@
-// ARMOR-RADAR - who a sensor is: its firmware, its Bluetooth address and whether its own Bluetooth is open. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - who a sensor is: its firmware, its Bluetooth address and whether its own Bluetooth is open. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Sources: the command documents of the family (LD2450 manual 1.03 sections 2.2.6, 2.2.10 and 2.2.11; LD2410 protocol V1.00 sections 2.2.8, 2.2.12 and 2.2.13; LD2412 protocol V1.05

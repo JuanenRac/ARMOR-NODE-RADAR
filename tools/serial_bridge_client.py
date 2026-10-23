@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ARMOR-RADAR - the other end of the node's transparent serial bridge to a sensor.
+"""ARMOR-NODE-RADAR - the other end of the node's transparent serial bridge to a sensor.
 
 Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 

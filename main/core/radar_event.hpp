@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the messages a node sends about what its perimeter engine and its sensors found, and how often it sends the targets. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the messages a node sends about what its perimeter engine and its sensors found, and how often it sends the targets. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // An event is one short message to armor/radar/<node>/events (contract radar_event.schema.json in ARMOR-COMMON): the words are a fixed list and there is no free text, so nothing secret can get in.

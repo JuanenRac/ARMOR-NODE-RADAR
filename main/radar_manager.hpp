@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the sensors on the three serial ports: trackers (LD2450, LD2461) and presence sensors (LD2410, LD2412, LD2410S, MR24HPC1).
+// ARMOR-NODE-RADAR - the sensors on the three serial ports: trackers (LD2450, LD2461) and presence sensors (LD2410, LD2412, LD2410S, MR24HPC1).
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once
 #include <cstddef>

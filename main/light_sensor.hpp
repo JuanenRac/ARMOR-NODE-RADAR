@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the ambient-light reading of the node.
+// ARMOR-NODE-RADAR - the ambient-light reading of the node.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #pragma once
 #include "core/node_config.hpp"

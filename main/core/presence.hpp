@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the presence sensors: the HLK-LD2410 (B and C), LD2412, LD2410S and the Seeed MR24HPC1.
+// ARMOR-NODE-RADAR - the presence sensors: the HLK-LD2410 (B and C), LD2412, LD2410S and the Seeed MR24HPC1.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Sources (ARMOR's sensors folder): "HLK-LD2410C serial communication protocol" V1.00 and the LD2410B's; "HLK-LD2412 serial communication protocol"

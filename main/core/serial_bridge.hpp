@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the rules of the transparent serial bridge to one sensor. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the rules of the transparent serial bridge to one sensor. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The manufacturers' tools for a PC (the configuration tools of the sensors, and their flashing tools) speak to a sensor over a serial cable. The bridge lets an administrator use them through the

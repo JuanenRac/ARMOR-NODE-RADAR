@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-RADAR banner" width="100%">
+  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-NODE-RADAR banner" width="100%">
 </p>
 
-# 📡 ARMOR-RADAR
+# 📡 ARMOR-NODE-RADAR
 
 <p align="center">
   <a href="README.md">🇺🇸 English</a> |
@@ -75,12 +75,12 @@ Capturadas a 1920×1080 numa bancada de testes, com dados de exemplo e sem qualq
 
 ## 🧩 Papel no A.R.M.O.R.
 
-O ARMOR-RADAR são os olhos do perímetro. Cada nó lê até três radares ou sensores de presença e publica pistas, luz e saúde para o [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) por MQTT; o [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) desenha-os na planta do local e o [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) pesa-os face às câmaras. O seu firmware partilha uma base com os outros nós (o painel, a configuração por Bluetooth, as atualizações assinadas, o acesso e o relógio vêm da base de firmware do [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), por isso o que se aprende num nó vale em todos.
+O ARMOR-NODE-RADAR são os olhos do perímetro. Cada nó lê até três radares ou sensores de presença e publica pistas, luz e saúde para o [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) por MQTT; o [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) desenha-os na planta do local e o [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) pesa-os face às câmaras. O seu firmware partilha uma base com os outros nós (o painel, a configuração por Bluetooth, as atualizações assinadas, o acesso e o relógio vêm da base de firmware do [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), por isso o que se aprende num nó vale em todos.
 
 ## 📂 Estrutura do repositório
 
 ```text
-ARMOR-RADAR/
+ARMOR-NODE-RADAR/
 ├── main/
 │   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
 │   ├── node_store.cpp      settings and users in flash
@@ -131,11 +131,11 @@ Os testes de anfitrião precisam de qualquer compilador C++17 (Linux, WSL, MSYS2
 O **A.R.M.O.R.** (Autonomous Radar & Multimodal Observation Range) é um sistema de segurança perimetral feito de repositórios independentes. Cada um tem a sua própria versão, os seus próprios testes e o seu próprio README; esta é a família:
 
 * **[ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)** - Contratos de mensagens, validadores, vetores de conformidade e tipos gerados
-* **ARMOR-RADAR** (este repositório) - Firmware de nó de campo para ESP32-S3 com três radares e o seu próprio painel web
-* **[ARMOR-SOLAR](https://github.com/JuanenRac/ARMOR-SOLAR)** - Protocolos de inversores e baterias solares e as mensagens de um nó de ligação
-* **[ARMOR-ELECTRICAL](https://github.com/JuanenRac/ARMOR-ELECTRICAL)** - Nó elétrico: contadores, a mensagem das leituras da rede e as regras de comutação
-* **[ARMOR-ALARM](https://github.com/JuanenRac/ARMOR-ALARM)** - Nó e central de alarme: zonas, armar, atrasos, sirene e PIN, com o servidor ou sem ele
-* **[ARMOR-HMI](https://github.com/JuanenRac/ARMOR-HMI)** - Painel tátil: o estado do sistema num ecrã de parede, armar e reconhecer, e a casa do assistente de voz
+* **ARMOR-NODE-RADAR** (este repositório) - Firmware de nó de campo para ESP32-S3 com três radares e o seu próprio painel web
+* **[ARMOR-NODE-SOLAR](https://github.com/JuanenRac/ARMOR-NODE-SOLAR)** - Protocolos de inversores e baterias solares e as mensagens de um nó de ligação
+* **[ARMOR-NODE-ELECTRICAL](https://github.com/JuanenRac/ARMOR-NODE-ELECTRICAL)** - Nó elétrico: contadores, a mensagem das leituras da rede e as regras de comutação
+* **[ARMOR-NODE-ALARM](https://github.com/JuanenRac/ARMOR-NODE-ALARM)** - Nó e central de alarme: zonas, armar, atrasos, sirene e PIN, com o servidor ou sem ele
+* **[ARMOR-NODE-HMI](https://github.com/JuanenRac/ARMOR-NODE-HMI)** - Painel tátil: o estado do sistema num ecrã de parede, armar e reconhecer, e a casa do assistente de voz
 * **[ARMOR-NETWORK](https://github.com/JuanenRac/ARMOR-NETWORK)** - A rede local: os seus dispositivos, a internet e o que muda
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - Coordenador central: telemetria, alarmes, dispositivos, leituras solares e câmaras
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - Consola web: câmaras, radar, alarmes, energia solar e o desenhador de local 2D/3D

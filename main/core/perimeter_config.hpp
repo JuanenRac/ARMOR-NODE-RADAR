@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the settings of the node's own perimeter engine: zones, tripwire lines, entry paths and the rules around them. Pure.
+// ARMOR-NODE-RADAR - the settings of the node's own perimeter engine: zones, tripwire lines, entry paths and the rules around them. Pure.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The server keeps judging the targets of every node (its dwell time, its ignore zones, its profiles); this engine is the part that runs on the node itself, next to the sensors: it

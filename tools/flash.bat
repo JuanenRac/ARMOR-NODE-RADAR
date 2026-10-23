@@ -1,5 +1,5 @@
 @echo off
-rem ARMOR-RADAR - writes the image of one node to a board over USB.
+rem ARMOR-NODE-RADAR - writes the image of one node to a board over USB.
 rem Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 rem
 rem   tools\flash.bat perimetro-1 COM5          writes dist\perimetro-1-s3-eth.bin to the board on COM5 (the Waveshare ESP32-S3-ETH)

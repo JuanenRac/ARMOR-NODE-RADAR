@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the orders a zone of the perimeter engine takes from the server, and the armed state. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the orders a zone of the perimeter engine takes from the server, and the armed state. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // A zone of the engine is a device of the server like a mapped output is: it reports `{"on":true}` on armor/device/<node>/<zone>/state and takes its orders on armor/device/<node>/<zone>/set, in the

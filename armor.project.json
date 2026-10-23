@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "ecosystem": "A.R.M.O.R.",
-  "name": "ARMOR-RADAR",
+  "name": "ARMOR-NODE-RADAR",
   "version": "0.8.0.0",
   "role": "ESP32-S3 PoE field-node firmware",
   "stack": "ESP-IDF C++",

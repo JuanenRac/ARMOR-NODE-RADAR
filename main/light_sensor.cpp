@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the ambient-light reading of the node (VEML7700 over I2C).
+// ARMOR-NODE-RADAR - the ambient-light reading of the node (VEML7700 over I2C).
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 #include "light_sensor.hpp"
 

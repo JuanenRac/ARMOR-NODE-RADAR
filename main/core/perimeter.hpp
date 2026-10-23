@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the node's own perimeter engine: what the targets do in the zones, across the lines and along the paths. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the node's own perimeter engine: what the targets do in the zones, across the lines and along the paths. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Each frame it takes the targets of the node (already on the shared plane, merged where two sensors see one person, each with the stable identity that track_stabiliser.hpp gives) and

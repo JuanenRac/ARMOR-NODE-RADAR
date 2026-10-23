@@ -1,4 +1,4 @@
-/* ARMOR-RADAR node panel - the texts, in the eight languages of A.R.M.O.R.: English, Spanish, German, French, Italian, Japanese, Chinese, Portuguese.
+/* ARMOR-NODE-RADAR node panel - the texts, in the eight languages of A.R.M.O.R.: English, Spanish, German, French, Italian, Japanese, Chinese, Portuguese.
    Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
    Each row is [en, es, de, fr, it, ja, zh, pt]. This file is joined in front of app.js when the panel is packed. */
 const LANGS = [["en", "English"], ["es", "Español"], ["de", "Deutsch"], ["fr", "Français"], ["it", "Italiano"], ["ja", "日本語"], ["zh", "中文"], ["pt", "Português"]];

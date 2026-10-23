@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the settings of a node as a file an administrator can keep and load onto another node, and the checks that make loading one safe. Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the settings of a node as a file an administrator can keep and load onto another node, and the checks that make loading one safe. Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // The export is {"format":"armor-radar-config","schema":1,"firmware":"x.y.z","config":{...}}: the same document the flash keeps, secrets included (it is for cloning a unit, and the panel offers

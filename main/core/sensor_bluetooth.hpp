@@ -1,4 +1,4 @@
-// ARMOR-RADAR - closing the Bluetooth of the sensors themselves. Pure: tested on a computer with a fake sensor.
+// ARMOR-NODE-RADAR - closing the Bluetooth of the sensors themselves. Pure: tested on a computer with a fake sensor.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // An LD2450, LD2410 or LD2412 has a Bluetooth radio of its own that is ON from the factory and asks for no PIN and no pairing: anybody near the node with the manufacturer's phone app can

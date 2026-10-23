@@ -1,4 +1,4 @@
-// ARMOR-RADAR - the node's numbers in the text format that Prometheus reads (GET /metrics, administrators only). Pure: tested on a computer.
+// ARMOR-NODE-RADAR - the node's numbers in the text format that Prometheus reads (GET /metrics, administrators only). Pure: tested on a computer.
 // Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 //
 // Format: "# HELP name text", "# TYPE name gauge|counter", then "name{label=\"value\"} number". Names and labels are checked here (letters, digits and underscore), label values are escaped, and a number
