@@ -194,6 +194,9 @@ struct Settings {
   // Wrong passwords the whole node lets through in a minute, from all addresses and names together (auth::LoginThrottle). 30 is how the node has always behaved; 0 turns this limit off (the limit of
   // each address and each person stays); at most 120.
   int login_limit_per_minute = 30;
+  // Keep the secrets this node stores (the passwords of its networks and users, tokens, keys, PINs) sealed in its flash (core/secret_seal.hpp). Off, as the node always was: they are readable text. Turning it on needs no
+  // eFuse and does not encrypt the flash, so it does not protect against someone who reads the whole chip; the panel says so.
+  bool seal_secrets = false;
   // How the task that reads the sensors waits for them (core/uart_wake.hpp): 0 looks at the serial lines every 10 ms, as the first versions did; 10 to 500 sleeps until a sensor sends
   // something and, when none does, at most this many milliseconds before it does its periodic work. 100 by default.
   int reader_idle_ms = uartwake::kIdleMsDefault;
@@ -625,6 +628,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       if (!uartwake::idle_ms_is_valid(idle)) bad(problems, "system.reader_idle_ms", "range"); else s.reader_idle_ms = idle;
     }
   }
+  if (const json::Value* security = document.get("security"); security != nullptr && security->is_object()) read_bool(*security, "seal_secrets", s.seal_secrets, "security.seal_secrets", problems);
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
     if (!p->is_object()) bad(problems, "perimeter", "invalid"); else read_perimeter(*p, s.perimeter, problems);
@@ -932,6 +936,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();
+  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

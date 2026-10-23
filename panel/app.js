@@ -373,6 +373,7 @@ function networkPage() {
       options: [[0, t("autoRestartNever")], [1, t("autoRestart1")], [2, t("autoRestart2")], [3, t("autoRestart3")], [4, t("autoRestart4")], [6, t("autoRestart6")], [12, t("autoRestart12")], [24, t("autoRestart24")], [48, t("autoRestart48")]] }),
       note(t("autoRestartNote"), "info"),
       field("loginLimit", "system.login_limit_per_minute", { type: "number", min: 0, max: 120 }), note(t("loginLimitNote"), "info"),
+      field("sealSecrets", "security.seal_secrets", { type: "checkbox" }), note(t("sealSecretsNote"), "info"),
       field("readerIdle", "system.reader_idle_ms", { type: "number", min: 0, max: 500 }), note(t("readerIdleNote"), "info")),
     isAdmin() ? card(t("configBackupTitle"),
       el("div", { class: "row" },

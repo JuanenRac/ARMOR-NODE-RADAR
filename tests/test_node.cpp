@@ -165,6 +165,7 @@ static void test_settings_defaults_and_roundtrip() {
   s.mqtt.backup = {{"mqtt://10.0.0.5:1883", "backup-user", "backup-password"}};
   s.auto_restart_hours = 12;
   s.login_limit_per_minute = 45;
+  s.seal_secrets = true;
   s.reader_idle_ms = 250;
   s.time.zone = "CET-1CEST,M3.5.0,M10.5.0/3"; s.time.ntp = "time.example.org"; s.time.ntp_enabled = false;
   s.ip.dhcp = false; s.ip.address = "192.168.0.181"; s.ip.gateway = "192.168.0.1"; s.ip.dns1 = "192.168.0.1"; s.ip.hostname = "armor-1";
@@ -185,6 +186,7 @@ static void test_settings_defaults_and_roundtrip() {
   CHECK(back.sta.backup.size() == 2 && back.sta.backup[0].ssid == "guest" && back.sta.backup[0].password == "guest-password" && back.sta.backup[1].ssid == "office");
   CHECK(back.mqtt.backup.size() == 1 && back.mqtt.backup[0].uri == "mqtt://10.0.0.5:1883" && back.mqtt.backup[0].username == "backup-user" && back.mqtt.backup[0].password == "backup-password");
   CHECK(back.auto_restart_hours == 12 && back.login_limit_per_minute == 45 && back.reader_idle_ms == 250);
+  CHECK(back.seal_secrets && !config::Settings{}.seal_secrets);   // written, read back, and off until it says otherwise
   CHECK(back.time.zone == "CET-1CEST,M3.5.0,M10.5.0/3" && back.time.ntp == "time.example.org" && !back.time.ntp_enabled);
   CHECK(back.pins.size() == 3 && back.pins[0].name == "garden_light" && back.pins[0].invert && back.pins[0].safe == config::SafeState::kOff && back.pins[0].link_timeout_s == 60);
   CHECK(back.pins[1].report == "open" && back.pins[1].pull == config::Pull::kUp && back.pins[2].scale == 0.0057 && back.pins[2].offset == -0.1);
@@ -320,6 +322,7 @@ static void test_settings_rejections() {
   CHECK(rejected(R"({"system":{"auto_restart_hours":-1}})", "system.auto_restart_hours", "range"));
   CHECK(rejected(R"({"system":{"login_limit_per_minute":121}})", "system.login_limit_per_minute", "range"));
   CHECK(rejected(R"({"system":{"login_limit_per_minute":-1}})", "system.login_limit_per_minute", "range"));
+  CHECK(rejected(R"({"security":{"seal_secrets":"yes"}})", "security.seal_secrets", "invalid"));
   CHECK(rejected(R"({"system":{"reader_idle_ms":501}})", "system.reader_idle_ms", "range"));
   CHECK(rejected(R"({"system":{"reader_idle_ms":5}})", "system.reader_idle_ms", "range"));   // between 1 and 9 is neither polling (0) nor a sleep a task can keep
   CHECK(rejected(R"({"system":{"reader_idle_ms":-1}})", "system.reader_idle_ms", "range"));

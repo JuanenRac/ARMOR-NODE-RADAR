@@ -63,6 +63,9 @@
 * **节点上的周界引擎（默认关闭）：** 六个检测区和三个排除区，每个都是可按角度旋转的矩形，三条按方向统计穿越次数的绊线，三条进入路径，宠物免疫和遮挡检测。它与传感器一起在节点上运行，因此在无法连接 broker 时仍然工作，broker 不在时保存事件，并发布到 `armor/radar/<节点>/events`；区域编辑器在节点的面板中。以上功能尚未在带传感器的实际电路板上运行过。
 * **每个传感器是谁，以及关闭其自带蓝牙：** 启动时，节点读取每个传感器的固件版本和蓝牙地址，默认关闭传感器自带的蓝牙（它不要求 PIN），并可在几分钟内把一个传感器的串口线交给管理员的电脑工具（透明串口桥）。面向管理员的 `GET /metrics`，以及设置的导出和全有或全无的导入，使之更加完整。
 * **无需线缆的诊断：** 在一次不干净的启动之后（崩溃、看门狗、电源跌落、内存分配失败），健康报告会在十分钟内说明原因；崩溃会留下核心转储（core dump），可在面板中查看、下载或删除；已保存的设置会在每次固件安装前被复制，并在更新损坏它们时恢复；管理员还可以通过服务器，用一次性令牌向节点索取诊断包或其日志。
+* **通过 HTTPS 并固定证书指纹进行接入:** `tools/adopt_node.py` 接受 `https://<地址>`,配合 `--fingerprint`(节点证书的 SHA-256,在承载请求的同一连接上校验)或 `--show-fingerprint` 读取指纹;对明文 HTTP 以及带固定地址或主机名的设备清单文件会给出警告,面板在导入这类文件时也会警告。
+* **传感器读取任务改为等待事件而不是轮询:** 读取任务在串口线路的事件队列上休眠,并一次取走所有到达的数据,在溢出时清空该线路,并按线路统计溢出和错误;`system.reader_idle_ms`(100;0 = 之前的 10 ms 轮询)设定等待时间,某个队列出错时会自动退回轮询。
+* **可选的已存储机密封存:** 默认关闭(`security.seal_secrets`,或服务器的 `nodes.nvs_encryption`)。开启后,节点保存的密码、令牌、密钥、PIN 和密码哈希会用 ChaCha20-Poly1305 封存,其余内容仍可读取;开启或关闭时会无损重写,即使节点中途停止也不会丢失。不会烧写 eFuse,闪存也不加密:密钥在同一芯片的一个分区中,因此**不能**防范持有电路板的人;在该分区出现之前安装的节点会保持原样,直到用新的分区表重新烧录。
 
 ## 🖼️ 屏幕截图
 
@@ -140,6 +143,7 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 * **[ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER)** - 中央协调器：遥测、报警、设备、太阳能读数和摄像头
 * **[ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO)** - 网页控制台：摄像头、雷达、报警、太阳能和 2D/3D 场地设计器
 * **[ARMOR-ANDROID-CONTROL](https://github.com/JuanenRac/ARMOR-ANDROID-CONTROL)** - 带实时 2D/3D 雷达的 Android 操作员客户端
+* **[ARMOR-IOS-CONTROL](https://github.com/JuanenRac/ARMOR-IOS-CONTROL)** - iPhone 操作员客户端
 * **[ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI)** - 会解释决策且从不执行动作的视觉推理策略
 * **[ARMOR-VISION](https://github.com/JuanenRac/ARMOR-VISION)** - Jetson Orin NX 上的摄像头区域、遮罩与检测规则
 * **[ARMOR-VOICE-AI](https://github.com/JuanenRac/ARMOR-VOICE-AI)** - 带无法伪造确认的离线语音意图
