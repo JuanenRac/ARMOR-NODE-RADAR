@@ -158,6 +158,13 @@ async function exportConfig() {
   URL.revokeObjectURL(url);
 }
 
+// A file taken from another node carries that node's fixed address or host name; two nodes on one network cannot share them.
+const importCarriesAddress = doc => {
+  const settings = doc && typeof doc === "object" && doc.config && typeof doc.config === "object" ? doc.config : doc;
+  const ip = settings && typeof settings === "object" ? settings.ip : null;
+  return !!ip && typeof ip === "object" && (ip.dhcp === false || !!ip.hostname);
+};
+
 // Loads a previously exported file on top of the form (not sent to the node yet): the usual Save/Save and restart bar applies it like
 // any other edit. The node keeps its own identity - node.id is never overwritten by an import.
 function importConfig(file) {
@@ -172,7 +179,7 @@ function importConfig(file) {
       const list = (check.data.problems || []).slice(0, 8).map(p => (p.path || "—") + ": " + problemText(p.code)).join("; ");
       S.message = { kind: "bad", text: t("importRefused") + " " + (list || errorText(check.data.error)) }; render(); return;
     }
-    if (!confirm(t("importValid"))) { S.message = null; render(); return; }
+    if (!confirm(t("importValid") + (importCarriesAddress(parsed) ? "\n\n" + t("importFixedAddress") : ""))) { S.message = null; render(); return; }
     const applied = await api("POST", "config/import", parsed);
     if (!applied.ok) { S.message = { kind: "bad", text: errorText(applied.data.error) }; render(); return; }
     await loadConfig();
