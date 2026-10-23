@@ -25,6 +25,7 @@
 #include "node_id.hpp"
 #include "perimeter_config.hpp"
 #include "stored_load.hpp"
+#include "uart_wake.hpp"
 #include "sensor_model.hpp"
 
 namespace armor::config {
@@ -193,6 +194,9 @@ struct Settings {
   // Wrong passwords the whole node lets through in a minute, from all addresses and names together (auth::LoginThrottle). 30 is how the node has always behaved; 0 turns this limit off (the limit of
   // each address and each person stays); at most 120.
   int login_limit_per_minute = 30;
+  // How the task that reads the sensors waits for them (core/uart_wake.hpp): 0 looks at the serial lines every 10 ms, as the first versions did; 10 to 500 sleeps until a sensor sends
+  // something and, when none does, at most this many milliseconds before it does its periodic work. 100 by default.
+  int reader_idle_ms = uartwake::kIdleMsDefault;
   // Two radars seeing one person at once, within this many millimetres of each other on the shared plane (radar_calibration.hpp), are
   // published as one target instead of two. 0: off, published exactly as each radar reported it (the setting's own default).
   int fusion_merge_mm = 0;
@@ -615,6 +619,11 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) {
     read_int(*system, "auto_restart_hours", s.auto_restart_hours, 0, 48, "system.auto_restart_hours", problems);
     read_int(*system, "login_limit_per_minute", s.login_limit_per_minute, 0, 120, "system.login_limit_per_minute", problems);
+    if (system->get("reader_idle_ms") != nullptr) {
+      int idle = s.reader_idle_ms;
+      read_int(*system, "reader_idle_ms", idle, 0, uartwake::kIdleMsMax, "system.reader_idle_ms", problems);
+      if (!uartwake::idle_ms_is_valid(idle)) bad(problems, "system.reader_idle_ms", "range"); else s.reader_idle_ms = idle;
+    }
   }
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
@@ -733,6 +742,7 @@ inline Problems validate(const Settings& s) {
   else if (!net::valid_utf8(s.node_name, &name_characters) || name_characters > 48) bad(problems, "node.name", "invalid");
   if (!language_is_known(s.language)) bad(problems, "ui.language", "invalid");
   if (!auto_restart_hours_is_valid(s.auto_restart_hours)) bad(problems, "system.auto_restart_hours", "invalid");
+  if (!uartwake::idle_ms_is_valid(s.reader_idle_ms)) bad(problems, "system.reader_idle_ms", "range");
 
   // network
   if (s.uplink == Uplink::kEthernet && !board::kHasEthernet) bad(problems, "uplink", "not_available");   // this board has no cable
@@ -921,7 +931,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
-  w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).end_object();
+  w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

@@ -72,6 +72,10 @@ Ethernet from its panel (*Firmware and log*).
 
 It asks the broker for the node's identity (`provision_node.sh`), creates the administrator (a random password kept in `secrets/<id>.admin`), applies
 the fleet's settings and the node's own, and restarts it. `--ip 192.168.0.60 --gateway 192.168.0.1` gives it a fixed address instead of DHCP.
+Over plain HTTP the set-up code and the administrator's password cross the network in clear (the tool says so): fine on a cable straight to the board or on the
+node's own set-up Wi-Fi, not on a shared network. Where the node serves HTTPS, adopt it with `https://192.168.0.181 --fingerprint <SHA-256 shown on its Web page>`: the
+node's certificate is its own, so the fingerprint is the proof, and anything else that answers is refused before a byte is sent. `--show-fingerprint` prints the one an
+address presents, to compare with the node's panel. The tool also warns when the fleet file fixes an address or a host name that every node would share.
 By hand, the panel does the same (step 4 below): open the address, enter the set-up code, choose the administrator, fill the pages. Nodes created
 before the pins and the panel link existed need `sudo mqtt_identity.sh upgrade-node <id>` on the broker.
 

@@ -16,17 +16,26 @@ enough; for many, this tool does what the panel would, the same way for each:
 
 The set-up code is the one the node shows on its USB console, or the fixed one of a universal image built with secrets/generic.conf (see
 docs/NODE_PANEL.md). Only the Python standard library is used. Passwords never appear on the screen.
+
+Over plain HTTP the set-up code and the administrator's password travel in clear on the network, which is acceptable on a cable straight to the board or on the
+node's own set-up Wi-Fi and not anywhere else. A node that serves HTTPS (its panel shows the SHA-256 fingerprint of its certificate, Web page) can be adopted
+without that: give https://<address> and --fingerprint <the fingerprint from the panel>. The certificate is made by the node itself, so no authority can vouch for
+it; the fingerprint is the proof, and a connection to anything that presents another certificate is refused before a single byte of the request is sent.
+--show-fingerprint prints the fingerprint the address presents (to compare with the one on the node's console or panel) and does nothing else.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import hmac
+import http.client
 import http.cookiejar
 import json
 import os
 import re
 import secrets
+import socket
+import ssl
 import subprocess
 import sys
 import time
@@ -42,14 +51,75 @@ class AdoptError(RuntimeError):
     pass
 
 
-class Node:
-    """A node's panel API, with its session cookie."""
+def normalize_fingerprint(text: str) -> str:
+    """A SHA-256 fingerprint as 64 lowercase hexadecimal digits, from the forms people copy (colons, spaces, capitals, a leading "sha256")."""
+    digits = re.sub(r"[^0-9a-f]", "", re.sub(r"(?i)^\s*sha-?256[:=\s]*", "", text).lower())
+    if len(digits) != 64:
+        raise AdoptError("a SHA-256 fingerprint has 64 hexadecimal digits (as the node's panel shows it)")
+    return digits
 
-    def __init__(self, address: str, timeout: float = 15.0) -> None:
+
+def certificate_fingerprint(der: bytes) -> str:
+    return hashlib.sha256(der).hexdigest()
+
+
+class PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """An HTTPS connection that trusts exactly one certificate, the one with the given SHA-256 fingerprint (the nodes make their own certificate). The check happens on the
+    connection that carries the request, straight after the handshake, so nothing is sent to anything else."""
+
+    def __init__(self, *args, fingerprint: str = "", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._fingerprint = fingerprint
+
+    def connect(self) -> None:
+        super().connect()
+        der = self.sock.getpeercert(binary_form=True) or b""
+        if certificate_fingerprint(der) != self._fingerprint:
+            self.close()
+            raise AdoptError("the certificate this address presents is not the one with the fingerprint given: nothing was sent (is it the right node?)")
+
+
+class PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, fingerprint: str) -> None:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.check_hostname = False   # the address of a board is an IP; the fingerprint is the proof of who answers
+        context.verify_mode = ssl.CERT_NONE
+        super().__init__(context=context)
+        self._fingerprint = fingerprint
+
+    def https_open(self, req):
+        return self.do_open(lambda host, **kw: PinnedHTTPSConnection(host, fingerprint=self._fingerprint, **kw), req, context=self._context)
+
+
+def presented_fingerprint(address: str, timeout: float = 15.0) -> str:
+    """The SHA-256 fingerprint of the certificate an address presents (port 443 unless the address names one). Nothing is trusted or sent."""
+    host = re.sub(r"^https?://", "", address).split("/")[0]
+    name, _, port = host.partition(":")
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with socket.create_connection((name, int(port or 443)), timeout=timeout) as raw, context.wrap_socket(raw, server_hostname=name) as tls:
+            return certificate_fingerprint(tls.getpeercert(binary_form=True) or b"")
+    except (OSError, ValueError) as error:
+        raise AdoptError(f"no HTTPS answer at {address}: {error}") from error
+
+
+class Node:
+    """A node's panel API, with its session cookie. With https:// the certificate must be the one whose SHA-256 fingerprint is given."""
+
+    def __init__(self, address: str, timeout: float = 15.0, fingerprint: str | None = None) -> None:
         self.base = address if address.startswith("http") else f"http://{address}"
         self.timeout = timeout
         self.jar = http.cookiejar.CookieJar()
-        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar))
+        handlers: list = [urllib.request.HTTPCookieProcessor(self.jar)]
+        self.secure = self.base.startswith("https://")
+        if self.secure:
+            if not fingerprint:
+                raise AdoptError("https:// needs --fingerprint (the SHA-256 fingerprint the node's panel shows); --show-fingerprint prints the one this address presents")
+            handlers.append(PinnedHTTPSHandler(normalize_fingerprint(fingerprint)))
+        self.opener = urllib.request.build_opener(*handlers)
 
     def call(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict]:
         data = json.dumps(body).encode("utf-8") if body is not None else None
@@ -131,7 +201,16 @@ def adopt(args: argparse.Namespace) -> int:
     fleet = json.loads(Path(args.fleet).read_text(encoding="utf-8")) if args.fleet else {}
     if (fleet.get("ap") or {}).get("password") == "change-this-wifi-password":
         raise AdoptError("secrets/fleet.json still has the example Wi-Fi password: edit it first")
-    node = Node(args.address)
+    node = Node(args.address, fingerprint=getattr(args, "fingerprint", None))
+    if not node.secure:
+        print("warning: plain HTTP - the set-up code and the administrator's password cross the network in clear. Use it on a cable straight to the board or on the node's own "
+              "set-up Wi-Fi; anywhere else give https://<address> and --fingerprint.", file=sys.stderr)
+    shared_ip = fleet.get("ip") or {}
+    if isinstance(shared_ip, dict) and shared_ip.get("dhcp") is False and not args.ip:
+        print("warning: the fleet file fixes an address (ip.dhcp is false): every node adopted with it would claim the same one. Give each node its own with --ip, or leave the "
+              "address out of the fleet file.", file=sys.stderr)
+    if isinstance(shared_ip, dict) and shared_ip.get("hostname"):
+        print("warning: the fleet file carries a host name: two nodes cannot share one. Remove it from the file and set it per node.", file=sys.stderr)
 
     status, session = node.call("GET", "session")
     if status != 200:
@@ -190,8 +269,8 @@ def adopt(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("address", help="the node's address (or http://host:port) while it is new: on the wire, or 192.168.4.1 on its set-up Wi-Fi")
-    parser.add_argument("--id", required=True, help="the node's identifier (also its identity on the broker)")
+    parser.add_argument("address", help="the node's address (or http://host:port; https://host to check its certificate) while it is new: on the wire, or 192.168.4.1 on its set-up Wi-Fi")
+    parser.add_argument("--id", help="the node's identifier (also its identity on the broker); required unless --show-fingerprint")
     parser.add_argument("--name", help="the name shown in the panel and in Studio (default: the identifier)")
     parser.add_argument("--setup-code", help="the code the node shows on its USB console (not needed when the image was built with a fleet secret)")
     parser.add_argument("--fleet-secret-file", default=str(ROOT / "secrets" / "fleet.secret"), help="the fleet secret, from which the code of each board is computed (default secrets/fleet.secret)")
@@ -208,7 +287,18 @@ def main() -> int:
     parser.add_argument("--broker-ssh-key")
     parser.add_argument("--restart-wait", type=float, default=8.0, help="seconds to wait before looking for the node again (default 8)")
     parser.add_argument("--force", action="store_true", help="replace secrets/<id>.admin")
+    parser.add_argument("--fingerprint", help="with https://: the SHA-256 fingerprint of the node's certificate as its panel shows it; any other certificate is refused")
+    parser.add_argument("--show-fingerprint", action="store_true", help="print the SHA-256 fingerprint of the certificate the address presents, and stop (compare it with the node's console)")
     args = parser.parse_args()
+    if args.show_fingerprint:
+        try:
+            print(presented_fingerprint(args.address))
+            return 0
+        except AdoptError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 1
+    if not args.id:
+        parser.error("--id is required")
     if args.ip and not args.gateway:
         parser.error("--ip needs --gateway")
     try:

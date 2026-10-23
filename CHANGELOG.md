@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The task that reads the sensors sleeps until a sensor sends something** instead of looking at the three serial lines every 10 ms: it waits on the event queues of the lines and wakes for the periodic work (presence devices, frame-rate window, statistics) at most `system.reader_idle_ms` later (100 by default, 10 to 500; 0 keeps the polling of the earlier versions, and a line whose queue cannot be set up falls back to polling by itself). It drains everything that has arrived, flushes a line that overflowed and counts overflows and line errors per line in the statistics log. The rule is in `main/core/uart_wake.hpp`, with host tests that play a sensor line against both ways of waiting, including a stall of the task. The field is on the System page in the eight languages.
+- **`tools/adopt_node.py` can adopt over HTTPS:** `https://<address> --fingerprint <SHA-256>` trusts exactly the certificate the node's panel shows and refuses any other before a byte of the request is sent; `--show-fingerprint` prints the one an address presents. Over plain HTTP it now says that the set-up code and the password cross the network in clear, and it warns when the fleet file fixes an address or a host name that every node would share. Host tests cover the fingerprint forms and a local TLS server with the right and a wrong certificate.
 - The repository has a security policy, a code of conduct, a contributing guide and a support file.
 - The banner follows the animated style of the ecosystem banners, with the name, the kind and the technologies of the project.
 ## [0.8.0.0] - Wrong passwords per minute as a setting and the broker certificate from a file

@@ -26,7 +26,8 @@ universal image once (`tools/build_node.sh generic`), flash it to every board by
 `tools/adopt_node.py <address> --id <name> --fleet secrets/fleet.json ...` creates its administrator, gets its identity from the broker and applies the
 settings every node shares (Wi-Fi, broker, language). With a fleet secret (`python tools/make_fleet.py`) the set-up code of a board is
 HMAC-SHA256(secret, MAC), so no cable is needed; the secret is inside the image, so it protects a fleet against the network and not against someone
-holding a board.
+holding a board. On a network that is not the node's own, adopt over HTTPS: `tools/adopt_node.py https://<address> --fingerprint <the SHA-256 shown on the Web page> ...`
+(`--show-fingerprint` prints the one an address presents); a certificate with another fingerprint is refused before anything is sent.
 
 ## Pages
 

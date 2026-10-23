@@ -28,6 +28,7 @@ extern "C" {
 #include "core/sensor_identity.hpp"
 #include "core/sensor_model.hpp"
 #include "core/track_stabiliser.hpp"
+#include "core/uart_wake.hpp"
 #include "node_guard.hpp"
 #include "core/var_framer.hpp"
 
@@ -37,6 +38,7 @@ constexpr char kTag[] = "armor-radar";
 constexpr std::array<uart_port_t, 3> kUarts{UART_NUM_0, UART_NUM_1, UART_NUM_2};
 constexpr int kAnswerTimeoutMs = 600;
 constexpr std::uint64_t kPresenceRepeatMs = 30000;
+constexpr int kUartEventQueue = 8;   // events kept per line while the reader task is busy; the queue set below is as long as the three together
 
 struct Line {
   bool enabled = false;
@@ -101,6 +103,13 @@ bool g_republish = false;        // set when the broker (re)connects: every pres
 
 std::uint64_t monotonic_ms() { return static_cast<std::uint64_t>(esp_timer_get_time()) / 1000ULL; }
 
+// The reader task sleeps on the event queues of the serial lines (system.reader_idle_ms; 0 keeps the polling of the first versions). A line whose queue could not be made or joined
+// to the set is simply polled: g_wake_set stays null and the task falls back to looking every uartwake::kPollMs.
+QueueSetHandle_t g_wake_set = nullptr;
+std::array<QueueHandle_t, 3> g_uart_events{};
+int g_reader_idle_ms = uartwake::kIdleMsDefault;
+uartwake::Pacer g_pacer;   // touched by the reader task only
+
 void configure_uart(std::size_t index, int rx_pin, int tx_pin, int baud) {
   const uart_port_t uart = kUarts[index];
   uart_config_t config{};
@@ -112,7 +121,29 @@ void configure_uart(std::size_t index, int rx_pin, int tx_pin, int baud) {
   config.source_clk = UART_SCLK_DEFAULT;
   ESP_ERROR_CHECK(uart_param_config(uart, &config));
   ESP_ERROR_CHECK(uart_set_pin(uart, tx_pin >= 0 ? tx_pin : UART_PIN_NO_CHANGE, rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-  ESP_ERROR_CHECK(uart_driver_install(uart, 2048, 0, 0, nullptr, 0));
+  if (g_wake_set != nullptr) {
+    // The driver posts an event for every burst of bytes (and for an overflow or a line error); the reader task takes them from the set.
+    ESP_ERROR_CHECK(uart_driver_install(uart, 2048, 0, kUartEventQueue, &g_uart_events[index], 0));
+    if (g_uart_events[index] == nullptr || xQueueAddToSet(g_uart_events[index], g_wake_set) != pdPASS) {
+      ESP_LOGW(kTag, "UART%u: the event queue could not join the set; the task looks at it every %u ms", static_cast<unsigned>(index), uartwake::kPollMs);
+      g_uart_events[index] = nullptr;
+      g_wake_set = nullptr;   // one line without events: the whole task goes back to looking (the lines already joined only fill their small queues, which is harmless)
+    }
+  } else {
+    ESP_ERROR_CHECK(uart_driver_install(uart, 2048, 0, 0, nullptr, 0));
+  }
+}
+
+uartwake::Event wake_event(uart_event_type_t type) {
+  switch (type) {
+    case UART_DATA: return uartwake::Event::kData;
+    case UART_FIFO_OVF: return uartwake::Event::kFifoOverflow;
+    case UART_BUFFER_FULL: return uartwake::Event::kBufferFull;
+    case UART_BREAK: return uartwake::Event::kBreak;
+    case UART_PARITY_ERR: return uartwake::Event::kParityError;
+    case UART_FRAME_ERR: return uartwake::Event::kFrameError;
+    default: return uartwake::Event::kOther;
+  }
 }
 
 #if CONFIG_ARMOR_RADAR_HEX_DUMP
@@ -128,6 +159,13 @@ void dump_frame(std::uint8_t radar, const std::uint8_t* bytes, std::size_t lengt
 #endif
 
 void log_statistics(std::uint64_t now) {
+  if (g_wake_set != nullptr) {
+    const uartwake::Counters& wake = g_pacer.counters();
+    ESP_LOGI(kTag, "reader: %u turns, %u idle; wake-ups %u/%u/%u, overflows %u/%u/%u, line errors %u/%u/%u", static_cast<unsigned>(wake.polls), static_cast<unsigned>(wake.idle_wakeups),
+             static_cast<unsigned>(wake.line[0].wakeups), static_cast<unsigned>(wake.line[1].wakeups), static_cast<unsigned>(wake.line[2].wakeups),
+             static_cast<unsigned>(wake.line[0].overruns), static_cast<unsigned>(wake.line[1].overruns), static_cast<unsigned>(wake.line[2].overruns),
+             static_cast<unsigned>(wake.line[0].line_errors), static_cast<unsigned>(wake.line[1].line_errors), static_cast<unsigned>(wake.line[2].line_errors));
+  }
   for (std::size_t i = 0; i < 3; ++i) {
     if (!g_lines[i].enabled) continue;
     const std::uint8_t radar = static_cast<std::uint8_t>(i + 1);
@@ -270,28 +308,53 @@ void reader_task(void*) {
   std::uint8_t buffer[128];
   std::uint64_t last_stats = 0, last_window = 0;
   for (;;) {
+    // Sleep until a sensor says something, or until the periodic work is due (see core/uart_wake.hpp). Every entry of the set is answered by taking the event from the queue it names:
+    // that is how a queue set is kept in step with its members.
+    unsigned woken = 0;
+    bool flush[3] = {false, false, false};
+    if (g_wake_set != nullptr) {
+      QueueSetMemberHandle_t member = xQueueSelectFromSet(g_wake_set, pdMS_TO_TICKS(uartwake::sleep_ms(monotonic_ms(), last_window, last_stats, g_reader_idle_ms)));
+      while (member != nullptr) {
+        for (std::size_t i = 0; i < 3; ++i) {
+          if (member != g_uart_events[i]) continue;
+          uart_event_t event;
+          if (xQueueReceive(g_uart_events[i], &event, 0) == pdTRUE) {
+            woken |= 1u << i;
+            if (g_pacer.note(i, wake_event(event.type)).flush) flush[i] = true;
+          }
+          break;
+        }
+        member = xQueueSelectFromSet(g_wake_set, 0);
+      }
+      g_pacer.turn(woken);
+    }
     for (std::size_t i = 0; i < 3; ++i) {
       Line& line = g_lines[i];
+      if (flush[i] && line.enabled && !line.bridge) uart_flush_input(kUarts[i]);   // an overflow: what is queued is cut frames, the framers start again at the next header
       if (!line.enabled || line.bridge) continue;
-      const int read = uart_read_bytes(kUarts[i], buffer, sizeof buffer, 0);
-      if (read <= 0) continue;
-      const std::uint8_t sensor_id = static_cast<std::uint8_t>(i + 1);
-      {
-        std::lock_guard<std::mutex> guard(g_data_lock);
-        g_health.bytes_received(sensor_id, static_cast<std::size_t>(read));
-      }
-      const std::size_t bytes = static_cast<std::size_t>(read);
-      switch (line.model) {
-        case sensors::Model::kLd2450: feed_ld2450(line, sensor_id, buffer, bytes); break;
-        case sensors::Model::kLd2461: feed_ld2461(line, sensor_id, buffer, bytes); break;
-        case sensors::Model::kLd2410: feed_report_family(line, sensor_id, presence::Family::kLd2410, buffer, bytes); break;
-        case sensors::Model::kLd2412: feed_report_family(line, sensor_id, presence::Family::kLd2412, buffer, bytes); break;
-        case sensors::Model::kLd2410s: feed_report_family(line, sensor_id, presence::Family::kLd2410s, buffer, bytes); break;
-        case sensors::Model::kMr24hpc1: feed_mr24(line, sensor_id, buffer, bytes); break;
+      // everything that has arrived, not one slice of it: with the wake-ups spaced the ring buffer holds tens of milliseconds of the fastest sensor
+      for (int round = 0; round < 16; ++round) {
+        const int read = uart_read_bytes(kUarts[i], buffer, sizeof buffer, 0);
+        if (read <= 0) break;
+        const std::uint8_t sensor_id = static_cast<std::uint8_t>(i + 1);
+        {
+          std::lock_guard<std::mutex> guard(g_data_lock);
+          g_health.bytes_received(sensor_id, static_cast<std::size_t>(read));
+        }
+        const std::size_t bytes = static_cast<std::size_t>(read);
+        switch (line.model) {
+          case sensors::Model::kLd2450: feed_ld2450(line, sensor_id, buffer, bytes); break;
+          case sensors::Model::kLd2461: feed_ld2461(line, sensor_id, buffer, bytes); break;
+          case sensors::Model::kLd2410: feed_report_family(line, sensor_id, presence::Family::kLd2410, buffer, bytes); break;
+          case sensors::Model::kLd2412: feed_report_family(line, sensor_id, presence::Family::kLd2412, buffer, bytes); break;
+          case sensors::Model::kLd2410s: feed_report_family(line, sensor_id, presence::Family::kLd2410s, buffer, bytes); break;
+          case sensors::Model::kMr24hpc1: feed_mr24(line, sensor_id, buffer, bytes); break;
+        }
+        if (static_cast<std::size_t>(read) < sizeof buffer) break;
       }
     }
     const std::uint64_t now = monotonic_ms();
-    if (now - last_window >= 5000) {
+    if (now - last_window >= uartwake::kWindowEveryMs) {
       std::lock_guard<std::mutex> guard(g_data_lock);
       for (std::size_t i = 0; i < 3; ++i) {
         Line& line = g_lines[i];
@@ -301,9 +364,9 @@ void reader_task(void*) {
       }
       last_window = now;
     }
-    if (now - last_stats >= 10000) { last_stats = now; log_statistics(now); }
+    if (now - last_stats >= uartwake::kStatsEveryMs) { last_stats = now; log_statistics(now); }
     publish_presence_devices(now);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    if (g_wake_set == nullptr) vTaskDelay(pdMS_TO_TICKS(uartwake::kPollMs));
   }
 }
 
@@ -772,6 +835,11 @@ void start(const config::Settings& settings, Publisher publisher) {
   g_pet_rule.enabled = settings.perimeter.pet_immunity;
   g_pet_rule.max_distance_cm = settings.perimeter.pet_distance_cm;
   g_pet_rule.max_energy = settings.perimeter.pet_energy;
+  g_reader_idle_ms = settings.reader_idle_ms;
+  if (uartwake::events_enabled(g_reader_idle_ms)) {
+    g_wake_set = xQueueCreateSet(3 * kUartEventQueue);
+    if (g_wake_set == nullptr) ESP_LOGW(kTag, "the wake-up set could not be made; the reader task looks at the sensors every %u ms", uartwake::kPollMs);
+  }
   for (std::size_t i = 0; i < 3; ++i) {
     Line& line = g_lines[i];
     const config::RadarLine& wanted = settings.radars[i];

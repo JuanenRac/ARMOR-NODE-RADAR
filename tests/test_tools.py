@@ -56,6 +56,71 @@ class AdoptNode(unittest.TestCase):
         merged = adopt.deep_merge({"ap": {"ssid": "ARMOR", "channel": 0}, "ui": {"language": "es"}}, {"ap": {"channel": 6}, "node": {"id": "n1"}})
         self.assertEqual(merged, {"ap": {"ssid": "ARMOR", "channel": 6}, "ui": {"language": "es"}, "node": {"id": "n1"}})
 
+    def test_a_fingerprint_is_read_in_the_forms_people_copy(self):
+        digits = "ab" * 32
+        self.assertEqual(adopt.normalize_fingerprint(digits), digits)
+        self.assertEqual(adopt.normalize_fingerprint(":".join(digits[i:i + 2].upper() for i in range(0, 64, 2))), digits)
+        self.assertEqual(adopt.normalize_fingerprint("SHA256: " + digits.upper()), digits)
+        for wrong in ("", "ab" * 31, "zz" * 32, "ab" * 33):
+            with self.assertRaises(adopt.AdoptError):
+                adopt.normalize_fingerprint(wrong)
+
+    def test_https_needs_a_fingerprint_and_plain_http_does_not(self):
+        with self.assertRaises(adopt.AdoptError):
+            adopt.Node("https://192.0.2.1")
+        self.assertFalse(adopt.Node("192.0.2.1").secure)
+        self.assertTrue(adopt.Node("https://192.0.2.1", fingerprint="ab" * 32).secure)
+
+    def test_only_the_certificate_with_the_given_fingerprint_is_talked_to(self):
+        import http.server, json, shutil, ssl, subprocess, tempfile, threading
+        if shutil.which("openssl") is None:
+            self.skipTest("openssl is not installed")
+        temp = pathlib.Path(tempfile.mkdtemp())
+        try:
+            key, cert = temp / "key.pem", temp / "cert.pem"
+            config = temp / "openssl.cnf"   # its own, so the test does not depend on where this machine keeps openssl's
+            config.write_text("[req]\ndistinguished_name = dn\nprompt = no\n[dn]\nCN = armor-test\n", encoding="utf-8")
+            made = subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out", str(cert), "-days", "2", "-config", str(config)],
+                                  capture_output=True)
+            if made.returncode != 0:
+                self.skipTest("openssl could not make a certificate")
+            seen = []
+
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    seen.append(self.path)
+                    body = json.dumps({"setup": True}).encode()
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+
+                def log_message(self, *args):
+                    pass
+
+            class Quiet(http.server.HTTPServer):
+                def handle_error(self, request, client_address):   # the client that refuses the certificate drops the handshake: expected
+                    pass
+
+            server = Quiet(("127.0.0.1", 0), Handler)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(str(cert), str(key))
+            server.socket = context.wrap_socket(server.socket, server_side=True)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            port = server.server_address[1]
+            right = adopt.certificate_fingerprint(ssl.PEM_cert_to_DER_cert(cert.read_text()))
+            self.assertEqual(adopt.presented_fingerprint(f"127.0.0.1:{port}"), right)
+            good = adopt.Node(f"https://127.0.0.1:{port}", fingerprint=right.upper())
+            self.assertEqual(good.call("GET", "session"), (200, {"setup": True}))
+            self.assertEqual(len(seen), 1)
+            other = adopt.Node(f"https://127.0.0.1:{port}", fingerprint="00" * 32)
+            with self.assertRaises(adopt.AdoptError):
+                other.call("GET", "session")
+            self.assertEqual(len(seen), 1, "nothing may reach a server whose certificate is not the one pinned")
+            server.shutdown()
+        finally:
+            shutil.rmtree(temp, ignore_errors=True)
+
     def test_a_whole_adoption_against_the_stand_in_node(self):
         import json, shutil, subprocess, tempfile, time, urllib.request
         if shutil.which("node") is None:
