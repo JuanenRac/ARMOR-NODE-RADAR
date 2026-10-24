@@ -238,29 +238,29 @@
 
     <text x="0" y="182" font-family="'Inter', 'Segoe UI', 'Roboto', sans-serif" font-weight="700" font-size="22" fill="url(#greenGlow)" letter-spacing="4" filter="url(#glowGreen)">FIELD NODES</text>
 
-    <text x="0" y="212" font-family="'Inter', 'Segoe UI', 'Roboto', sans-serif" font-weight="500" font-size="12" fill="#8B949E" letter-spacing="1.5">ESP-IDF · ESP32-S3 · MQTT · UART · I2C</text>
+    <text x="0" y="212" font-family="'Inter', 'Segoe UI', 'Roboto', sans-serif" font-weight="500" font-size="12" fill="#8B949E" letter-spacing="1.5">C++17 · ESP-IDF 5.5 · ESP32-S3 · LD2450 / LD2412 · MQTT</text>
 
     <g transform="translate(0, 232)">
-      <rect x="0" y="0" width="80" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
+      <rect x="0" y="0" width="67" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
       <circle cx="11" cy="11" r="4" fill="#00FF88">
         <animate attributeName="opacity" values="0.5;1;0.5" dur="2.0s" repeatCount="indefinite"/>
       </circle>
-      <text x="22" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">ESP-IDF</text>
-      <rect x="90" y="0" width="86" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
-      <circle cx="101" cy="11" r="4" fill="#FF9900">
+      <text x="22" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">C++17</text>
+      <rect x="77" y="0" width="106" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
+      <circle cx="88" cy="11" r="4" fill="#FF9900">
         <animate attributeName="opacity" values="0.5;1;0.5" dur="2.2s" repeatCount="indefinite"/>
       </circle>
-      <text x="112" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">ESP32-S3</text>
-      <rect x="186" y="0" width="60" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
-      <circle cx="197" cy="11" r="4" fill="#00E5FF">
+      <text x="99" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">ESP-IDF 5.5</text>
+      <rect x="193" y="0" width="86" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
+      <circle cx="204" cy="11" r="4" fill="#00E5FF">
         <animate attributeName="opacity" values="0.5;1;0.5" dur="2.4s" repeatCount="indefinite"/>
       </circle>
-      <text x="208" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">MQTT</text>
-      <rect x="256" y="0" width="60" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
-      <circle cx="267" cy="11" r="4" fill="#FF0055">
+      <text x="215" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">ESP32-S3</text>
+      <rect x="289" y="0" width="133" height="22" rx="11" fill="#161B22" stroke="#30363D" stroke-width="1"/>
+      <circle cx="300" cy="11" r="4" fill="#FF0055">
         <animate attributeName="opacity" values="0.5;1;0.5" dur="2.6s" repeatCount="indefinite"/>
       </circle>
-      <text x="278" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">UART</text>
+      <text x="311" y="15" font-family="sans-serif" font-weight="600" font-size="10" fill="#C9D1D9" letter-spacing="0.5">LD2450 / LD2412</text>
     </g>
   </g>
 
