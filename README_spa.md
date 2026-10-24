@@ -117,10 +117,10 @@ ARMOR-NODE-RADAR/
 │   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
 ├── panel/                  index.html, app.js, text.js (8 languages), style.css
 ├── tests/                  test_core.cpp, test_node.cpp, test_mqtt_tls.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
-├── tools/                  build_node.sh, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py
+├── tools/                  build_node.sh, check_sdkconfig.py, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py, serial_bridge_client.py, setup_code.html, the shared CI checks (armor_ci_validate.py, armor_project_tool.py, _armor_readme_parity.py)
 ├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
-├── partitions.csv, sdkconfig.defaults, sdkconfig.board.*
-└── docs/                   BENCH_BRINGUP.md, NODE_PANEL.md, BLE_PROVISIONING.md, SENSORS.md, HARDWARE_BOUNDARY.md
+├── CMakeLists.txt, partitions.csv, sdkconfig.defaults, sdkconfig.board.*   the ESP-IDF project, the flash layout and the settings of each board (s3-eth, s3-wifi)
+└── docs/                   BENCH_BRINGUP.md, NODE_PANEL.md, BLE_PROVISIONING.md, SENSORS.md, HARDWARE_BOUNDARY.md, BENCH_TESTS.md, SETUP_CODE.md
 ```
 
 ## 🛠️ Entorno de desarrollo
