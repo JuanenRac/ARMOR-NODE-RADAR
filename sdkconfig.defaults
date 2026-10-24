@@ -57,6 +57,8 @@ CONFIG_MBEDTLS_DYNAMIC_FREE_CA_CERT=y
 # The node makes its own certificate on the first boot in this task: mbedTLS needs several KB of stack to write a certificate (a 4 KB output buffer
 # of its own), and 6144 overflowed there on the first real board (every boot ended in 'A stack overflow in task main').
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
+# the system event task runs every network, Wi-Fi and Bluetooth handler: the default 2304 bytes left 276 bytes free on a running node
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
 
 # Bluetooth Low Energy (NimBLE) is only the peripheral side, for configuring a node from a phone (docs/BLE_PROVISIONING.md); it is started only when the
 # node's settings say so. No bonding is kept, one connection at a time.
