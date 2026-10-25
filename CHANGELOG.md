@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.0.4] - The node tells the server where its panel is again, with its four-number version
+
+- **The node tells the server where its panel is again:** the message that gives Studio the address of the node's own panel (the name, the firmware, the address and the port, sent when the node connects and every minute) was refused by the node itself whenever the firmware had four numbers, as from 0.8.0.0, so the link "Open the panel" stayed on the address the node had in an older version. The message now accepts three or four numbers, with a test for the four-number version (0.8.0.3) and for one with five.
+
 ## [0.8.0.3] - The panel's HTTPS server has room to work: its stack grows from 10240 to 12288 bytes
 
 - **The HTTPS server of the panel gets 12288 bytes of stack instead of 10240:** the live smoke test found only 332 bytes free in an `httpd` task after the TLS handshakes of a long login, and the node reports a task with less than 400 bytes free as low. The plain HTTP server keeps its 10240 bytes.

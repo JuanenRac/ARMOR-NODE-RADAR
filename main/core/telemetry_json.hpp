@@ -75,7 +75,8 @@ inline JsonResult build_health(std::string_view node_id, std::uint64_t timestamp
 
 // The information message: armor/node/{node_id}/info  {"node_id","timestamp_ms","name","firmware","ip","port"}. It lets a console offer a link to the
 // node's own web panel. Nothing is written unless every field satisfies the contract (name 1 to 48 characters of valid UTF-8, firmware x.y.z,
-// a dotted-quad IPv4 address without leading zeros, port 1 to 65535).
+// a dotted-quad IPv4 address without leading zeros, port 1 to 65535). The firmware is three numbers, or four from 0.8.0 on (the odometer of the family): a node of 0.8.0.x
+// that refused the fourth one never told the server where its panel is, and the link stayed on the address of an older version.
 inline JsonResult build_info(std::string_view node_id, std::uint64_t timestamp_ms, std::string_view name, std::string_view firmware, std::string_view ip, unsigned port,
                              char* out, std::size_t capacity, std::size_t& length) {
   length = 0;
@@ -91,7 +92,7 @@ inline JsonResult build_info(std::string_view node_id, std::uint64_t timestamp_m
     else if (c == '.' && digit_before) { ++dots; digit_before = false; }
     else ok = false;
   }
-  if (!ok || dots != 2 || !digit_before) return JsonResult::kInvalidInfo;
+  if (!ok || (dots != 2 && dots != 3) || !digit_before) return JsonResult::kInvalidInfo;
   json::Writer w;
   w.begin_object().field("node_id", node_id).key("timestamp_ms").integer(static_cast<long long>(timestamp_ms)).field("name", name).field("firmware", firmware).field("ip", ip)
       .key("port").integer(port).end_object();

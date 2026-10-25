@@ -726,7 +726,9 @@ static void test_info_message() {
   CHECK(build_info("n1", 5, "\xC3\x28", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);   // broken UTF-8
   CHECK(build_info("n1", 5, "n", "v0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.2", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
-  CHECK(build_info("n1", 5, "n", "0.2.3.4", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
+  CHECK(build_info("n1", 5, "n", "0.8.0.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kOk);   // four numbers from 0.8.0 on
+  CHECK(std::string(out, length).find("\"firmware\":\"0.8.0.3\"") != std::string::npos);
+  CHECK(build_info("n1", 5, "n", "0.2.3.4.5", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.2.", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.2.3", "10.0.0", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.2.3", "10.0.0.01", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
