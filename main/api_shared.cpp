@@ -10,6 +10,8 @@
 extern "C" {
 #include "esp_app_desc.h"
 #include "esp_chip_info.h"
+#include "esp_flash_encrypt.h"
+#include "esp_secure_boot.h"
 #include "esp_flash.h"
 #include "esp_heap_caps.h"
 #include "esp_image_format.h"
@@ -53,8 +55,13 @@ void write_hardware(json::Writer& w) {
   const bool bootloader_known = esp_ota_get_bootloader_description(nullptr, &bootloader) == ESP_OK && bootloader.magic_byte == ESP_BOOTLOADER_DESC_MAGIC_BYTE;
   w.key("hardware").begin_object().field("chip", model).field("chip_revision", chip.revision).field("cores", static_cast<int>(chip.cores))
       .field("flash_mb", static_cast<int>(flash_bytes / (1024 * 1024))).field("psram_mb", static_cast<int>(heap_caps_get_total_size(MALLOC_CAP_SPIRAM) / (1024 * 1024)))
+      .field("cpu_mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ).field("wifi", (chip.features & CHIP_FEATURE_WIFI_BGN) != 0).field("ble", (chip.features & CHIP_FEATURE_BLE) != 0)
+      .field("secure_boot", esp_secure_boot_enabled()).field("flash_encryption", esp_flash_encryption_enabled())
       .field("app_idf", esp_app_get_description()->idf_ver);
   if (bootloader_known) w.field("bootloader_idf", bootloader.idf_ver); else w.field("bootloader_idf", "?");
+#if CONFIG_ESP_BROWNOUT_DET
+  w.field("brownout_level", CONFIG_ESP_BROWNOUT_DET_LVL);
+#endif
   w.end_object();
 }
 

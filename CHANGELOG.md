@@ -5,6 +5,7 @@ All notable changes to this project are documented here.
 ## [0.8.0.3] - The panel's HTTPS server has room to work: its stack grows from 10240 to 12288 bytes
 
 - **The HTTPS server of the panel gets 12288 bytes of stack instead of 10240:** the live smoke test found only 332 bytes free in an `httpd` task after the TLS handshakes of a long login, and the node reports a task with less than 400 bytes free as low. The plain HTTP server keeps its 10240 bytes.
+- **The Hardware card of the panel shows more of what the ESP32-S3 reads of itself:** the CPU frequency, the radios of the chip (Wi-Fi and Bluetooth LE), the level of the brown-out detector and whether secure boot and flash encryption are on (the temperature of the chip was already there). They are `hardware.cpu_mhz`, `wifi`, `ble`, `brownout_level`, `secure_boot` and `flash_encryption` in the status of the node, with their texts in the eight languages.
 
 ## [0.8.0.2] - The system event task has room to work: its stack grows from 2304 to 4096 bytes
 
