@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## [0.8.0.5] - The Overview boxes line up and the inter-processor tasks have more stack
+
+- **The framed values of the Overview page have the same width:** each value fills the column next to its label, so the boxes of a card line up instead of having the width of their text.
+- **The inter-processor call tasks have more stack:** `CONFIG_ESP_IPC_TASK_STACK_SIZE` is 2048 (the default left 532 bytes free in `ipc0` on a running node).
+
 ## [0.8.0.4] - The node tells the server where its panel is again, with its four-number version
 
 - **The node tells the server where its panel is again:** the message that gives Studio the address of the node's own panel (the name, the firmware, the address and the port, sent when the node connects and every minute) was refused by the node itself whenever the firmware had four numbers, as from 0.8.0.0, so the link "Open the panel" stayed on the address the node had in an older version. The message now accepts three or four numbers, with a test for the four-number version (0.8.0.3) and for one with five.

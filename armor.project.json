@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "ecosystem": "A.R.M.O.R.",
   "name": "ARMOR-NODE-RADAR",
-  "version": "0.8.0.4",
+  "version": "0.8.0.5",
   "role": "ESP32-S3 PoE field-node firmware",
   "stack": "ESP-IDF C++",
   "technologies": [
@@ -16,7 +16,7 @@
   "maturity": "established",
   "family": "Field Nodes",
   "parent": "ARMOR-COMMON",
-  "native_version": "0.8.0.4",
+  "native_version": "0.8.0.5",
   "build": "idf.py build",
   "notes": "The core, the node state machine, the sensor decoders and the Wi-Fi board layer are tested on a computer: 2,212 checks across nine host test programs, all passing (no frame captured from a real LD2450 is kept as a fixture yet). Its emitted payloads and device states are all accepted by ARMOR-COMMON's shared contract checker. The firmware runs on a real Waveshare ESP32-S3-ETH board with a radar; the LD2461 and presence-sensor decoders, the pin assignment of the PoE board and the Wi-Fi board have not been verified on hardware."
 }
