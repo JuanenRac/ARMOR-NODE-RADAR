@@ -411,6 +411,7 @@ function wifiPage() {
   return el("div", { class: "grid wide" },
     card(t("wifiAp"),
       field("apEnable", "ap.enabled", { type: "checkbox", rerender: true }),
+      S.cfg.ap.enabled && S.cfg.sta.enabled ? note(t("apStaWarning")) : null,
       ap.enabled ? [
         el("div", { class: "row" }, field("ssid", "ap.ssid", { max: 32 }),
           field("security", "ap.security", { type: "select", rerender: true, options: [["wpa2", t("secWpa2")], ["wpa3", t("secWpa3")], ["wpa2wpa3", t("secWpa2Wpa3")], ["open", t("secOpen")]] })),
