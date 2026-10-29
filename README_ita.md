@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/ARMOR_BANNER.svg" alt="ARMOR-NODE-RADAR banner" width="100%">
+  <img src="images/ARMOR_BANNER.svg" alt="Banner di ARMOR-NODE-RADAR" width="100%">
 </p>
 
 # 📡 ARMOR-NODE-RADAR
@@ -18,16 +18,17 @@
 ### Firmware del nodo di campo (Waveshare ESP32-S3-ETH, tre radar o sensori di presenza, Ethernet e Wi-Fi) con un proprio pannello web e il nucleo testato su computer
 
 <p align="center">
-  <img src="https://img.shields.io/badge/License-GPL%203.0-blue.svg" alt="GPL 3.0">
-  <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
+  <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 o successiva">
+  <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Linguaggio">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Version-0.8.0.5-0f6cbd.svg" alt="Version">
-  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
+  <img src="https://img.shields.io/badge/Tests-7371%20checks-2ea44f.svg" alt="Test">
+  <img src="https://img.shields.io/badge/Version-0.8.0.5-0f6cbd.svg" alt="Versione">
+  <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturità">
 </p>
 
 ---
 
-**Controllo di onestà - cosa funziona oggi:** Il nodo radar è l'unico nodo che esiste come hardware: il suo firmware gira su una vera scheda Waveshare ESP32-S3-ETH con un radar e riferisce al banco di prova CM5, e il suo pannello web e gli aggiornamenti via etere vi sono in uso. Il nucleo indipendente dall'hardware (4,633 controlli in 13 programmi di test: i decodificatori dell'LD2450, dell'LD2461 e di quattro sensori di presenza, il canale di comando dell'LD2450, le impostazioni e i loro controlli, la tabella dei pin, utenti e sessioni, il piano di rete, il serializzatore di messaggi la cui uscita è accettata da ARMOR-COMMON, e i controlli di versione e firma) è provato su un computer, il **pannello web** è stato esercitato in un vero browser contro un nodo sostitutivo e l'**immagine del firmware si compila** nel contenitore ESP-IDF 5.5.5. Ciò che **non** è ancora provato: i decodificatori dell'LD2461 e dei sensori di presenza corrispondono solo agli esempi svolti dei loro manuali, senza un modulo dietro; il controllo della firma degli aggiornamenti e l'abbinamento Bluetooth con PIN sono provati su computer con firme vere ma non ancora sulla scheda; il canale di comando del radar non è verificato con un modulo; e il certificato HTTPS del pannello (fatto dal nodo stesso) non è provato in tutti i browser.
+**Controllo di onestà - cosa funziona oggi:** Il nodo radar è l'unico nodo che esiste come hardware: il suo firmware gira su una vera scheda Waveshare ESP32-S3-ETH con un radar e riferisce al banco di prova CM5, e il suo pannello web e gli aggiornamenti via etere vi sono in uso. Il nucleo indipendente dall'hardware (4,633 controlli in 14 programmi di test: i decodificatori dell'LD2450, dell'LD2461 e di quattro sensori di presenza, il canale di comando dell'LD2450, le impostazioni e i loro controlli, la tabella dei pin, utenti e sessioni, il piano di rete, il serializzatore di messaggi la cui uscita è accettata da ARMOR-COMMON, e i controlli di versione e firma) è provato su un computer, il **pannello web** è stato esercitato in un vero browser contro un nodo sostitutivo e l'**immagine del firmware si compila** nel contenitore ESP-IDF 5.5.5. Ciò che **non** è ancora provato: i decodificatori dell'LD2461 e dei sensori di presenza corrispondono solo agli esempi svolti dei loro manuali, senza un modulo dietro; il controllo della firma degli aggiornamenti e l'abbinamento Bluetooth con PIN sono provati su computer con firme vere ma non ancora sulla scheda; il canale di comando del radar non è verificato con un modulo; e il certificato HTTPS del pannello (fatto dal nodo stesso) non è provato in tutti i browser.
 
 ---
 
@@ -37,9 +38,16 @@
 |---|---|
 | Versione | `0.8.0.5` |
 | Maturità | Consolidato |
-| Test | 4.633 controlli in 13 programmi (`ctest`) |
-| Tecnologia | ESP-IDF C++ |
+| Ruolo | Nodo di campo radar per ESP32-S3 (famiglia: Field Nodes, padre: ARMOR-COMMON) |
+| Tecnologia | C++17, ESP-IDF 5.5.5, ESP32-S3 |
+| Test | 7371 verifiche in 14 programmi host e 6 verifiche Python (`ctest`) |
+| Schede | Waveshare ESP32-S3-ETH (Ethernet) e ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
+| Sensori | Fino a 3 radar (LD2450, LD2461) o sensori di presenza per nodo, sensore di luce VEML7700 |
+| Gira su | Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8; test su host su qualsiasi computer |
 | Su hardware reale | Gira su una vera scheda Waveshare ESP32-S3-ETH con un radar, riferendo al banco di prova CM5 |
+| Licenza | GPL-3.0-or-later |
+
+**Vai a:** [Panoramica](#-panoramica) · [Architettura](#-architettura) · [Sicurezza](#-sicurezza-e-protezione) · [Interfacce](#-interfacce) · [Configurazione](#-configurazione) · [Avvio rapido](#-avvio-rapido) · [Test](#-test) · [Problemi](#-risoluzione-dei-problemi) · [Struttura](#-struttura-del-repository) · [Correlati](#-progetti-correlati)
 
 ## 🚦 Stato del progetto
 
@@ -50,7 +58,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Area | Stato | Cosa significa qui |
 |---|---|---|
 | Software | 🟢 | Il firmware compila nel contenitore ESP-IDF 5.5.5 e gira su una scheda ESP32-S3-ETH reale. |
-| Test | 🟢 | Superano 4.633 controlli in 13 programmi host (`ctest`): i decodificatori, le impostazioni, la tabella dei pin, gli utenti, il piano di rete, il serializzatore dei messaggi e i controlli di versione. |
+| Test | 🟢 | Superano 7.371 controlli in 14 programmi host (`ctest`): i decodificatori, le impostazioni, la tabella dei pin, gli utenti, il piano di rete, il serializzatore dei messaggi e i controlli di versione. |
 | Protocolli e dati | 🟡 | L'LD2450 funziona con un radar reale; i decodificatori dell'LD2461 e dei quattro sensori di presenza corrispondono solo agli esempi dei loro manuali e il canale di comando del radar non è stato verificato con un modulo. |
 | Interfaccia | 🟡 | Il pannello web è in uso sulla scheda e provato in un browser reale contro un nodo simulato; il suo certificato HTTPS, creato dal nodo stesso, non è stato provato in tutti i browser. |
 | Hardware | 🟡 | È l'unico nodo che esiste come hardware: una scheda Waveshare ESP32-S3-ETH reale con un radar riferisce al banco di prova CM5; nessun altro modulo sensore è collegato. |
@@ -67,11 +75,13 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 * **Un solo Wi-Fi da più nodi:** ogni nodo può offrire un access point collegato alla sua porta Ethernet; con lo stesso nome e password e il canale in automatico (1, 6 o 11 secondo la MAC), telefoni e sensori Wi-Fi vedono una sola rete con un solo server DHCP. Non è una rete mesh radio: ogni nodo mantiene il suo cavo. Un nodo può invece unirsi al Wi-Fi di un router (con ricerca delle reti), e uno senza cavo può essere configurato via **Bluetooth** dall'app Android.
 * **Pin per il server:** qualsiasi pin libero diventa un ingresso, un'uscita (con uno stato sicuro se il broker si perde), PWM o una lettura analogica, e appare come dispositivo del server: un relè o un contatto non richiede un nuovo firmware. I pin riservati della scheda non vengono mai offerti.
 * **Aggiornamenti via radio (OTA) con ripristino** dal pannello (due slot sulla flash da 16 MB) e un **collegamento da Studio** al pannello di ogni nodo, dall'indirizzo che il nodo pubblica.
-* **Il pannello in HTTPS:** il nodo crea il proprio certificato (autofirmato, conservato in flash) e serve il pannello sulla porta 443 oltre che sulla 80, o solo sulla 443; il cookie di sessione è marcato Secure e l'impronta del certificato viene mostrata per confrontarla con l'avviso del browser. **Identità di traccia stabili:** i bersagli di ogni frame sono associati a quelli seguiti prima, così una persona mantiene lo stesso id, un frame perso non fa sfarfallare e le posizioni sono un po' levigate.
+* **Il pannello in HTTPS:** il nodo crea il proprio certificato (autofirmato, conservato in flash) e serve il pannello sulla porta 443 oltre che sulla 80, o solo sulla 443; il cookie di sessione è marcato Secure e l'impronta del certificato viene mostrata per confrontarla con l'avviso del browser.
+* **Identità di traccia stabili:** i bersagli di ogni frame sono associati a quelli seguiti prima, così una persona mantiene lo stesso id, un frame perso non fa sfarfallare e le posizioni sono un po' levigate.
 * **Sei modelli di sensore, uno per porta:** una porta porta un LD2450 o un LD2461 (tracker che alimentano il perimetro, con il campo proprio del modello in Studio) o un sensore di presenza (LD2410, LD2412, LD2410S, MR24HPC1) che diventa un dispositivo del server e pubblica presenza e distanza. Si sceglie nel pannello; cos'è ciascuno, il suo protocollo e cosa non è stato verificato sono in `docs/SENSORS.md`.
 * **Decodificatore, salute e configurazione dell'LD2450:** un framer che si risincronizza trova i frame in un flusso rumoroso; ogni frame da 30 byte dà fino a tre bersagli che diventano tracce del contratto; la console e il pannello dicono per radar se trasmette, tace o manda dati illeggibili. Il pannello può anche leggere la versione del modulo, scegliere uno o tre bersagli e impostare zone di rilevamento (un protocollo non verificato su un modulo).
 * **Luce ambiente e messaggi esatti rispetto al contratto:** il VEML7700 con range automatico; JSON di telemetria, salute e informazioni che segue gli schemi pubblicati e rifiuta di scrivere qualsiasi cosa non valida, con timestamp di orologio reale (SNTP) e un last will MQTT. La telemetria è trattenuta finché nessun radar trasmette, mai un «tutto tranquillo» vuoto.
-* **Un'immagine per tutte le schede, come un prodotto di rete:** il firmware è lo stesso e la MAC distingue le schede (`armor-` e sei cifre finché non ricevono un nome); `adopt_node.py` dà a un nodo appena flashato il suo amministratore, la sua identità di broker e le impostazioni comuni della flotta via rete, con un codice di configurazione calcolato dalla sua MAC: 5 nodi o 27 sono lo stesso lavoro. **Strumenti da banco:** flash via USB-C, un nodo finto per lavorare sul pannello e un convertitore da un registro di frame grezzi a un fixture di test ([messa in servizio da banco](docs/BENCH_BRINGUP.md)).
+* **Un'immagine per tutte le schede, come un prodotto di rete:** il firmware è lo stesso e la MAC distingue le schede (`armor-` e sei cifre finché non ricevono un nome); `adopt_node.py` dà a un nodo appena flashato il suo amministratore, la sua identità di broker e le impostazioni comuni della flotta via rete, con un codice di configurazione calcolato dalla sua MAC: 5 nodi o 27 sono lo stesso lavoro.
+* **Strumenti da banco:** flash via USB-C, un nodo finto per lavorare sul pannello e un convertitore da un registro di frame grezzi a un fixture di test ([messa in servizio da banco](docs/BENCH_BRINGUP.md)).
 * **Aggiornamenti via etere firmati:** il nodo installa da GitHub solo un'immagine il cui SHA-256 coincide e che porta una firma Ed25519 valida del responsabile (la chiave pubblica è nel firmware, quella privata non lascia mai il responsabile); un file caricato a mano da un amministratore nel pannello resta accettato. Le pagine e i messaggi del pannello sono in otto lingue.
 * **Abbinamento Bluetooth con PIN:** il PIN a sei cifre deriva dal codice di configurazione, è stampato sulla console USB e mostrato a un amministratore nel pannello; il telefono deve inserirlo prima di poter scrivere le impostazioni del nodo.
 * **Solo la casa può usare il pannello:** il pannello risponde per impostazione predefinita alla rete privata (o alle reti indicate dal proprietario, come una VPN), rifiuta un elenco che escluderebbe chi lo salva, conta le password errate per persona e per indirizzo e funziona dietro il proxy del server per essere raggiunto da fuori casa senza pubblicare il nodo.
@@ -85,6 +95,23 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 * **Il lettore dei sensori attende eventi invece di interrogare:** il task di lettura dorme sulle code di eventi delle linee seriali e svuota tutto ciò che è arrivato, svuota la linea in caso di overflow e conta overflow ed errori per linea; `system.reader_idle_ms` (100; 0 = il polling da 10 ms di prima) fissa l'attesa, e una coda che si guasta riporta da sola al polling.
 * **Sigillatura facoltativa dei segreti salvati:** disattivata per impostazione predefinita (`security.seal_secrets`, o `nodes.nvs_encryption` del server). Attiva, le password, i token, le chiavi, i PIN e gli hash delle password che il nodo salva restano sigillati con ChaCha20-Poly1305 e tutto il resto resta leggibile; attivarla o disattivarla li riscrive senza perdere nulla, anche se il nodo si ferma a metà. Nessun eFuse viene bruciato e la flash non è cifrata: la chiave si trova in una partizione dello stesso chip, quindi **non** protegge da chi ha la scheda, e un nodo installato prima di quella partizione mantiene i suoi segreti com'erano finché non viene flashato con la nuova tabella delle partizioni.
 
+## 🧩 Ruolo in A.R.M.O.R.
+
+ARMOR-NODE-RADAR sono gli occhi del perimetro. Ogni nodo legge fino a tre radar o sensori di presenza e pubblica tracce, luce e salute verso [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) via MQTT; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) le disegna sulla planimetria del sito e [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) le pesa rispetto alle telecamere. Il suo firmware condivide una base con gli altri nodi (il pannello, la configurazione Bluetooth, gli aggiornamenti firmati, l'accesso e l'orologio vengono dalla base firmware di [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), così ciò che impari su un nodo vale per tutti.
+
+| Nome | Come | A cosa serve |
+|---|---|---|
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | Riceve i messaggi del radar (oggi il banco CM5) e comanda il nodo |
+| ARMOR-STUDIO | collegamento al pannello | Apre il pannello del nodo dall'indirizzo che il nodo pubblica |
+| ARMOR-ANDROID-CONTROL | Bluetooth | Configura il nodo sul campo |
+| ARMOR-COMMON | contratti, base firmware | I messaggi sono verificati con i suoi schemi; il firmware comune è copiato da lì |
+
+## 🏛️ Architettura
+
+<p align="center">
+  <img src="images/architecture.svg" alt="Architettura di ARMOR-NODE-RADAR: chi lo chiama, cosa contiene e da cosa dipende" width="100%">
+</p>
+
 ## 🖼️ Schermate
 
 Catturate a 1920×1080 su un banco di prova, con dati di esempio e senza alcuna installazione reale dietro.
@@ -94,43 +121,58 @@ Catturate a 1920×1080 su un banco di prova, con dati di esempio e senza alcuna 
 <tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Pin: cosa fa ogni pin, verificato perché due funzioni non ne condividano mai uno." width="100%"><br><sub>Pin: cosa fa ogni pin, verificato perché due funzioni non ne condividano mai uno.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Rete: l'indirizzamento Ethernet o Wi-Fi del nodo, impostato dal suo pannello web." width="100%"><br><sub>Rete: l'indirizzamento Ethernet o Wi-Fi del nodo, impostato dal suo pannello web.</sub></td></tr>
 </table>
 
-## 🧩 Ruolo in A.R.M.O.R.
+## 🔒 Sicurezza e protezione
 
-ARMOR-NODE-RADAR sono gli occhi del perimetro. Ogni nodo legge fino a tre radar o sensori di presenza e pubblica tracce, luce e salute verso [ARMOR-SERVER](https://github.com/JuanenRac/ARMOR-SERVER) via MQTT; [ARMOR-STUDIO](https://github.com/JuanenRac/ARMOR-STUDIO) le disegna sulla planimetria del sito e [ARMOR-SERVER-AI](https://github.com/JuanenRac/ARMOR-SERVER-AI) le pesa rispetto alle telecamere. Il suo firmware condivide una base con gli altri nodi (il pannello, la configurazione Bluetooth, gli aggiornamenti firmati, l'accesso e l'orologio vengono dalla base firmware di [ARMOR-COMMON](https://github.com/JuanenRac/ARMOR-COMMON)), così ciò che impari su un nodo vale per tutti.
+| Minaccia | Difesa |
+|---|---|
+| Password in chiaro o compilate | PBKDF2-HMAC-SHA256 con 10 000 round; nessuna password nel firmware (un nodo senza utenti entra in configurazione); al massimo 4 utenti (admin o visualizzatore) e da 8 a 64 caratteri; al massimo 6 sessioni, 30 minuti di inattività |
+| Prendere un nodo appena programmato | La configurazione richiede un codice di avvio: quello della build (`CONFIG_ARMOR_SETUP_CODE`) o uno casuale tenuto in flash e mostrato sulla console USB; con un segreto di flotta è `HMAC-SHA256(segreto, MAC)`; è anche la chiave del Wi-Fi di configurazione (WPA2, mai in bridge) |
+| Il pannello raggiunto da Internet | Risponde di default alle reti private di una casa (10/8, 172.16/12, 192.168/16, 169.254/16, 127/8 e 100.64/10 dove vivono alcune VPN); l'impostazione `web.admin_sources` elenca altri indirizzi e reti IPv4 (8 voci, 120 caratteri); tutto il resto è rifiutato tranne l'identità pubblica `GET /api/v1/session`; una lista che escluderebbe chi la salva è rifiutata |
+| Il pannello in chiaro su HTTP | HTTPS sulla 443 con un certificato che il nodo crea da sé (autofirmato, in flash, impronta SHA-256 visibile per confrontarla); il pannello può essere http, https o entrambi; il cookie di sessione è sempre HttpOnly e SameSite=Strict (e Secure su TLS) |
+| Un firmware falso da GitHub | Un'immagine si installa solo con uno SHA-256 coincidente e una firma Ed25519 valida fatta con la chiave del manutentore (`no_checksum`, `no_signature`, `bad_signature`, `checksum_mismatch`, `wrong_firmware`, `not_newer`, `version_mismatch` la rifiutano); un caricamento manuale da un amministratore non è verificato: un limite esplicito |
+| Dirottamento della configurazione Bluetooth | Un PIN a 6 cifre derivato dal codice di configurazione, visibile sulla console USB e a un amministratore; il telefono deve digitarlo prima di scrivere le impostazioni; la finestra dura `CONFIG_ARMOR_BLE_SETUP_MINUTES` (10 di default, da 1 a 120) |
+| Un ordine remoto che fa danni | Due passi con un token monouso legato a quell'operazione; solo il server può scrivere quei topic nel broker; una pausa dura al massimo un'ora; non ci sono ripristino di fabbrica, cancellazione né sonno profondo da ordine remoto |
+| Segreti memorizzati letti da chi ha la scheda | Opzionale (spento di default, interruttore `security.seal_secrets` o `nodes.nvs_encryption` del server): ChaCha20-Poly1305 per password, token, chiavi, PIN e hash. Non cifra la flash né brucia un eFuse: la chiave è in una partizione dello stesso chip, quindi non protegge da chi ha la scheda |
+| Il collegamento al broker in chiaro | TLS opzionale (`mqtts://`) con l'autorità propria del proprietario (PEM fino a 2 KB) e verifica del nome; spento di default. L'handshake è girato solo nei test su host, non su una scheda |
+| Il Bluetooth proprio di un sensore | Di default il nodo chiude il Bluetooth di ogni sensore LD (senza PIN); un ponte seriale trasparente verso un computer si apre solo per pochi minuti e da un amministratore |
+| Adottare un nodo su una rete non fidata | `tools/adopt_node.py https://<indirizzo> --fingerprint <SHA-256>` verifica il certificato nella stessa connessione; avvisa per l'HTTP in chiaro e per i file di flotta con indirizzo fisso |
+| Un pin pericoloso | I pin riservati della scheda non vengono mai offerti; un'uscita ha uno stato sicuro se si perde il broker; due funzioni non possono condividere un pin (verificato) |
+| Un firmware pubblico con segreto di flotta | `CONFIG_ARMOR_FLEET_SECRET` è vuoto di default: la build pubblica non porta alcun segreto |
 
-## 📂 Struttura del repository
+Leggi [SECURITY.md](SECURITY.md) per segnalare una vulnerabilità. Non c'è stata una revisione indipendente.
 
-```text
-ARMOR-NODE-RADAR/
-├── main/
-│   ├── app_main.cpp        start-up: settings, radars, pins, network, panel, broker, Bluetooth
-│   ├── node_store.cpp      settings and users in flash
-│   ├── network.cpp         Ethernet, Wi-Fi access point and bridge, station
-│   ├── web_server.cpp      the panel and its JSON API, login, update
-│   ├── api_shared.cpp      the operations the panel and Bluetooth share (status, settings, Wi-Fi scan)
-│   ├── ble_provision.cpp   configuration from a phone over Bluetooth (NimBLE)
-│   ├── radar_manager.cpp   UARTs, frames, health, command channel (armor_radar.cpp, radar_tracks.hpp)
-│   ├── gpio_manager.cpp    the pins mapped for the server
-│   ├── mqtt_link.cpp       clock, health, telemetry, information, pin topics
-│   ├── board_ethernet.cpp, light_sensor.cpp, tls_cert.cpp, log_buffer.cpp, entropy.cpp
-│   ├── Kconfig.projbuild   the first settings of a build
-│   └── core/               framer, ld2450, ld2450_command, ld2461, presence, sensor_model, node_config, board_pins, network_plan, auth, ble_frame, ble_dispatch, gpio_logic, json, veml7700, telemetry_json...
-├── panel/                  index.html, app.js, text.js (8 languages), style.css
-├── tests/                  test_core.cpp, test_node.cpp, test_mqtt_tls.cpp, test_sensors.cpp, test_board_wifi.cpp, emit_samples.cpp, check_contract.py, test_tools.py
-├── tools/                  build_node.sh, check_sdkconfig.py, make_fleet.py, adopt_node.py, provision_node.sh, flash.bat, pack_panel.py, panel_mock.mjs, frames_to_fixture.py, serial_bridge_client.py, setup_code.html, the shared CI checks (armor_ci_validate.py, armor_project_tool.py, _armor_readme_parity.py)
-├── secrets/                node.conf.example, fleet.example.json (the real files are git-ignored)
-├── CMakeLists.txt, partitions.csv, sdkconfig.defaults, sdkconfig.board.*   the ESP-IDF project, the flash layout and the settings of each board (s3-eth, s3-wifi)
-└── docs/                   BENCH_BRINGUP.md, NODE_PANEL.md, BLE_PROVISIONING.md, SENSORS.md, HARDWARE_BOUNDARY.md, BENCH_TESTS.md, SETUP_CODE.md
-```
+## 🔌 Interfacce
 
-## 🛠️ Ambiente di sviluppo
+| Parte | Cosa imposta |
+|---|---|
+| MQTT | `armor/node/<id>/{telemetry,health,info,command}`, `armor/health/<id>` (il suo last will è `{"node_id":"..","online":false}`), `armor/control/<id>/{command,result,maintenance}` e `armor/control/all/command`, `armor/device/<id>/<pin>/{state,set}`, `armor/radar/<id>/events`, `armor/radar/<id>/control/armed` |
+| Pannello (HTTP 80, HTTPS 443) | Percorsi `session`, `login`, `logout`, `setup`, `status`, `config` (+ export, import), `wifi/scan`, `time`, `radars` (+ command), `perimeter` (+ armed, learn, zone), `pins` (+ command), `bridge` (+ open, close, io), `ota` (+ check, install, progress, copy, switch), `account`, `ble-pin`, `log`, `coredump`, `factory-reset`, `reboot`; `/metrics` per gli amministratori e il WebSocket `/ws/radar-map`; `tests/check_routes.py` verifica che ogni percorso chiamato dal pannello esista |
+| Testi del pannello | 76 codici di errore con testo in otto lingue (832 righe in `panel/text.js`), verificati da `tests/check_panel_text.py` |
+| Hardware | 3 UART per LD2450, LD2461, LD2410, LD2412, LD2410S e MR24HPC1 (RX 16, 17, 18; TX 15, 21, 38); W5500 su SPI (MOSI 11, MISO 12, SCLK 13, CS 14, INT 10, RST 9, 20 MHz); VEML7700 su I2C (GPIO 1 e 2); pulsante BOOT |
 
-**Requisiti:** un compilatore C++17 per i test sul computer, il container ESP-IDF 5.5.5 per compilare l'immagine, un Waveshare ESP32-S3-ETH o un ESP32-S3-WROOM-1 N16R8
+## ⚙️ Configurazione
+
+| Variabile | Predefinito | Cosa imposta |
+|---|---|---|
+| `CONFIG_ARMOR_NODE_ID` | `""` | Il nome; vuoto dà `armor-` e gli ultimi tre byte del MAC |
+| `CONFIG_ARMOR_SETUP_CODE`, `CONFIG_ARMOR_FLEET_SECRET` | `""` | Il codice di configurazione della build (vuoto: casuale) e il segreto di flotta (16+ caratteri; mai nel repository) |
+| `CONFIG_ARMOR_RADAR_COUNT` | 3 (0-3) | Quanti radar sono collegati |
+| `CONFIG_ARMOR_TRACK_STABILISER` | y | Mantenere l'identità di una traccia da un fotogramma all'altro |
+| `CONFIG_ARMOR_MQTT_URI`, `_USERNAME`, `_PASSWORD` | `""` | Le prime impostazioni del broker (modificabili nel pannello) |
+| `CONFIG_ARMOR_HEARTBEAT_S` | 10 (2-300) | Secondi tra i battiti di salute |
+| `CONFIG_ARMOR_TELEMETRY_PERIOD_MS` | 200 (200-5000) | Al massimo 5 messaggi al secondo |
+| `CONFIG_ARMOR_BLE_SETUP_MINUTES` | 10 (1-120) | Quanto resta aperta la configurazione Bluetooth |
+| `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | La scheda: Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
+| `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | Tieni BOOT 8 s nei primi 30 s per ricominciare |
+
+Le impostazioni regolate dal vivo sono nel pannello e salvate in flash (ad esempio `system.reader_idle_ms`, `security.seal_secrets`, il limite di accessi falliti al minuto (30, da 0 a 120) e le zone del motore di perimetro); i valori predefiniti del firmware sono in `sdkconfig.defaults` e `sdkconfig.board.*`. La flash da 16 MB contiene `nvs` (64 KB), `otadata`, `phy_init`, due slot da 3 MB `ota_0` e `ota_1`, `coredump` (128 KB) e `nvs_keys` (4 KB) (`partitions.csv`).
+
+## 🚀 Avvio rapido
+
+**Requisiti:** un compilatore C++17 per i test su host; il container ESP-IDF 5.5.5 per costruire l'immagine; una Waveshare ESP32-S3-ETH o una ESP32-S3-WROOM-1 N16R8.
 
 ```bash
-cmake -S tests -B build/host && cmake --build build/host
-build/host/test_core && build/host/test_node && build/host/test_sensors && build/host/test_board_wifi && build/host/test_release   # 4,633 checks, -Werror
-build/host/emit_samples | python tests/check_contract.py
+cmake -S tests -B build/host && cmake --build build/host && ctest --test-dir build/host   # host tests, -Werror
 node tools/panel_mock.mjs --user admin:adminpass123   # the panel without a board
 python tools/make_fleet.py                             # once: the fleet secret and the shared settings
 tools/build_node.sh generic                           # ONE image for every Waveshare board (dist/generic-s3-eth.bin), in the ESP-IDF container
@@ -146,6 +188,92 @@ tools/adopt_node.py 192.168.0.181 --id perimetro-3 --fleet secrets/fleet.json --
 ```
 
 I test su computer richiedono un compilatore C++17 (Linux, WSL, MSYS2). Vedi la [messa in servizio da banco](docs/BENCH_BRINGUP.md), il [pannello](docs/NODE_PANEL.md) e il [confine hardware](docs/HARDWARE_BOUNDARY.md).
+
+## 🧪 Test
+
+```bash
+cmake -S tests -B build/host && cmake --build build/host && ctest --test-dir build/host
+build/host/emit_samples | python tests/check_contract.py
+python -I tools/armor_ci_validate.py
+```
+
+14 programmi di test su host e 6 verifiche Python girano con `ctest`; 7371 verifiche contate dai programmi host, compilati con `-Werror`.
+
+| Parte | Cosa copre |
+|---|---|
+| `test_core`, `test_sensors`, `test_family`, `test_uart_wake` | I decodificatori (LD2450, LD2461, quattro sensori di presenza), il delimitatore di frame, il canale dei comandi, le famiglie di sensori e il risveglio della UART |
+| `test_node`, `test_base`, `test_shared`, `test_board_wifi` | Le impostazioni e le loro verifiche, la tabella dei pin, utenti e sessioni, il piano di rete, la base condivisa e la scheda Wi-Fi |
+| `test_logic`, `test_perimeter`, `test_control`, `test_diag` | La logica dei pin, il motore di perimetro, gli ordini di controllo in due passi e la diagnostica |
+| `test_mqtt_tls`, `test_release` | Il collegamento TLS al broker (solo host) e le verifiche di versione e firma |
+| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python: i testi del pannello in otto lingue (832 righe), i task, i percorsi di salvataggio, la sessione Bluetooth sotto il suo lock, i percorsi e il client del ponte seriale |
+
+Il pannello web è anche provato in un browser reale contro un nodo sostitutivo (`tools/panel_mock.mjs`). I decodificatori LD2461 e di presenza coincidono solo con gli esempi dei loro manuali.
+
+## 🏗️ Compilazione e rilascio
+
+`tools/build_node.sh generic` costruisce UNA immagine per ogni scheda Waveshare nel container ESP-IDF 5.5.5, e `tools/flash.bat` la scrive via USB-C; lo stesso firmware è costruito per la scheda solo Wi-Fi con `s3-wifi`. Le versioni portano l'immagine, il suo SHA-256 e la sua firma Ed25519, una per scheda.
+
+## 🩺 Risoluzione dei problemi
+
+| Vedi | Perché | Fai |
+|---|---|---|
+| Hai perso la password o il nodo non entra più in rete | Un nodo in configurazione senza indirizzo dopo 90 s apre un proprio Wi-Fi `ARMOR-SETUP-xxxxxx` (apri `http://192.168.4.1/`) | Per ricominciare tieni premuto BOOT per 8 secondi nei primi 30 secondi dopo l'accensione (cancella impostazioni e utenti), o usa *Ripristino di fabbrica* nel pannello |
+| Un aggiornamento da GitHub è rifiutato | La versione non ha checksum o firma, non corrispondono (`e_no_checksum`, `e_no_signature`, `e_checksum_mismatch`, `e_bad_signature`), non ha un'immagine per questa scheda (`e_no_asset_for_board`) o è di un altro progetto (`e_wrong_firmware`) | Il nodo non è cambiato; riprova o lascia che un amministratore carichi il file a mano |
+| I comandi al radar rispondono `no_answer`, `refused` o `disabled` | Il filo TX del radar non è collegato, il modulo si è bloccato o il nodo chiude prima il suo Bluetooth | Controlla il cablaggio (vedi la messa in servizio al banco), riavvia il modulo dal pannello |
+| Il nodo non mostra il sensore 3 o lascia dormire un radar | Il modulo ha smesso di parlare (silenzio senza frame errati) | Usa *riavvia modulo* nella pagina dei radar, poi chiudi il Bluetooth del sensore |
+
+## 📂 Struttura del repository
+
+<p align="center">
+  <img src="images/repository-structure.svg" alt="Struttura del repository di ARMOR-NODE-RADAR" width="100%">
+</p>
+
+<details>
+<summary>Versione testuale dell'albero</summary>
+
+```text
+ARMOR-NODE-RADAR/
+├── main/                                il firmware: un componente ESP-IDF
+├── panel/                               il pannello web incorporato nel firmware
+├── tests/                               test su host e verifiche Python
+├── docs/                                7 guide per il banco e il pannello
+├── tools/                               strumenti di build, flash, adozione, flotta e verifica
+├── .github/                             workflow CI e modelli per issue e pull request
+├── images/                              banner, icona e le due immagini di questo README
+├── build.sh build.bat                   build tramite il flusso di progetto condiviso
+├── test.sh test.bat                     eseguire i test tramite il flusso condiviso
+├── run.sh run.bat                       avvio tramite il flusso di progetto condiviso
+├── armor.project.json                   manifesto: versione, ruolo, maturità, comando di build
+├── CHANGELOG.md                         cosa è cambiato in ogni versione
+├── SECURITY.md SUPPORT.md LICENSE       politica di sicurezza, supporto e licenza
+├── CONTRIBUTING.md CODE_OF_CONDUCT.md   come contribuire e il codice di condotta
+├── CMakeLists.txt                       il progetto ESP-IDF
+├── partitions.csv                       la tabella della flash
+├── sdkconfig.defaults                   le impostazioni del firmware
+├── sdkconfig.board.s3-eth               la scheda Ethernet
+├── sdkconfig.board.s3-wifi              la scheda Wi-Fi
+├── secrets/                             esempi di file di flotta e nodo
+├── build-test.sh build-test.bat         eseguire i test tramite il flusso condiviso
+└── .gitattributes .gitignore            impostazioni di Git
+```
+
+</details>
+
+## 🗺️ Roadmap e limiti noti
+
+**Limiti noti oggi**
+
+* I decodificatori LD2461 e di presenza coincidono solo con gli esempi dei loro manuali, senza modulo dietro; il canale dei comandi è stato verificato solo con l'LD2450.
+* La verifica della firma degli aggiornamenti e l'abbinamento Bluetooth con PIN sono dimostrati su un computer con firme reali ma non ancora sulla scheda; l'handshake TLS con il broker non è girato su una scheda.
+* Il rapporto di salute e il controllo dal server non sono girati sulla scheda; il motore di perimetro non è mai girato con un sensore; il certificato HTTPS proprio del pannello non è provato in tutti i browser; la scheda Wi-Fi non esiste fisicamente (esiste solo quella Ethernet).
+
+**Prossimi passi**
+
+* Far girare il motore di perimetro, il rapporto di salute e gli ordini di controllo con sensori reali e il banco CM5; provare il collegamento TLS al broker e l'aggiornamento firmato sulla scheda.
+
+## 🌍 Lingue
+
+Il README e i testi esistono in inglese, spagnolo, francese, italiano, tedesco, cinese, giapponese e portoghese europeo.
 
 ## 🔗 Progetti correlati
 
@@ -171,15 +299,23 @@ I test su computer richiedono un compilatore C++17 (Linux, WSL, MSYS2). Vedi la 
 * **[ARMOR-UPDATER](https://github.com/JuanenRac/ARMOR-UPDATER)** - Rileva, installa e aggiorna i repository stessi dell'ecosistema
 * **[ARMOR-DOCS](https://github.com/JuanenRac/ARMOR-DOCS)** - Architettura, base di sicurezza e matrice delle capacità
 
-## 📚 Documentazione e comunità
+## 📚 Documentazione
 
-Dove leggere di più:
-
+* [Pannello del nodo](docs/NODE_PANEL.md): primo avvio, utenti, rete, le pagine del pannello
+* [Codice di configurazione](docs/SETUP_CODE.md) e [provisioning Bluetooth](docs/BLE_PROVISIONING.md)
+* [Sensori](docs/SENSORS.md): i sei modelli e i loro decodificatori
+* [Messa in servizio al banco](docs/BENCH_BRINGUP.md), [prove al banco](docs/BENCH_TESTS.md) e [limite dell'hardware](docs/HARDWARE_BOUNDARY.md)
 * [Matrice delle capacità: cosa è provato e cosa no](https://github.com/JuanenRac/ARMOR-DOCS/blob/main/docs/CAPABILITY_MATRIX.md)
 * [Catalogo dei progetti: versioni e dipendenze tra i repository](https://github.com/JuanenRac/ARMOR-DOCS/blob/main/docs/PROJECT_CATALOG.md)
 * [Cronologia delle modifiche di questo repository](CHANGELOG.md)
-* [Licenza (GPL-3.0-or-later)](LICENSE)
-* Domande, idee e segnalazioni: electrohobby3d@gmail.com
+
+## 🤝 Contribuire e comunità
+
+* Prima di una pull request esegui `ctest --test-dir build/host` and `python -I tools/armor_ci_validate.py`: deve passare. Vedi [CONTRIBUTING.md](CONTRIBUTING.md) e il [codice di condotta](CODE_OF_CONDUCT.md).
+* Il README esiste in otto lingue ed è generato dalle sorgenti in ARMOR-DOCS: una modifica al testo si fa lì.
+* Una modifica a un messaggio tra componenti parte da ARMOR-COMMON.
+* Non descrivere come funzionante su una scheda ciò che è stato solo compilato.
+* Segnala una vulnerabilità in privato: [SECURITY.md](SECURITY.md). Domande, idee e segnalazioni: electrohobby3d@gmail.com ([SUPPORT.md](SUPPORT.md)).
 
 ## 👤 AUTORE
 

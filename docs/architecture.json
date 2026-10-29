@@ -1,0 +1,212 @@
+{
+  "repo": "ARMOR-NODE-RADAR",
+  "ecosystem": "armor",
+  "tagline": "A radar node of up to 270 degrees: three LD2450 on three UARTs, a web panel, signed updates and a link to the broker, on one firmware for every board.",
+  "description": "The firmware of ARMOR-NODE-RADAR reads up to three radars, keeps a track's identity, publishes the messages the ARMOR-COMMON contract accepts, serves a web panel with its own HTTPS certificate and installs only signed updates. It is the one node that exists as hardware; the perimeter engine, the LD2461 and presence-sensor decoders and the TLS link to the broker have not run with real modules or on a board.",
+  "columns": [
+    "WHAT IS CONNECTED",
+    "THIS FIRMWARE",
+    "WHO IT TALKS TO"
+  ],
+  "nodes": [
+    {
+      "id": "radars",
+      "column": 0,
+      "level": "external",
+      "title": "Radars, light sensor",
+      "lines": [
+        "up to three LD2450 (UART RX",
+        "16, 17, 18) and a VEML7700;",
+        "other sensor models decoded"
+      ]
+    },
+    {
+      "id": "people",
+      "column": 0,
+      "level": "external",
+      "title": "Browser, phone",
+      "lines": [
+        "the panel on 80 and 443, the",
+        "live map by WebSocket, the",
+        "set-up over Bluetooth"
+      ]
+    },
+    {
+      "id": "radar",
+      "column": 1,
+      "level": "tested",
+      "title": "radar_manager, core/",
+      "lines": [
+        "framer, LD2450 decoder, track",
+        "identity, health, commands;",
+        "host tests with real frames"
+      ],
+      "code": [
+        "main/radar_manager.cpp",
+        "main/core/ld2450.hpp",
+        "main/core/track_stabiliser.hpp"
+      ]
+    },
+    {
+      "id": "link",
+      "column": 1,
+      "level": "contract",
+      "title": "mqtt_link, telemetry",
+      "lines": [
+        "telemetry, health and info that",
+        "ARMOR-COMMON accepts; control",
+        "orders in two steps"
+      ],
+      "code": [
+        "main/mqtt_link.cpp",
+        "main/core/telemetry_json.hpp",
+        "main/core/control_gate.hpp"
+      ]
+    },
+    {
+      "id": "perim",
+      "column": 1,
+      "level": "config",
+      "title": "perimeter engine",
+      "lines": [
+        "6 detection and 3 exclusion",
+        "zones, crossing lines, routes;",
+        "off by default, no sensor yet"
+      ],
+      "code": [
+        "main/perimeter_rt.cpp",
+        "main/core/perimeter.hpp"
+      ]
+    },
+    {
+      "id": "web",
+      "column": 1,
+      "level": "tested",
+      "title": "web_server, panel/",
+      "lines": [
+        "panel in eight languages, logins,",
+        "own HTTPS certificate, private",
+        "networks only by default"
+      ],
+      "code": [
+        "main/web_server.cpp",
+        "main/core/auth.hpp",
+        "main/core/web_policy.hpp",
+        "panel/text.js"
+      ]
+    },
+    {
+      "id": "ble",
+      "column": 1,
+      "level": "tested",
+      "title": "ble_provision",
+      "lines": [
+        "set-up over Bluetooth with a",
+        "6-digit PIN derived from the",
+        "set-up code"
+      ],
+      "code": [
+        "main/ble_provision.cpp",
+        "main/core/ble_window.hpp"
+      ]
+    },
+    {
+      "id": "ota",
+      "column": 1,
+      "level": "contract",
+      "title": "github_update",
+      "lines": [
+        "SHA-256 plus Ed25519 signature,",
+        "two slots with rollback;",
+        "the check has not run on a board"
+      ],
+      "code": [
+        "main/github_update.cpp",
+        "main/core/fw_trust.hpp"
+      ]
+    },
+    {
+      "id": "server",
+      "column": 2,
+      "level": "external",
+      "title": "Broker, ARMOR-SERVER",
+      "lines": [
+        "mqtt:// or optional mqtts://;",
+        "the CM5 test bench receives",
+        "the messages today"
+      ]
+    },
+    {
+      "id": "github",
+      "column": 2,
+      "level": "external",
+      "title": "GitHub releases",
+      "lines": [
+        "the signed image of each",
+        "version, one per board"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "radars",
+      "to": "radar",
+      "label": "UART",
+      "level": "tested"
+    },
+    {
+      "from": "people",
+      "to": "web",
+      "label": "",
+      "level": "tested"
+    },
+    {
+      "from": "radar",
+      "to": "link",
+      "label": "",
+      "level": "tested"
+    },
+    {
+      "from": "radar",
+      "to": "perim",
+      "label": "",
+      "level": "config"
+    },
+    {
+      "from": "link",
+      "to": "web",
+      "label": "",
+      "level": "tested"
+    },
+    {
+      "from": "perim",
+      "to": "web",
+      "label": "",
+      "level": "config"
+    },
+    {
+      "from": "web",
+      "to": "ota",
+      "label": "",
+      "level": "contract"
+    },
+    {
+      "from": "ble",
+      "to": "ota",
+      "label": "",
+      "level": "tested"
+    },
+    {
+      "from": "link",
+      "to": "server",
+      "label": "MQTT",
+      "level": "contract"
+    },
+    {
+      "from": "ota",
+      "to": "github",
+      "label": "HTTPS",
+      "level": "contract"
+    }
+  ]
+}
