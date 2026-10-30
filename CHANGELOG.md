@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.8.0.6] - The Wi-Fi page warns when the node's own network is on next to the router connection, the node client is tested against a real Mosquitto and the README follows the universal layout
+
 - **The lights of Project status follow the evidence of the manifest:** the manifest says how far the repository has been shown to work (`evidence`: `host-test`, `simulator`, `bench` or `field`) and the validator fails when a light is above what that evidence and the maturity allow (`tools/status_lights.py`), so a green that never ran on real hardware cannot come back.
 - **The tests play the node's MQTT client against a real Mosquitto:** `tests/check_mosquitto.py` (shared with the other nodes) checks, with the messages this node prints, the retained birth and last will, delivery to the server, the node's own order topic and that it cannot write on another node's topics; the CI installs Mosquitto and fails without it.
 - **The Wi-Fi page warns when the node's own network is switched on next to the router connection:** the same notice the Overview shows (one radio, the network forced onto the router's channel) appears in the form as soon as both are on, in the eight languages.
