@@ -14,6 +14,7 @@
   ],
   "deployment_target": "ESP32-S3-ETH-PoE",
   "maturity": "established",
+  "evidence": "bench",
   "family": "Field Nodes",
   "parent": "ARMOR-COMMON",
   "native_version": "0.8.0.5",

@@ -64,7 +64,7 @@ Cada línea es una parte de este repositorio y la luz dice hasta dónde llega ho
 | Hardware | 🟡 | Es el único nodo que existe como hardware: una placa Waveshare ESP32-S3-ETH real con un radar informa al banco de pruebas CM5; no hay ningún otro módulo de sensor conectado. |
 | Seguridad | 🟡 | El emparejamiento con PIN Bluetooth y la comprobación de la firma de las actualizaciones están probados en un ordenador con firmas reales, pero aún no en la placa; no ha habido una revisión independiente. |
 | Actualizaciones | 🟡 | Las actualizaciones por aire se usan en la placa; la comprobación de actualizaciones firmadas aún no se ha ejecutado allí. |
-| Integración | 🟢 | Los mensajes de la placa llegan al servidor del banco de pruebas CM5, y esos mismos mensajes los aceptan los esquemas compartidos y los vectores de conformidad de ARMOR-COMMON. |
+| Integración | 🟡 | Los mensajes de la placa llegan al servidor del banco de pruebas CM5, y esos mismos mensajes los aceptan los esquemas compartidos y los vectores de conformidad de ARMOR-COMMON. Solo se ha visto en el banco, no en una instalación. |
 | Documentación | 🟢 | Ocho idiomas y el historial de cambios están al día. |
 
 ## 🎯 Resumen

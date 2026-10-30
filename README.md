@@ -64,7 +64,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Hardware | 🟡 | It is the one node that exists as hardware: a real Waveshare ESP32-S3-ETH board with a radar reports to the CM5 test bench; no other sensor module is connected. |
 | Security | 🟡 | The Bluetooth PIN pairing and the update signature check are proven on a computer with real signatures but not yet on the board; there has been no independent review. |
 | Updates | 🟡 | Over-the-air updates are in use on the board; the signed-update check has not run there yet. |
-| Integration | 🟢 | The messages of the board reach the CM5 test bench server, and the same messages are accepted by the shared schemas and conformance vectors of ARMOR-COMMON. |
+| Integration | 🟡 | The messages of the board reach the CM5 test bench server, and the same messages are accepted by the shared schemas and conformance vectors of ARMOR-COMMON. It has been seen on the bench only, not in an installation. |
 | Documentation | 🟢 | Eight languages and the changelog are up to date. |
 
 ## 🎯 Overview
