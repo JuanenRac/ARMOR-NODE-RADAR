@@ -164,6 +164,7 @@ Read [SECURITY.md](SECURITY.md) to report a vulnerability. There has been no ind
 | `CONFIG_ARMOR_BLE_SETUP_MINUTES` | 10 (1-120) | How long the Bluetooth set-up stays open |
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | The board: Waveshare ESP32-S3-ETH or ESP32-S3-WROOM-1 N16R8 (Wi-Fi only) |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | Hold BOOT for 8 s in the first 30 s to start again |
+| `system.login_limit_per_minute` | 30 (0-120) | Wrong passwords per minute before the panel locks sign-in for everyone (0 = no global limit); read and change it from Studio (a button on every node) or with `POST /api/v1/admin/nodes/settings`, where the panel login is used once and never kept |
 
 The settings that are tuned live in the panel and are kept in flash (for example `system.reader_idle_ms`, `security.seal_secrets`, the failed-login limit per minute (30, 0 to 120) and the zones of the perimeter engine); the defaults of the firmware are in `sdkconfig.defaults` and `sdkconfig.board.*`. The flash of 16 MB holds `nvs` (64 KB), `otadata`, `phy_init`, two 3 MB slots `ota_0` and `ota_1`, `coredump` (128 KB) and `nvs_keys` (4 KB) (`partitions.csv`).
 

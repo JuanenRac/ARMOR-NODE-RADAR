@@ -164,6 +164,7 @@ Leggi [SECURITY.md](SECURITY.md) per segnalare una vulnerabilità. Non c'è stat
 | `CONFIG_ARMOR_BLE_SETUP_MINUTES` | 10 (1-120) | Quanto resta aperta la configurazione Bluetooth |
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | La scheda: Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | Tieni BOOT 8 s nei primi 30 s per ricominciare |
+| `system.login_limit_per_minute` | 30 (0-120) | Password errate al minuto prima che il pannello blocchi l'accesso a tutti (0 = nessun limite globale); si legge e si cambia da Studio (un pulsante su ogni nodo) o con `POST /api/v1/admin/nodes/settings`, dove l'accesso al pannello è usato una volta e mai conservato |
 
 Le impostazioni regolate dal vivo sono nel pannello e salvate in flash (ad esempio `system.reader_idle_ms`, `security.seal_secrets`, il limite di accessi falliti al minuto (30, da 0 a 120) e le zone del motore di perimetro); i valori predefiniti del firmware sono in `sdkconfig.defaults` e `sdkconfig.board.*`. La flash da 16 MB contiene `nvs` (64 KB), `otadata`, `phy_init`, due slot da 3 MB `ota_0` e `ota_1`, `coredump` (128 KB) e `nvs_keys` (4 KB) (`partitions.csv`).
 

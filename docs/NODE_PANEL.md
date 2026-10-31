@@ -33,7 +33,7 @@ holding a board. On a network that is not the node's own, adopt over HTTPS: `too
 
 | Page | What it does |
 |---|---|
-| Overview | node, hardware, date and time (with where the time comes from), flash memory (total, reserved by the partitions, what the two firmware slots hold and which one runs), network, broker and the state of the three radars, refreshed every three seconds |
+| Overview | node, hardware, date and time (with where the time comes from), flash memory (total, reserved by the partitions, what the two firmware slots hold and which one runs), network, broker and the state of the three radars, refreshed every three seconds; Each card shows its values in green frames that are as wide as their text (they stay on the right and grow to the left, so a long text in any of the eight languages is not squeezed; on a narrow screen the label goes above its frame). |
 | Network | Ethernet or Wi-Fi as the connection; DHCP or a fixed address, mask, gateway, two DNS servers, host name; the time zone and the time server (or, with the server off, the browser's clock); Bluetooth; automatic restart; the configuration file (download and load) |
 | Wi-Fi | the node's own access point (name, security, password, channel, hidden, clients, power, width, country, joined to the wire or not) and, for a node without a cable, the Wi-Fi station |
 | Broker | the MQTT broker and its backups, user and password, the health and telemetry periods; the light sensor and its pins |

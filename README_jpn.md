@@ -164,6 +164,7 @@ ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダ
 | `CONFIG_ARMOR_BLE_SETUP_MINUTES` | 10 (1-120) | Bluetooth セットアップを開けておく時間 |
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | 基板：Waveshare ESP32-S3-ETH または ESP32-S3-WROOM-1 N16R8（Wi-Fi のみ） |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | 最初の 30 秒以内に BOOT を 8 秒押すと初期化 |
+| `system.login_limit_per_minute` | 30 (0-120) | パネルが全員のログインをロックするまでの 1 分あたりの誤パスワード数（0 = 全体の上限なし）。Studio（各ノードのボタン）または `POST /api/v1/admin/nodes/settings` で読み取り・変更でき、パネルのログイン情報は 1 回だけ使われ保存されません |
 
 ライブで調整する設定はパネルにあり、フラッシュに保存されます（例：`system.reader_idle_ms`、`security.seal_secrets`、1 分あたりのログイン失敗上限（30、0〜120）、境界エンジンのゾーン）。ファームウェアの既定値は `sdkconfig.defaults` と `sdkconfig.board.*` にあります。16 MB のフラッシュには `nvs`（64 KB）、`otadata`、`phy_init`、3 MB のスロット `ota_0` と `ota_1`、`coredump`（128 KB）、`nvs_keys`（4 KB）があります（`partitions.csv`）。
 

@@ -164,6 +164,7 @@ ARMOR-NODE-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存
 | `CONFIG_ARMOR_BLE_SETUP_MINUTES` | 10 (1-120) | 蓝牙设置保持开启的时间 |
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | 电路板：Waveshare ESP32-S3-ETH 或 ESP32-S3-WROOM-1 N16R8（仅 Wi-Fi） |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | 在前 30 秒内按住 BOOT 8 秒可重新开始 |
+| `system.login_limit_per_minute` | 30 (0-120) | 面板对所有人锁定登录前每分钟允许的错误密码次数（0 = 无全局限制）；可在 Studio（每个节点上的按钮）或通过 `POST /api/v1/admin/nodes/settings` 读取和修改，面板登录信息只使用一次，绝不保存 |
 
 现场调节的设置在面板中并保存在闪存里（例如 `system.reader_idle_ms`、`security.seal_secrets`、每分钟登录失败上限（30，范围 0 到 120）以及周界引擎的区域）；固件默认值在 `sdkconfig.defaults` 和 `sdkconfig.board.*` 中。16 MB 闪存包含 `nvs`（64 KB）、`otadata`、`phy_init`、两个 3 MB 槽位 `ota_0` 和 `ota_1`、`coredump`（128 KB）和 `nvs_keys`（4 KB）（`partitions.csv`）。
 
