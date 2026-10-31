@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-7371%20checks-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.8.0.6-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.8.0.7-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
@@ -36,7 +36,7 @@
 
 | | |
 |---|---|
-| バージョン | `0.8.0.6` |
+| バージョン | `0.8.0.7` |
 | 成熟度 | 確立 |
 | 役割 | ESP32-S3 用レーダーフィールドノード（ファミリー：Field Nodes、親：ARMOR-COMMON） |
 | 技術 | C++17, ESP-IDF 5.5.5, ESP32-S3 |

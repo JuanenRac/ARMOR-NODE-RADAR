@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Linguaggio">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-7371%20checks-2ea44f.svg" alt="Test">
-  <img src="https://img.shields.io/badge/Version-0.8.0.6-0f6cbd.svg" alt="Versione">
+  <img src="https://img.shields.io/badge/Version-0.8.0.7-0f6cbd.svg" alt="Versione">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturità">
 </p>
 
@@ -36,7 +36,7 @@
 
 | | |
 |---|---|
-| Versione | `0.8.0.6` |
+| Versione | `0.8.0.7` |
 | Maturità | Consolidato |
 | Ruolo | Nodo di campo radar per ESP32-S3 (famiglia: Field Nodes, padre: ARMOR-COMMON) |
 | Tecnologia | C++17, ESP-IDF 5.5.5, ESP32-S3 |

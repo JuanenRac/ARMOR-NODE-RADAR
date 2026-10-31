@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.8.0.7] - The green frames of the Overview fit their text
+
+- **The green frames of the Overview fit their text:** in the Overview cards (Hardware, Flash memory and the rest) each green frame is as wide as its content, stays on the right and grows to the left, so long texts in any of the eight languages are no longer squeezed; on a narrow screen the label goes above its frame.
+
 ## [0.8.0.6] - The Wi-Fi page warns when the node's own network is on next to the router connection, the node client is tested against a real Mosquitto and the README follows the universal layout
 
 - **The lights of Project status follow the evidence of the manifest:** the manifest says how far the repository has been shown to work (`evidence`: `host-test`, `simulator`, `bench` or `field`) and the validator fails when a light is above what that evidence and the maturity allow (`tools/status_lights.py`), so a green that never ran on real hardware cannot come back.
