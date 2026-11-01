@@ -3,7 +3,7 @@
  * Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
  *
  * The hardware-independent core under main/core is built and tested on a computer (tests/); the files beside this one are built with
- * ESP-IDF 5.4 (tools/build_node.sh does it in a container). It has run on real boards (a Waveshare ESP32-S3-ETH with a radar, reporting to the bench server); the
+ * ESP-IDF 5.5.5 (tools/build_node.sh does it in a container). It has run on real boards (a Waveshare ESP32-S3-ETH with a radar, reporting to the bench server); the
  * LD2461 and the presence sensors have not been tried with hardware: the bench checklist is in docs/BENCH_BRINGUP.md.
  *
  * What a node is, in one paragraph: everything that differs from node to node (its identity, its address, its Wi-Fi network, its broker,

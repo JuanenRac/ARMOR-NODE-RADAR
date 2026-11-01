@@ -20,6 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SET = re.compile(r"^(CONFIG_[A-Za-z0-9_]+)=(.*)$")
 UNSET = re.compile(r"^# (CONFIG_[A-Za-z0-9_]+) is not set$")
+# The one ESP-IDF version every node is built with (tools/build_node.sh names the same container).
+EXPECTED_IDF = "5.5.5"
 
 
 def wanted(path: Path) -> dict[str, str]:
@@ -65,12 +67,36 @@ def profile_of(sdkconfig: Path) -> str:
     return match.group(1) if match else ""
 
 
+def idf_problems(made: dict[str, str]) -> list[str]:
+    """The build must come from ESP-IDF EXPECTED_IDF: a build directory made with another version keeps it in CONFIG_IDF_INIT_VERSION."""
+    version = made.get("CONFIG_IDF_INIT_VERSION", "").strip('"')
+    if not version:
+        return []   # a generated file that does not say (very old ESP-IDF): nothing to compare
+    if version != EXPECTED_IDF:
+        return [f"CONFIG_IDF_INIT_VERSION: built with ESP-IDF {version}, the nodes use {EXPECTED_IDF} (delete this build directory and build again)"]
+    return []
+
+
+def lock_problems(lock: Path) -> list[str]:
+    """dependencies.lock, where a node has one, must name the same ESP-IDF."""
+    if not lock.is_file():
+        return []
+    match = re.search(r"^  idf:\n    source:\n      type: idf\n    version: ([0-9.]+)", lock.read_text(encoding="utf-8", errors="replace"), re.M)
+    if match and match.group(1) != EXPECTED_IDF:
+        return [f"dependencies.lock: ESP-IDF {match.group(1)}, the nodes use {EXPECTED_IDF}"]
+    return []
+
+
 def check(sdkconfig: Path) -> list[str]:
     asked = wanted(ROOT / "sdkconfig.defaults")
     board = profile_of(sdkconfig)
     if board and (ROOT / f"sdkconfig.board.{board}").exists():
         asked.update(wanted(ROOT / f"sdkconfig.board.{board}"))
-    return differences(asked, generated(sdkconfig))
+    made = generated(sdkconfig)
+    problems = differences(asked, made)
+    problems += idf_problems(made)
+    problems += lock_problems(ROOT / "dependencies.lock")
+    return problems
 
 
 def self_test() -> int:
@@ -81,6 +107,9 @@ def self_test() -> int:
     assert differences({"CONFIG_X": "n"}, {}) == []   # an unset symbol that the build never heard of is the same thing
     assert profile_of(Path("x/.compile/publica-s3-eth/sdkconfig")) == "s3-eth"
     assert profile_of(Path("x/build/foo/sdkconfig")) == ""
+    assert idf_problems({"CONFIG_IDF_INIT_VERSION": '"5.5.5"'}) == []
+    assert idf_problems({"CONFIG_IDF_INIT_VERSION": '"5.4.2"'}) != []
+    assert idf_problems({}) == []
     print("check_sdkconfig self-test passed")
     return 0
 

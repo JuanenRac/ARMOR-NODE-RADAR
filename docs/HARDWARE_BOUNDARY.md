@@ -7,7 +7,7 @@
 | The core in `main/core` (framer, LD2450 decoder and command channel, track set, message serialiser, dew point and heater, day/night, static map, node id, JSON reader and writer, settings and their checks, pin table, network plan, panel users and sessions, mapped-pin logic) | Any computer with CMake and a C++17 compiler | `tests/test_core.cpp` and `tests/test_node.cpp` (`-Werror`) |
 | The firmware's JSON against the published contract | A computer | `tests/emit_samples.cpp` piped into `tests/check_contract.py`, validated by ARMOR-COMMON |
 | The web panel (pages, eight languages, login, set-up, saving, field problems, pins, radars, phone width) | A real browser (headless Edge) against `tools/panel_mock.mjs`, a stand-in for a node | a scripted session; no text key left untranslated, no console error |
-| `main/*.cpp` outside `core` (UARTs, W5500, Wi-Fi and the bridge, HTTP server, OTA, NVS, PWM, ADC, I2C, MQTT, SNTP, tasks) | ESP-IDF 5.4 | **builds** in the ESP-IDF container (`tools/build_node.sh`); **runs on two real ESP32-S3-ETH nodes**: the HTTP and HTTPS panel, users, settings in flash, Ethernet, MQTT with an account per node, telemetry, the live map and the over-the-air update. Not yet recorded on a node: the Wi-Fi access point bridged to the cable, the light sensor, mapped pins and the PoE current |
+| `main/*.cpp` outside `core` (UARTs, W5500, Wi-Fi and the bridge, HTTP server, OTA, NVS, PWM, ADC, I2C, MQTT, SNTP, tasks) | ESP-IDF 5.5.5 | **builds** in the ESP-IDF container (`tools/build_node.sh`); **runs on two real ESP32-S3-ETH nodes**: the HTTP and HTTPS panel, users, settings in flash, Ethernet, MQTT with an account per node, telemetry, the live map and the over-the-air update. Not yet recorded on a node: the Wi-Fi access point bridged to the cable, the light sensor, mapped pins and the PoE current |
 
 Run `build-test` from ARMOR-COMMON's launcher (or the commands in the README) for the host part. Without ESP-IDF the run states that the
 firmware image was **not** built; `tools/build_node.sh` builds it in the container. The first day on a board is
@@ -122,3 +122,12 @@ A node that runs for months has to notice when it is in trouble and put it right
 * **Building.** A cached `sdkconfig` keeps the old value of a line added to `sdkconfig.defaults`: delete `.compile/<profile>` (or `build/<profile>`) before building, and run `python tools/check_sdkconfig.py` afterwards; it lists every line of `sdkconfig.defaults` that the build did not take.
 
 None of it has run on a board. To check on one: the log at start (`starting Bluetooth with N KB`, `Bluetooth is up`, `Bluetooth is off`), the minute line of the memory, and a forced shortage of memory to see the gate and the guard act.
+
+## Rebuilding the image with ESP-IDF 5.5.5
+
+Every node of the family is built with one ESP-IDF version, **5.5.5**: the container `espressif/idf:v5.5.5` of `tools/build_node.sh`, or an install of 5.5.5 on the machine (never mix the two in one build directory). To rebuild:
+
+1. Start from clean build directories: delete `build/<profile>` and `.compile/<profile>` (a cached `sdkconfig` keeps the values of an older build).
+2. Build one image at a time: `tools/build_node.sh generic` (board `s3-eth`) and `tools/build_node.sh generic s3-wifi`; on Windows use WSL with Docker, or PowerShell with the ESP-IDF 5.5.5 environment loaded (not Git Bash) and `idf.py -B build/<profile> -D SDKCONFIG=build/<profile>/sdkconfig -D "SDKCONFIG_DEFAULTS=<the defaults of the script>" set-target esp32s3 build`.
+3. Check what was built: `python tools/check_sdkconfig.py` fails when a line of `sdkconfig.defaults` was not taken, when the build says another ESP-IDF than 5.5.5 and, where the node has a `dependencies.lock`, when the lock names another one.
+4. Check the image: the version of the firmware is inside the `.bin` (`grep -a` for it), `dist/<name>.bin` is the merged image, and a public image holds no fleet secret (the script refuses one that does).
