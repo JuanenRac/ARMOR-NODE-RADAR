@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR is the eyes of the perimeter. Each node reads up to three radar
 
 | Name | How | What for |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | Receives the radar messages (the CM5 test bench today) and orders the node |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | Receives the radar messages (the CM5 test bench today) and orders the node |
 | ARMOR-STUDIO | link to the panel | Opens the node's panel from the address the node publishes |
 | ARMOR-ANDROID-CONTROL | Bluetooth | Sets the node up in the field |
 | ARMOR-COMMON | contracts, firmware base | The messages are checked against its schemas; the common firmware is copied from it |

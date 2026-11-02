@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR sono gli occhi del perimetro. Ogni nodo legge fino a tre radar 
 
 | Nome | Come | A cosa serve |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | Riceve i messaggi del radar (oggi il banco CM5) e comanda il nodo |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | Riceve i messaggi del radar (oggi il banco CM5) e comanda il nodo |
 | ARMOR-STUDIO | collegamento al pannello | Apre il pannello del nodo dall'indirizzo che il nodo pubblica |
 | ARMOR-ANDROID-CONTROL | Bluetooth | Configura il nodo sul campo |
 | ARMOR-COMMON | contratti, base firmware | I messaggi sono verificati con i suoi schemi; il firmware comune è copiato da lì |

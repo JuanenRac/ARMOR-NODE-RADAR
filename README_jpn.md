@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダ
 
 | 名前 | 方法 | 用途 |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | レーダーのメッセージを受け取り（現在は CM5 テストベンチ）、ノードに命令する |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | レーダーのメッセージを受け取り（現在は CM5 テストベンチ）、ノードに命令する |
 | ARMOR-STUDIO | パネルへのリンク | ノードが公開するアドレスからノードのパネルを開く |
 | ARMOR-ANDROID-CONTROL | Bluetooth | 現場でノードを設定 |
 | ARMOR-COMMON | コントラクト、ファームウェア基盤 | メッセージはそのスキーマで検証し、共通ファームウェアはここからコピー |

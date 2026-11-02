@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A pipe inside a code span no longer splits a table cell in the README:** the topics the node publishes are shown escaped in the table of integrations, in the eight languages.
 - **The README shows screenshots of the web panel of the node:** four pictures with a sentence under each, in the eight languages, taken headless against a stand-in node with made-up sample data by `tools/capture_screenshots.py` and listed in `docs/screenshots.json`; the pictures weigh at most 400 KB each.
 
 ## [0.8.0.8] - The documentation covers the sign-in limit and the green frames, the generated configuration is checked against ESP-IDF 5.5.5 and the counters of the host tests are exact

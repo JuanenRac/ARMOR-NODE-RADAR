@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR sind die Augen des Perimeters. Jeder Knoten liest bis zu drei R
 
 | Name | Wie | Wozu |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | Empfängt die Radarnachrichten (heute der CM5-Prüfstand) und steuert den Knoten |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | Empfängt die Radarnachrichten (heute der CM5-Prüfstand) und steuert den Knoten |
 | ARMOR-STUDIO | Link zum Panel | Öffnet das Panel des Knotens unter der vom Knoten veröffentlichten Adresse |
 | ARMOR-ANDROID-CONTROL | Bluetooth | Richtet den Knoten vor Ort ein |
 | ARMOR-COMMON | Verträge, Firmware-Basis | Die Nachrichten werden gegen seine Schemas geprüft; die gemeinsame Firmware stammt daraus |

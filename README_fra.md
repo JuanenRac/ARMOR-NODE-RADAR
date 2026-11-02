@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR est l'œil du périmètre. Chaque nœud lit jusqu'à trois rada
 
 | Nom | Comment | À quoi ça sert |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | Reçoit les messages du radar (aujourd'hui le banc CM5) et commande le nœud |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | Reçoit les messages du radar (aujourd'hui le banc CM5) et commande le nœud |
 | ARMOR-STUDIO | lien vers le panneau | Ouvre le panneau du nœud à l'adresse que le nœud publie |
 | ARMOR-ANDROID-CONTROL | Bluetooth | Configure le nœud sur le terrain |
 | ARMOR-COMMON | contrats, base de firmware | Les messages sont vérifiés avec ses schémas ; le firmware commun en est copié |

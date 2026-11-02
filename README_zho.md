@@ -101,7 +101,7 @@ ARMOR-NODE-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存
 
 | 名称 | 方式 | 用途 |
 |---|---|---|
-| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry|health|info|command` | 接收雷达消息（目前是 CM5 测试台）并向节点下达命令 |
+| ARMOR-SERVER | MQTT `armor/node/<id>/telemetry\|health\|info\|command` | 接收雷达消息（目前是 CM5 测试台）并向节点下达命令 |
 | ARMOR-STUDIO | 面板链接 | 通过节点发布的地址打开节点面板 |
 | ARMOR-ANDROID-CONTROL | Bluetooth | 在现场设置节点 |
 | ARMOR-COMMON | 合约、固件基础 | 消息按其模式校验；公共固件由此复制 |
