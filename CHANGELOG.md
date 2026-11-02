@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The README shows screenshots of the web panel of the node:** four pictures with a sentence under each, in the eight languages, taken headless against a stand-in node with made-up sample data by `tools/capture_screenshots.py` and listed in `docs/screenshots.json`; the pictures weigh at most 400 KB each.
+
 ## [0.8.0.8] - The documentation covers the sign-in limit and the green frames, the generated configuration is checked against ESP-IDF 5.5.5 and the counters of the host tests are exact
 
 - **The documentation covers the sign-in limit and the green frames:** the configuration table of the README (eight languages) lists `system.login_limit_per_minute` (30 by default, 0 to 120, read and changed from Studio or with the server's node settings route), and the node panel guide describes the Overview cards with their green frames as wide as their text.

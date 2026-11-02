@@ -114,12 +114,31 @@ O ARMOR-NODE-RADAR são os olhos do perímetro. Cada nó lê até três radares 
 
 ## 🖼️ Capturas de ecrã
 
-Capturadas a 1920×1080 numa bancada de testes, com dados de exemplo e sem qualquer instalação real por trás.
+Capturadas numa bancada de testes com dados de exemplo inventados e sem qualquer instalação real por trás.
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="Resumo: o estado do nó num relance - rede, broker, firmware e o que reporta." width="100%"><br><sub>Resumo: o estado do nó num relance - rede, broker, firmware e o que reporta.</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="Radares: cada radar do nó, o seu modelo, os seus pinos e a sua calibração." width="100%"><br><sub>Radares: cada radar do nó, o seu modelo, os seus pinos e a sua calibração.</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Pinos: o que cada pino faz, verificado para que duas funções nunca partilhem um." width="100%"><br><sub>Pinos: o que cada pino faz, verificado para que duas funções nunca partilhem um.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Rede: o endereçamento Ethernet ou Wi-Fi do nó, definido no seu próprio painel web." width="100%"><br><sub>Rede: o endereçamento Ethernet ou Wi-Fi do nó, definido no seu próprio painel web.</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="Resumo" width="100%">
+</p>
+
+<p align="center"><em>Resumo: o estado do nó num relance - rede, broker, firmware e o que reporta.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="Radares" width="100%">
+</p>
+
+<p align="center"><em>Radares: cada radar do nó, o seu modelo, os seus pinos e a sua calibração.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="Pinos" width="100%">
+</p>
+
+<p align="center"><em>Pinos: o que cada pino faz, verificado para que duas funções nunca partilhem um.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="Rede" width="100%">
+</p>
+
+<p align="center"><em>Rede: o endereçamento Ethernet ou Wi-Fi do nó, definido no seu próprio painel web.</em></p>
 
 ## 🔒 Segurança e proteção
 

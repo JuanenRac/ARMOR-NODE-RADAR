@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR is the eyes of the perimeter. Each node reads up to three radar
 
 ## 🖼️ Screenshots
 
-Captured at 1920×1080 on a test bench, with sample data and no real installation behind them.
+Captured on a test bench with made-up sample data and no real installation behind them.
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="Overview: the state of the node at a glance - network, broker, firmware and what it reports." width="100%"><br><sub>Overview: the state of the node at a glance - network, broker, firmware and what it reports.</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="Radars: each radar of the node, its model, pins and calibration." width="100%"><br><sub>Radars: each radar of the node, its model, pins and calibration.</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Pins: which pin does what, checked so that two functions never share one." width="100%"><br><sub>Pins: which pin does what, checked so that two functions never share one.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Network: Ethernet or Wi-Fi addressing of the node, set from its own web panel." width="100%"><br><sub>Network: Ethernet or Wi-Fi addressing of the node, set from its own web panel.</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="Overview" width="100%">
+</p>
+
+<p align="center"><em>Overview: the state of the node at a glance - network, broker, firmware and what it reports.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="Radars" width="100%">
+</p>
+
+<p align="center"><em>Radars: each radar of the node, its model, pins and calibration.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="Pins" width="100%">
+</p>
+
+<p align="center"><em>Pins: which pin does what, checked so that two functions never share one.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="Network" width="100%">
+</p>
+
+<p align="center"><em>Network: Ethernet or Wi-Fi addressing of the node, set from its own web panel.</em></p>
 
 ## 🔒 Security & Safety
 

@@ -1,0 +1,96 @@
+{
+  "screens": [
+    {
+      "file": "overview.png",
+      "alt": {
+        "en": "Overview",
+        "es": "Resumen",
+        "fr": "Résumé",
+        "it": "Riepilogo",
+        "de": "Übersicht",
+        "zh": "概览",
+        "ja": "概要",
+        "pt": "Resumo"
+      },
+      "caption": {
+        "en": "Overview: the state of the node at a glance - network, broker, firmware and what it reports.",
+        "es": "Resumen: el estado del nodo de un vistazo - red, broker, firmware y lo que reporta.",
+        "fr": "Résumé : l'état du nœud en un coup d'œil - réseau, broker, firmware et ce qu'il remonte.",
+        "it": "Riepilogo: lo stato del nodo in breve - rete, broker, firmware e ciò che riporta.",
+        "de": "Übersicht: der Zustand des Knotens auf einen Blick - Netzwerk, Broker, Firmware und was er meldet.",
+        "zh": "概览：节点状态一目了然——网络、代理、固件及其上报内容。",
+        "ja": "概要：ネットワーク、ブローカー、ファームウェア、報告内容など、ノードの状態をひと目で確認できます。",
+        "pt": "Resumo: o estado do nó num relance - rede, broker, firmware e o que reporta."
+      }
+    },
+    {
+      "file": "radars.png",
+      "alt": {
+        "en": "Radars",
+        "es": "Radares",
+        "fr": "Radars",
+        "it": "Radar",
+        "de": "Radare",
+        "zh": "雷达",
+        "ja": "レーダー",
+        "pt": "Radares"
+      },
+      "caption": {
+        "en": "Radars: each radar of the node, its model, pins and calibration.",
+        "es": "Radares: cada radar del nodo, su modelo, sus pines y su calibración.",
+        "fr": "Radars : chaque radar du nœud, son modèle, ses broches et son étalonnage.",
+        "it": "Radar: ogni radar del nodo, il suo modello, i suoi pin e la sua calibrazione.",
+        "de": "Radare: jedes Radar des Knotens mit Modell, Pins und Kalibrierung.",
+        "zh": "雷达：节点上的每个雷达，包括型号、引脚和校准。",
+        "ja": "レーダー：ノードの各レーダーの型式、ピン、キャリブレーション。",
+        "pt": "Radares: cada radar do nó, o seu modelo, os seus pinos e a sua calibração."
+      }
+    },
+    {
+      "file": "pins.png",
+      "alt": {
+        "en": "Pins",
+        "es": "Pines",
+        "fr": "Broches",
+        "it": "Pin",
+        "de": "Pins",
+        "zh": "引脚",
+        "ja": "ピン",
+        "pt": "Pinos"
+      },
+      "caption": {
+        "en": "Pins: which pin does what, checked so that two functions never share one.",
+        "es": "Pines: qué hace cada pin, comprobado para que dos funciones no compartan uno.",
+        "fr": "Broches : ce que fait chaque broche, vérifié pour que deux fonctions n'en partagent jamais une.",
+        "it": "Pin: cosa fa ogni pin, verificato perché due funzioni non ne condividano mai uno.",
+        "de": "Pins: was jeder Pin tut, geprüft, damit sich nie zwei Funktionen einen teilen.",
+        "zh": "引脚：每个引脚的用途，并检查两个功能不会共用同一引脚。",
+        "ja": "ピン：各ピンの役割。2 つの機能が同じピンを共有しないよう検査されます。",
+        "pt": "Pinos: o que cada pino faz, verificado para que duas funções nunca partilhem um."
+      }
+    },
+    {
+      "file": "network.png",
+      "alt": {
+        "en": "Network",
+        "es": "Red",
+        "fr": "Réseau",
+        "it": "Rete",
+        "de": "Netzwerk",
+        "zh": "网络",
+        "ja": "ネットワーク",
+        "pt": "Rede"
+      },
+      "caption": {
+        "en": "Network: Ethernet or Wi-Fi addressing of the node, set from its own web panel.",
+        "es": "Red: el direccionamiento Ethernet o Wi-Fi del nodo, ajustado desde su propio panel web.",
+        "fr": "Réseau : l'adressage Ethernet ou Wi-Fi du nœud, réglé depuis son propre panneau web.",
+        "it": "Rete: l'indirizzamento Ethernet o Wi-Fi del nodo, impostato dal suo pannello web.",
+        "de": "Netzwerk: Ethernet- oder WLAN-Adressierung des Knotens, im eigenen Web-Panel eingestellt.",
+        "zh": "网络：节点的以太网或 Wi-Fi 地址设置，在其自带的网页面板中配置。",
+        "ja": "ネットワーク：ノードの Ethernet または Wi-Fi のアドレス設定を、専用の Web パネルから行います。",
+        "pt": "Rede: o endereçamento Ethernet ou Wi-Fi do nó, definido no seu próprio painel web."
+      }
+    }
+  ]
+}

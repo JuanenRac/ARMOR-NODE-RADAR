@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存
 
 ## 🖼️ 屏幕截图
 
-在测试台上以 1920×1080 截取，使用示例数据，背后没有真实的安装。
+在测试台上使用虚构的示例数据截取，背后没有真实的安装。
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="概览：节点状态一目了然——网络、代理、固件及其上报内容。" width="100%"><br><sub>概览：节点状态一目了然——网络、代理、固件及其上报内容。</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="雷达：节点上的每个雷达，包括型号、引脚和校准。" width="100%"><br><sub>雷达：节点上的每个雷达，包括型号、引脚和校准。</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="引脚：每个引脚的用途，并检查两个功能不会共用同一引脚。" width="100%"><br><sub>引脚：每个引脚的用途，并检查两个功能不会共用同一引脚。</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="网络：节点的以太网或 Wi-Fi 地址设置，在其自带的网页面板中配置。" width="100%"><br><sub>网络：节点的以太网或 Wi-Fi 地址设置，在其自带的网页面板中配置。</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="概览" width="100%">
+</p>
+
+<p align="center"><em>概览：节点状态一目了然——网络、代理、固件及其上报内容。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="雷达" width="100%">
+</p>
+
+<p align="center"><em>雷达：节点上的每个雷达，包括型号、引脚和校准。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="引脚" width="100%">
+</p>
+
+<p align="center"><em>引脚：每个引脚的用途，并检查两个功能不会共用同一引脚。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="网络" width="100%">
+</p>
+
+<p align="center"><em>网络：节点的以太网或 Wi-Fi 地址设置，在其自带的网页面板中配置。</em></p>
 
 ## 🔒 安全与防护
 

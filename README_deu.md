@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR sind die Augen des Perimeters. Jeder Knoten liest bis zu drei R
 
 ## 🖼️ Screenshots
 
-Aufgenommen mit 1920×1080 auf einem Prüfstand, mit Beispieldaten und ohne eine echte Anlage dahinter.
+Aufgenommen auf einem Prüfstand mit erfundenen Beispieldaten und ohne eine echte Anlage dahinter.
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="Übersicht: der Zustand des Knotens auf einen Blick - Netzwerk, Broker, Firmware und was er meldet." width="100%"><br><sub>Übersicht: der Zustand des Knotens auf einen Blick - Netzwerk, Broker, Firmware und was er meldet.</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="Radare: jedes Radar des Knotens mit Modell, Pins und Kalibrierung." width="100%"><br><sub>Radare: jedes Radar des Knotens mit Modell, Pins und Kalibrierung.</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Pins: was jeder Pin tut, geprüft, damit sich nie zwei Funktionen einen teilen." width="100%"><br><sub>Pins: was jeder Pin tut, geprüft, damit sich nie zwei Funktionen einen teilen.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Netzwerk: Ethernet- oder WLAN-Adressierung des Knotens, im eigenen Web-Panel eingestellt." width="100%"><br><sub>Netzwerk: Ethernet- oder WLAN-Adressierung des Knotens, im eigenen Web-Panel eingestellt.</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="Übersicht" width="100%">
+</p>
+
+<p align="center"><em>Übersicht: der Zustand des Knotens auf einen Blick - Netzwerk, Broker, Firmware und was er meldet.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="Radare" width="100%">
+</p>
+
+<p align="center"><em>Radare: jedes Radar des Knotens mit Modell, Pins und Kalibrierung.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="Pins" width="100%">
+</p>
+
+<p align="center"><em>Pins: was jeder Pin tut, geprüft, damit sich nie zwei Funktionen einen teilen.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="Netzwerk" width="100%">
+</p>
+
+<p align="center"><em>Netzwerk: Ethernet- oder WLAN-Adressierung des Knotens, im eigenen Web-Panel eingestellt.</em></p>
 
 ## 🔒 Sicherheit und Schutz
 

@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR est l'œil du périmètre. Chaque nœud lit jusqu'à trois rada
 
 ## 🖼️ Captures d'écran
 
-Capturées en 1920×1080 sur un banc d'essai, avec des données d'exemple et sans installation réelle derrière.
+Capturées sur un banc d'essai avec des données d'exemple fictives et sans installation réelle derrière.
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="Résumé : l'état du nœud en un coup d'œil - réseau, broker, firmware et ce qu'il remonte." width="100%"><br><sub>Résumé : l'état du nœud en un coup d'œil - réseau, broker, firmware et ce qu'il remonte.</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="Radars : chaque radar du nœud, son modèle, ses broches et son étalonnage." width="100%"><br><sub>Radars : chaque radar du nœud, son modèle, ses broches et son étalonnage.</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Broches : ce que fait chaque broche, vérifié pour que deux fonctions n'en partagent jamais une." width="100%"><br><sub>Broches : ce que fait chaque broche, vérifié pour que deux fonctions n'en partagent jamais une.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Réseau : l'adressage Ethernet ou Wi-Fi du nœud, réglé depuis son propre panneau web." width="100%"><br><sub>Réseau : l'adressage Ethernet ou Wi-Fi du nœud, réglé depuis son propre panneau web.</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="Résumé" width="100%">
+</p>
+
+<p align="center"><em>Résumé : l'état du nœud en un coup d'œil - réseau, broker, firmware et ce qu'il remonte.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="Radars" width="100%">
+</p>
+
+<p align="center"><em>Radars : chaque radar du nœud, son modèle, ses broches et son étalonnage.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="Broches" width="100%">
+</p>
+
+<p align="center"><em>Broches : ce que fait chaque broche, vérifié pour que deux fonctions n'en partagent jamais une.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="Réseau" width="100%">
+</p>
+
+<p align="center"><em>Réseau : l'adressage Ethernet ou Wi-Fi du nœud, réglé depuis son propre panneau web.</em></p>
 
 ## 🔒 Sécurité et protection
 

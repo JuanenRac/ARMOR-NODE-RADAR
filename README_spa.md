@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR son los ojos del perímetro. Cada nodo lee hasta tres radares o
 
 ## 🖼️ Capturas de pantalla
 
-Capturadas a 1920×1080 en un banco de pruebas, con datos de ejemplo y sin ninguna instalación real detrás.
+Capturadas en un banco de pruebas con datos de ejemplo inventados y sin ninguna instalación real detrás.
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="Resumen: el estado del nodo de un vistazo - red, broker, firmware y lo que reporta." width="100%"><br><sub>Resumen: el estado del nodo de un vistazo - red, broker, firmware y lo que reporta.</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="Radares: cada radar del nodo, su modelo, sus pines y su calibración." width="100%"><br><sub>Radares: cada radar del nodo, su modelo, sus pines y su calibración.</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="Pines: qué hace cada pin, comprobado para que dos funciones no compartan uno." width="100%"><br><sub>Pines: qué hace cada pin, comprobado para que dos funciones no compartan uno.</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="Red: el direccionamiento Ethernet o Wi-Fi del nodo, ajustado desde su propio panel web." width="100%"><br><sub>Red: el direccionamiento Ethernet o Wi-Fi del nodo, ajustado desde su propio panel web.</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="Resumen" width="100%">
+</p>
+
+<p align="center"><em>Resumen: el estado del nodo de un vistazo - red, broker, firmware y lo que reporta.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="Radares" width="100%">
+</p>
+
+<p align="center"><em>Radares: cada radar del nodo, su modelo, sus pines y su calibración.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="Pines" width="100%">
+</p>
+
+<p align="center"><em>Pines: qué hace cada pin, comprobado para que dos funciones no compartan uno.</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="Red" width="100%">
+</p>
+
+<p align="center"><em>Red: el direccionamiento Ethernet o Wi-Fi del nodo, ajustado desde su propio panel web.</em></p>
 
 ## 🔒 Seguridad y protección
 

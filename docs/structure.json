@@ -239,14 +239,14 @@
         {
           "name": "images/",
           "desc": {
-            "en": "banner, icon and the two pictures of this README",
-            "es": "banner, icono y las dos imágenes de este README",
-            "de": "Banner, Symbol und die zwei Bilder dieses READMEs",
-            "fr": "bannière, icône et les deux images de ce README",
-            "it": "banner, icona e le due immagini di questo README",
-            "ja": "バナー、アイコン、この README の 2 つの図",
-            "zh": "横幅、图标和本 README 的两幅图",
-            "pt": "faixa, ícone e as duas imagens deste README"
+            "en": "banner, icon, README pictures, screenshots",
+            "es": "banner, icono, imágenes del README, capturas",
+            "de": "Banner, Symbol, README-Bilder, Screenshots",
+            "fr": "bannière, icône, images du README, captures",
+            "it": "banner, icona, immagini del README, schermate",
+            "ja": "バナー、アイコン、README の図、スクリーンショット",
+            "zh": "横幅、图标、README 图片、屏幕截图",
+            "pt": "faixa, ícone, imagens do README, capturas de ecrã"
           }
         }
       ]

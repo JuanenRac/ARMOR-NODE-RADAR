@@ -114,12 +114,31 @@ ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダ
 
 ## 🖼️ スクリーンショット
 
-テストベンチで 1920×1080 で撮影。サンプルデータを使用しており、実際の設備は接続されていません。
+テストベンチで架空のサンプルデータを使って撮影したもので、実際の設備は接続されていません。
 
-<table>
-<tr><td width="50%" valign="top"><img src="images/screenshots/overview.png" alt="概要：ネットワーク、ブローカー、ファームウェア、報告内容など、ノードの状態をひと目で確認できます。" width="100%"><br><sub>概要：ネットワーク、ブローカー、ファームウェア、報告内容など、ノードの状態をひと目で確認できます。</sub></td><td width="50%" valign="top"><img src="images/screenshots/radars.png" alt="レーダー：ノードの各レーダーの型式、ピン、キャリブレーション。" width="100%"><br><sub>レーダー：ノードの各レーダーの型式、ピン、キャリブレーション。</sub></td></tr>
-<tr><td width="50%" valign="top"><img src="images/screenshots/pins.png" alt="ピン：各ピンの役割。2 つの機能が同じピンを共有しないよう検査されます。" width="100%"><br><sub>ピン：各ピンの役割。2 つの機能が同じピンを共有しないよう検査されます。</sub></td><td width="50%" valign="top"><img src="images/screenshots/network.png" alt="ネットワーク：ノードの Ethernet または Wi-Fi のアドレス設定を、専用の Web パネルから行います。" width="100%"><br><sub>ネットワーク：ノードの Ethernet または Wi-Fi のアドレス設定を、専用の Web パネルから行います。</sub></td></tr>
-</table>
+<p align="center">
+  <img src="images/screenshots/overview.png" alt="概要" width="100%">
+</p>
+
+<p align="center"><em>概要：ネットワーク、ブローカー、ファームウェア、報告内容など、ノードの状態をひと目で確認できます。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/radars.png" alt="レーダー" width="100%">
+</p>
+
+<p align="center"><em>レーダー：ノードの各レーダーの型式、ピン、キャリブレーション。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/pins.png" alt="ピン" width="100%">
+</p>
+
+<p align="center"><em>ピン：各ピンの役割。2 つの機能が同じピンを共有しないよう検査されます。</em></p>
+
+<p align="center">
+  <img src="images/screenshots/network.png" alt="ネットワーク" width="100%">
+</p>
+
+<p align="center"><em>ネットワーク：ノードの Ethernet または Wi-Fi のアドレス設定を、専用の Web パネルから行います。</em></p>
 
 ## 🔒 セキュリティと安全
 
