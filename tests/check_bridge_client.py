@@ -7,8 +7,14 @@ Usage:  python tests/check_bridge_client.py
 from __future__ import annotations
 
 import json
+import os
+import hashlib
+import shutil
 import socket
+import ssl
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
+import adopt_node  # noqa: E402
 import serial_bridge_client as client  # noqa: E402
 
 failures: list[str] = []
@@ -183,6 +190,42 @@ def test_tcp() -> None:
     check(received and received[0] == b"\xfd\xfc\xfb\xfa\x04\x03\x02\x01", "what the sensor sends comes back to the program")
 
 
+def test_pinning() -> None:
+    """The certificate of a node is its own: the pin is checked on the connection that carries the request, a wrong pin sends nothing, and with neither pin nor --insecure the chain is verified (so refused)."""
+    openssl = shutil.which("openssl")
+    if openssl is None:
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        key, cert = Path(tmp) / "node.key", Path(tmp) / "node.crt"
+        made = subprocess.run([openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out", str(cert), "-days", "1", "-subj", "/CN=armor-node"], capture_output=True, env={name: value for name, value in os.environ.items() if name != "OPENSSL_CONF"})
+        if made.returncode != 0:
+            return
+        fingerprint = hashlib.sha256(ssl.PEM_cert_to_DER_cert(cert.read_text())).hexdigest()
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(str(cert), str(key))
+        FakeNode.state = {}
+        server = ThreadingHTTPServer(("127.0.0.1", 0), FakeNode)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        base = f"https://127.0.0.1:{server.server_address[1]}"
+        try:
+            check(adopt_node.presented_fingerprint(base) == fingerprint, "the fingerprint an address presents is the one of its certificate")
+            good = client.Bridge(base, fingerprint=fingerprint.upper())
+            good.login("ana", "right")
+            check(len(FakeNode.state.get("calls", [])) == 1, "the pinned node answers when its certificate is the pinned one")
+            before = len(FakeNode.state.get("calls", []))
+            for wrong in (client.Bridge(base, fingerprint="00" * 32), client.Bridge(base)):
+                try:
+                    wrong.login("ana", "right")
+                    check(False, "a node that does not show the pinned certificate (or a chain nobody vouches for) is refused")
+                except client.BridgeError:
+                    pass
+            check(len(FakeNode.state.get("calls", [])) == before, "nothing is sent to a node whose certificate is not trusted")
+        finally:
+            server.shutdown()
+            server.server_close()
+
+
 def main() -> int:
     import tempfile
 
@@ -191,6 +234,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         test_capture(Path(tmp))
     test_tcp()
+    test_pinning()
     if failures:
         for what in failures:
             print(f"BRIDGE_CLIENT=FAIL {what}")

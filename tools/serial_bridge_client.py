@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import getpass
 import hashlib
+import http.client
 import http.cookiejar
 import json
 import os
@@ -44,6 +45,31 @@ BAUDS = (9600, 19200, 38400, 57600, 115200, 230400, 256000, 460800, 921600)
 
 class BridgeError(RuntimeError):
     pass
+
+
+class PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """An HTTPS connection that goes on only with the certificate whose SHA-256 is given: the check is made on the very connection that carries the request, straight after
+    the handshake, so nothing is sent to anything else (the node makes its own certificate, so no authority can vouch for it)."""
+
+    def __init__(self, *args, fingerprint: str = "", **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._fingerprint = fingerprint
+
+    def connect(self) -> None:
+        super().connect()
+        found = hashlib.sha256(self.sock.getpeercert(binary_form=True) or b"").hexdigest()
+        if found != self._fingerprint:
+            self.close()
+            raise BridgeError(f"the certificate of the node is not the one pinned (its SHA-256 is {found})")
+
+
+class PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, context: ssl.SSLContext, fingerprint: str) -> None:
+        super().__init__(context=context)
+        self._fingerprint = fingerprint
+
+    def https_open(self, req):
+        return self.do_open(lambda host, **kw: PinnedHTTPSConnection(host, fingerprint=self._fingerprint, **kw), req, context=self._context)
 
 
 def parse_hex(text: str) -> bytes:
@@ -67,31 +93,16 @@ class Bridge:
         self.timeout = timeout
         self.fingerprint = re.sub(r"[^0-9a-f]", "", fingerprint.lower())
         context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         if insecure or self.fingerprint:
             context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE   # the pin below stands in for the chain when one is given
+            context.verify_mode = ssl.CERT_NONE   # the node's certificate is its own: the pin (checked on the connection itself) or the explicit --insecure stands in for the chain
         self.jar = http.cookiejar.CookieJar()
-        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar), urllib.request.HTTPSHandler(context=context))
+        tls = PinnedHTTPSHandler(context, self.fingerprint) if self.fingerprint else urllib.request.HTTPSHandler(context=context)
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar), tls)
         self.token = ""
-        self._pinned = False
-
-    def _pin(self) -> None:
-        if not self.fingerprint or self._pinned or not self.base.startswith("https"):
-            return
-        host = self.base.split("://", 1)[1].split("/", 1)[0]
-        name, _, port = host.partition(":")
-        with socket.create_connection((name, int(port or 443)), timeout=self.timeout) as raw:
-            context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-            with context.wrap_socket(raw, server_hostname=name) as secure:
-                found = hashlib.sha256(secure.getpeercert(binary_form=True) or b"").hexdigest()
-        if found != self.fingerprint:
-            raise BridgeError(f"the certificate of the node is not the one pinned (its SHA-256 is {found})")
-        self._pinned = True
 
     def call(self, method: str, path: str, body: bytes | dict | None = None, query: str = "", headers: dict[str, str] | None = None) -> tuple[int, bytes]:
-        self._pin()
         data = json.dumps(body).encode("utf-8") if isinstance(body, dict) else body
         head = {"X-Requested-With": "armor", **(headers or {})}
         if isinstance(body, dict):

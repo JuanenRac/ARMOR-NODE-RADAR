@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The bench tools talk to a node only over TLS 1.2 or newer, and the pin is checked on the connection that carries the request:** `tools/serial_bridge_client.py` used to check the pinned fingerprint on a separate connection before the request; it now checks it on the connection itself, as `tools/adopt_node.py` does, so nothing is sent to a node that shows another certificate. Without `--fingerprint` and without `--insecure` the certificate chain is verified as before. `--show-fingerprint` reads the certificate with the standard library instead of opening an unverified context. A test with a TLS stand-in node covers the right pin, a wrong pin and no pin.
 - **The launchers find the shared repository through `ARMOR_COMMON_DIR`:** `build`, `build-test`, `test` and `run` (`.sh` and `.bat`) use the folder named by that variable when it is set and the sibling `ARMOR-COMMON` folder otherwise, so a checkout with another layout builds without changing a file.
 - **A pipe inside a code span no longer splits a table cell in the README:** the topics the node publishes are shown escaped in the table of integrations, in the eight languages.
 - **The README shows screenshots of the web panel of the node:** four pictures with a sentence under each, in the eight languages, taken headless against a stand-in node with made-up sample data by `tools/capture_screenshots.py` and listed in `docs/screenshots.json`; the pictures weigh at most 400 KB each.

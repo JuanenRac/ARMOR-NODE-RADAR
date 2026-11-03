@@ -34,7 +34,6 @@ import json
 import os
 import re
 import secrets
-import socket
 import ssl
 import subprocess
 import sys
@@ -93,15 +92,12 @@ class PinnedHTTPSHandler(urllib.request.HTTPSHandler):
 
 
 def presented_fingerprint(address: str, timeout: float = 15.0) -> str:
-    """The SHA-256 fingerprint of the certificate an address presents (port 443 unless the address names one). Nothing is trusted or sent."""
+    """The SHA-256 fingerprint of the certificate an address presents (port 443 unless the address names one). Nothing is trusted or sent: the standard library only reads the certificate."""
     host = re.sub(r"^https?://", "", address).split("/")[0]
     name, _, port = host.partition(":")
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
     try:
-        with socket.create_connection((name, int(port or 443)), timeout=timeout) as raw, context.wrap_socket(raw, server_hostname=name) as tls:
-            return certificate_fingerprint(tls.getpeercert(binary_form=True) or b"")
+        pem = ssl.get_server_certificate((name, int(port or 443)), timeout=timeout)
+        return certificate_fingerprint(ssl.PEM_cert_to_DER_cert(pem))
     except (OSError, ValueError) as error:
         raise AdoptError(f"no HTTPS answer at {address}: {error}") from error
 
