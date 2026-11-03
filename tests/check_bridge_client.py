@@ -202,6 +202,7 @@ def test_pinning() -> None:
             return
         fingerprint = hashlib.sha256(ssl.PEM_cert_to_DER_cert(cert.read_text())).hexdigest()
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
         context.load_cert_chain(str(cert), str(key))
         FakeNode.state = {}
         server = ThreadingHTTPServer(("127.0.0.1", 0), FakeNode)
