@@ -31,10 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -64,14 +64,14 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ hashFiles('package.json') != '' }}
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
 
       - name: Set up Java for the Android client
         if: ${{ hashFiles('gradlew') != '' }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
