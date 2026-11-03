@@ -1,0 +1,313 @@
+# =============================================================================
+# A.R.M.O.R. - Manual firmware build in the ESP-IDF container (build here, sign locally)
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D)
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# Started by hand only (workflow_dispatch): it never runs on a push or a pull request, because compiling a firmware image in the official ESP-IDF container takes
+# many minutes of GitHub Actions time. It builds the universal ("generic") images of THIS node repository with tools/build_node.sh, in PUBLIC mode (no secrets/generic.conf,
+# so no fleet secret can get into an image), checks that every image carries the version of armor.project.json and that the fleet secret is empty, and uploads the images,
+# SHA256SUMS and a build manifest as one artifact, with a build-provenance attestation.
+#
+# It uses no signing key and signs nothing: the signature of a release image is a LOCAL step (tools/fetch_and_sign.py downloads the artifact, verifies the attestation and the
+# hashes, signs with the key of the owner and, with --publish, publishes the release). With dry_run on (the default) nothing but the artifact is made; with it off a DRAFT release
+# with the unsigned files is also prepared. A failed build writes the Job Summary and opens (or updates) the issue "build-failed"; a later good build closes it.
+# The same file is in the five node repositories; it builds the repository it is in.
+
+name: Firmware build (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: build and check only, no draft release"
+        type: boolean
+        required: true
+        default: true
+      board:
+        description: "Board (empty = the boards of the node: lcd7box for the panel, s3-eth and s3-wifi for the others)"
+        type: string
+        required: false
+        default: ""
+      ref:
+        description: "Branch, tag or commit of this repository"
+        type: string
+        required: true
+        default: main
+      idf_image:
+        description: "ESP-IDF container"
+        type: string
+        required: true
+        default: espressif/idf:v5.5.5
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan the build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      boards: ${{ steps.plan.outputs.boards }}
+      kind: ${{ steps.plan.outputs.kind }}
+      version: ${{ steps.plan.outputs.version }}
+      sha: ${{ steps.plan.outputs.sha }}
+    steps:
+      - name: Check the inputs
+        shell: bash
+        env:
+          BOARD: ${{ inputs.board }}
+          IDF_IMAGE: ${{ inputs.idf_image }}
+          REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          [[ "$BOARD" =~ ^[a-z0-9][a-z0-9-]{0,31}$ || -z "$BOARD" ]] || { echo "::error::the board must be lowercase letters, digits and dashes"; exit 1; }
+          [[ "$IDF_IMAGE" =~ ^espressif/idf:v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "::error::the container must be espressif/idf:vX.Y[.Z]"; exit 1; }
+          [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "::error::the ref has characters that a branch, tag or commit does not have"; exit 1; }
+
+      - name: Check out this repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - name: Work out the boards, the kind and the version
+        id: plan
+        shell: bash
+        env:
+          BOARD: ${{ inputs.board }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          manifest = json.load(open("armor.project.json", encoding="utf-8"))
+          kind = manifest["name"].removeprefix("ARMOR-NODE-").lower()
+          board = os.environ["BOARD"]
+          boards = [board] if board else (["lcd7box"] if kind == "hmi" else ["s3-eth", "s3-wifi"])
+          print("boards=" + json.dumps(boards))
+          print("kind=" + kind)
+          print("version=" + manifest["version"])
+          PY
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.board }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        board: ${{ fromJSON(needs.plan.outputs.boards) }}
+    env:
+      BOARD: ${{ matrix.board }}
+      KIND: ${{ needs.plan.outputs.kind }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      IDF_IMAGE: ${{ inputs.idf_image }}
+    steps:
+      - name: Check out the exact commit that was planned
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+          persist-credentials: false
+
+      - name: Make sure the build has no fleet secret to take
+        shell: bash
+        run: |
+          set -euo pipefail
+          # secrets/ is git-ignored, so a checkout has none; this stops a future change that would commit one
+          if [ -e secrets/generic.conf ]; then
+            echo "::error::secrets/generic.conf is in the repository; a public image must not be built with it"
+            exit 1
+          fi
+
+      - name: Build the image in the ESP-IDF container
+        shell: bash
+        env:
+          ARMOR_IDF_IMAGE: ${{ inputs.idf_image }}
+        run: |
+          set -euo pipefail
+          # the container is limited to the cores of this runner (build_node.sh asks for cores 0-3 by default)
+          export ARMOR_BUILD_CPUSET="0-$(( $(nproc) - 1 ))"
+          bash tools/build_node.sh generic "$BOARD"
+
+      - name: Check the version in the images and that no fleet secret got in, and name the files
+        shell: bash
+        run: |
+          set -euo pipefail
+          complete="dist/generic-$BOARD.bin"
+          app="build/generic-$BOARD/armor_$KIND.bin"
+          [ -f "$complete" ] || { echo "::error::$complete was not made"; exit 1; }
+          [ -f "$app" ] || { echo "::error::$app was not made"; exit 1; }
+          for image in "$complete" "$app"; do
+            if ! python3 - "$image" "$VERSION" <<'PY'
+          import re, sys
+          data = open(sys.argv[1], "rb").read()
+          sys.exit(0 if re.search(rb"(?<![0-9.])" + re.escape(sys.argv[2].encode()) + rb"(?![0-9])", data) else 1)
+          PY
+            then
+              echo "::error::$image does not carry the version $VERSION of armor.project.json (the version has to be raised BEFORE the build)"
+              exit 1
+            fi
+            echo "version $VERSION found in $image"
+          done
+          if grep -E '^CONFIG_ARMOR_(FLEET_SECRET|SETUP_CODE)="[^"]+"' "build/generic-$BOARD/sdkconfig" >/dev/null; then
+            echo "::error::build/generic-$BOARD/sdkconfig carries a fleet secret or a set-up code: a public image must not"
+            exit 1
+          fi
+          echo "no fleet secret in build/generic-$BOARD/sdkconfig"
+          mkdir -p out
+          cp "$app" "out/armor-$KIND-$VERSION-$BOARD-publica-app.bin"
+          cp "$complete" "out/armor-$KIND-$VERSION-$BOARD-publica-complete.bin"
+          {
+            echo "### $BOARD: $KIND $VERSION"
+            (cd out && sha256sum ./*.bin | sed 's/^/- /')
+            echo "- container: \`$IDF_IMAGE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the images of this board
+        uses: actions/upload-artifact@v4
+        with:
+          name: parts-${{ matrix.board }}
+          path: out/*.bin
+          if-no-files-found: error
+          retention-days: 7
+
+  collect:
+    name: Collect, attest and prepare the draft
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      KIND: ${{ needs.plan.outputs.kind }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      SHA: ${{ needs.plan.outputs.sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the images of every board
+        uses: actions/download-artifact@v4
+        with:
+          pattern: parts-*
+          merge-multiple: true
+          path: files
+
+      - name: Write SHA256SUMS and the build manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd files
+          sha256sum ./*.bin | sed 's#  \./#  #' > SHA256SUMS
+          python3 - <<'PY'
+          import json, os, re
+          files = []
+          for line in open("SHA256SUMS", encoding="utf-8"):
+              digest, name = line.strip().split("  ", 1)
+              board = re.match(r"armor-[a-z]+-[0-9.]+-(.+)-publica-(app|complete)\.bin$", name)
+              files.append({"name": name, "sha256": digest, "bytes": os.path.getsize(name), "board": board.group(1), "part": board.group(2)})
+          json.dump({
+              "schema": "armor-build/1", "repository": os.environ["GITHUB_REPOSITORY"], "project": "armor_" + os.environ["KIND"], "version": os.environ["VERSION"],
+              "commit": os.environ["SHA"], "built_on": "github-actions", "run_id": os.environ["GITHUB_RUN_ID"],
+              "run_url": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              "idf_image": "${{ inputs.idf_image }}", "signed": False, "files": files,
+          }, open("build-manifest.json", "w", encoding="utf-8"), indent=2)
+          PY
+          cat SHA256SUMS
+
+      - name: Attest the provenance of the files
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            files/*.bin
+            files/SHA256SUMS
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ needs.plan.outputs.kind }}-${{ needs.plan.outputs.version }}
+          path: files/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Prepare the draft release with the unsigned files
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::error::the release $tag already exists: raise the version before a new build"
+            exit 1
+          fi
+          gh release create "$tag" files/* --draft --target "$SHA" --title "${GITHUB_REPOSITORY#*/} $VERSION (unsigned build, to be signed locally)" \
+            --notes "Unsigned build made by GitHub Actions. It is signed and published with tools/fetch_and_sign.py; do not install these files before that."
+          echo "- draft release \`$tag\` prepared with the unsigned files" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    name: Verify the artifact as a stranger would
+    needs: [plan, collect]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      attestations: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the build
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ needs.plan.outputs.kind }}-${{ needs.plan.outputs.version }}
+          path: build
+
+      - name: Check hashes, manifest and attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd build
+          sha256sum -c SHA256SUMS
+          python3 - <<'PY'
+          import json
+          manifest = json.load(open("build-manifest.json", encoding="utf-8"))
+          assert manifest["signed"] is False and manifest["files"], "unexpected manifest"
+          print("manifest ok:", manifest["project"], manifest["version"], len(manifest["files"]), "files")
+          PY
+          for file in ./*.bin SHA256SUMS; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" >/dev/null
+            echo "attestation ok: $file"
+          done
+
+  notify:
+    name: Tell the owner (issue build-failed)
+    if: ${{ always() }}
+    needs: [plan, build, collect, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RESULTS: ${{ needs.plan.result }} ${{ needs.build.result }} ${{ needs.collect.result }} ${{ needs.verify.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Open, update or close the issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --label build-failed --state open --json number --jq '.[0].number // empty')"
+          if [[ " $RESULTS " == *" failure "* || " $RESULTS " == *" cancelled "* ]]; then
+            body="The firmware build failed (plan / build / collect / verify: $RESULTS). Run: $RUN_URL"
+            if [ -n "$number" ]; then
+              gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "$body"
+            else
+              gh label create build-failed --repo "$GITHUB_REPOSITORY" --color B60205 --description "A firmware build in GitHub Actions failed" 2>/dev/null || true
+              gh issue create --repo "$GITHUB_REPOSITORY" --label build-failed --title "Firmware build failed" --body "$body"
+            fi
+            echo "### The build failed: issue build-failed updated" >> "$GITHUB_STEP_SUMMARY"
+          elif [ -n "$number" ]; then
+            gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "A later build passed: $RUN_URL"
+          fi
