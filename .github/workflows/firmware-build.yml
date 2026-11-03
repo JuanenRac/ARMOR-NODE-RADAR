@@ -10,7 +10,8 @@
 #
 # It uses no signing key and signs nothing: the signature of a release image is a LOCAL step (tools/fetch_and_sign.py downloads the artifact, verifies the attestation and the
 # hashes, signs with the key of the owner and, with --publish, publishes the release). With dry_run on (the default) nothing but the artifact is made; with it off a DRAFT release
-# with the unsigned files is also prepared. A failed build writes the Job Summary and opens (or updates) the issue "build-failed"; a later good build closes it.
+# with the unsigned files is also prepared. A build that does not finish correctly (failed, cancelled, timed out or skipped without cause) writes the Job Summary, says which job and why,
+# and opens (or updates) the issue "build-failed"; a later good build closes it. A build that never finishes is found by build-watchdog.yml (issue "build-stuck").
 # The same file is in the five node repositories; it builds the repository it is in.
 
 name: Firmware build (manual)
@@ -41,6 +42,11 @@ on:
 
 permissions:
   contents: read
+
+# One build per ref at a time, and a running build is never cancelled by a newer one (a half-done dry_run=false would leave a draft release behind).
+concurrency:
+  group: firmware-build-${{ inputs.ref }}
+  cancel-in-progress: false
 
 jobs:
   plan:
@@ -288,26 +294,111 @@ jobs:
     timeout-minutes: 5
     permissions:
       issues: write
+      actions: read
       contents: read
     env:
       GH_TOKEN: ${{ github.token }}
-      RESULTS: ${{ needs.plan.result }} ${{ needs.build.result }} ${{ needs.collect.result }} ${{ needs.verify.result }}
+      NEEDS: ${{ toJSON(needs) }}
+      REF: ${{ inputs.ref }}
+      DRY_RUN: ${{ inputs.dry_run }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Open, update or close the issue
+      - name: Open, update or close the issue build-failed
+        id: report
         shell: bash
         run: |
           set -euo pipefail
-          number="$(gh issue list --repo "$GITHUB_REPOSITORY" --label build-failed --state open --json number --jq '.[0].number // empty')"
-          if [[ " $RESULTS " == *" failure "* || " $RESULTS " == *" cancelled "* ]]; then
-            body="The firmware build failed (plan / build / collect / verify: $RESULTS). Run: $RUN_URL"
-            if [ -n "$number" ]; then
-              gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body "$body"
-            else
-              gh label create build-failed --repo "$GITHUB_REPOSITORY" --color B60205 --description "A firmware build in GitHub Actions failed" 2>/dev/null || true
-              gh issue create --repo "$GITHUB_REPOSITORY" --label build-failed --title "Firmware build failed" --body "$body"
-            fi
-            echo "### The build failed: issue build-failed updated" >> "$GITHUB_STEP_SUMMARY"
-          elif [ -n "$number" ]; then
-            gh issue close "$number" --repo "$GITHUB_REPOSITORY" --comment "A later build passed: $RUN_URL"
-          fi
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          run_url = os.environ["RUN_URL"]
+          summary = os.environ["GITHUB_STEP_SUMMARY"]
+          order = ["plan", "build", "collect", "verify"]
+
+
+          def gh(*args, check=True):
+              result = subprocess.run(["gh", *args], capture_output=True, text=True)
+              if check and result.returncode != 0:
+                  raise RuntimeError("gh " + " ".join(args[:3]) + " failed: " + result.stderr.strip()[:300])
+              return result.stdout
+
+
+          def write_summary(text):
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write(text + "\n")
+
+
+          try:
+              needs = json.loads(os.environ["NEEDS"])
+              results = {name: needs.get(name, {}).get("result", "missing") for name in order}
+              bad = {name: result for name, result in results.items() if result != "success"}
+              number = gh("issue", "list", "--repo", repo, "--label", "build-failed", "--state", "open", "--json", "number", "--jq", ".[0].number // empty").strip()
+              if bad:
+                  # what the API knows about each job: conclusion (failure, cancelled, timed_out, skipped), failed step, reason
+                  jobs = json.loads(gh("api", f"repos/{repo}/actions/runs/{run_id}/jobs?per_page=100"))["jobs"]
+                  lines = []
+                  causes = 0
+                  for job in jobs:
+                      if job["name"].startswith("Tell the owner"):
+                          continue
+                      conclusion = job.get("conclusion") or job.get("status")
+                      if conclusion in ("success", "skipped") and not any(s.get("conclusion") in ("failure", "cancelled", "timed_out") for s in job.get("steps", [])):
+                          continue
+                      step = next((s["name"] for s in job.get("steps", []) if s.get("conclusion") in ("failure", "cancelled", "timed_out")), None)
+                      reason = ""
+                      if conclusion != "skipped":
+                          causes += 1
+                          annotations = gh("api", f"repos/{repo}/check-runs/{job['id']}/annotations", check=False)
+                          try:
+                              messages = [a["message"] for a in json.loads(annotations or "[]") if a.get("annotation_level") in ("failure", "error")]
+                          except ValueError:
+                              messages = []
+                          if messages:
+                              reason = messages[0].strip().splitlines()[0][:300]
+                      what = {"failure": "failed", "cancelled": "was cancelled", "timed_out": "ran out of time", "skipped": "was skipped because an earlier job did not pass"}.get(conclusion, "ended as " + str(conclusion))
+                      line = f"- **{job['name']}** {what}"
+                      if step:
+                          line += f" (step: {step})"
+                      if reason:
+                          line += f": {reason}"
+                      line += f" - {job['html_url']}"
+                      lines.append(line)
+                  if causes == 0:
+                      lines.append("- no job reports a failure, but these ended without success: " + ", ".join(f"{n}={r}" for n, r in bad.items()) + " (a job was skipped without an earlier failure)")
+                  body = "\n".join([
+                      "The firmware build did not finish correctly.",
+                      "",
+                      f"Run: {run_url}",
+                      f"Ref: `{os.environ.get('REF', '')}`, dry run: {os.environ.get('DRY_RUN', '')}",
+                      "Results: " + ", ".join(f"{n}={r}" for n, r in results.items()),
+                      "",
+                      *lines,
+                      "",
+                      "Open the run, read the log of the job above, fix the cause and start the workflow again; a later good build closes this issue.",
+                  ])
+                  write_summary("### The build did not finish correctly\n" + "\n".join(lines))
+                  if number:
+                      gh("issue", "comment", number, "--repo", repo, "--body", body)
+                  else:
+                      gh("label", "create", "build-failed", "--repo", repo, "--color", "B60205", "--description", "A firmware build in GitHub Actions failed", check=False)
+                      gh("issue", "create", "--repo", repo, "--label", "build-failed", "--title", "Firmware build failed", "--body", body)
+                  print("::error::the firmware build did not finish correctly: " + ", ".join(f"{n}={r}" for n, r in bad.items()) + " - " + run_url)
+              else:
+                  write_summary("### The build passed")
+                  if number:
+                      gh("issue", "close", number, "--repo", repo, "--comment", f"A later build passed: {run_url}")
+          except Exception as error:  # the report itself failed: say so loudly, with the cause
+              text = f"{type(error).__name__}: {error}"
+              print(f"::error::the notify job could not report the state of the build ({text}). Check the run by hand: {run_url}")
+              write_summary(f"### The notify job failed\n\nIt could not open, update or close the issue build-failed.\n\nCause: `{text}`\n\nRun: {run_url}")
+              sys.exit(1)
+          PY
+
+      - name: Say it if this notify job itself failed
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "::error::the notify job failed before it could report the build; open the run and read its summary: $RUN_URL"
+          echo "### The notify job failed, so the issue build-failed may be missing. Read the log above. Run: $RUN_URL" >> "$GITHUB_STEP_SUMMARY"
