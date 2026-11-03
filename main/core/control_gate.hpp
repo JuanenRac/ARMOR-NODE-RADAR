@@ -137,6 +137,12 @@ inline bool code_of(const std::string& text, std::size_t lowest) {
   for (const char c : text) if (!lower_alnum(c)) return false;
   return true;
 }
+// The id of a command is sixteen lowercase hexadecimal digits, the one format of every command in the family.
+inline bool command_id_of(const std::string& text) {
+  if (text.size() != 16) return false;
+  for (const char c : text) if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+  return true;
+}
 inline bool person_of(const std::string& text) {
   if (text.empty() || text.size() > 64) return false;
   for (const char c : text) if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '@' || c == ' ' || c == '-')) return false;
@@ -187,7 +193,7 @@ inline bool parse_command(std::string_view text, Command& out, std::string* why 
   long long stamp = 0;
   if (!detail::integer_in(doc.get("timestamp_ms"), 0, 9007199254740991LL, stamp)) return fail("timestamp_ms");
   const json::Value* id = doc.get("command_id");
-  if (id == nullptr || !id->is_string() || !detail::code_of(id->text, 8)) return fail("command_id");
+  if (id == nullptr || !id->is_string() || !detail::command_id_of(id->text)) return fail("command_id");
   const json::Value* action = doc.get("action");
   if (action == nullptr || !action->is_string()) return fail("action");
   Command parsed;

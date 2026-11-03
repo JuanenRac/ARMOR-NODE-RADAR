@@ -279,6 +279,10 @@ static void test_the_order_is_read_strictly() {
   CHECK(!control::parse_command(R"({"kind":"node_restart_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"d0d0d0d012345678","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
   CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":-1,"command_id":"d0d0d0d012345678","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
   CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"abc","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
+  CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"d0d0d0d0","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
+  CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"d0d0d0d0zzzzzzzz","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
+  CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"D0D0D0D012345678","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
+  CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"d0d0d0d0123456789","action":"arm","operation":"restart","mode":"now","requested_by":"ana"})", out));
   CHECK(!control::parse_command(R"({"kind":"node_control_command","node_id":"radar-1","timestamp_ms":9000,"command_id":"d0d0d0d012345678","action":"arm","operation":"restart","mode":"now","requested_by":"ana\n"})", out));
 }
 
