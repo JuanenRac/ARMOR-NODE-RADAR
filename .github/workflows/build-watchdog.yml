@@ -43,7 +43,7 @@ jobs:
       MAX_OVERRIDE: ${{ inputs.max_minutes }}
     steps:
       - name: Check out the configuration
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           sparse-checkout: .github
           persist-credentials: false

@@ -65,14 +65,17 @@ jobs:
           BOARD: ${{ inputs.board }}
           IDF_IMAGE: ${{ inputs.idf_image }}
           REF: ${{ inputs.ref }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
+          [ "$ACTOR" = "$OWNER" ] || { echo "::error::only the owner of the repository ($OWNER) may start this build, not $ACTOR"; exit 1; }
           [[ "$BOARD" =~ ^[a-z0-9][a-z0-9-]{0,31}$ || -z "$BOARD" ]] || { echo "::error::the board must be lowercase letters, digits and dashes"; exit 1; }
           [[ "$IDF_IMAGE" =~ ^espressif/idf:v[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "::error::the container must be espressif/idf:vX.Y[.Z]"; exit 1; }
           [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "::error::the ref has characters that a branch, tag or commit does not have"; exit 1; }
 
       - name: Check out this repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
@@ -112,7 +115,7 @@ jobs:
       IDF_IMAGE: ${{ inputs.idf_image }}
     steps:
       - name: Check out the exact commit that was planned
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: ${{ needs.plan.outputs.sha }}
           persist-credentials: false
@@ -172,7 +175,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the images of this board
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: parts-${{ matrix.board }}
           path: out/*.bin
@@ -185,17 +188,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read
       id-token: write
       attestations: write
     env:
       KIND: ${{ needs.plan.outputs.kind }}
       VERSION: ${{ needs.plan.outputs.version }}
       SHA: ${{ needs.plan.outputs.sha }}
-      GH_TOKEN: ${{ github.token }}
+      IDF_IMAGE: ${{ inputs.idf_image }}
     steps:
       - name: Download the images of every board
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: parts-*
           merge-multiple: true
@@ -218,31 +221,55 @@ jobs:
               "schema": "armor-build/1", "repository": os.environ["GITHUB_REPOSITORY"], "project": "armor_" + os.environ["KIND"], "version": os.environ["VERSION"],
               "commit": os.environ["SHA"], "built_on": "github-actions", "run_id": os.environ["GITHUB_RUN_ID"],
               "run_url": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
-              "idf_image": "${{ inputs.idf_image }}", "signed": False, "files": files,
+              "idf_image": os.environ["IDF_IMAGE"], "signed": False, "files": files,
           }, open("build-manifest.json", "w", encoding="utf-8"), indent=2)
           PY
           cat SHA256SUMS
 
       - name: Attest the provenance of the files
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-path: |
             files/*.bin
             files/SHA256SUMS
 
       - name: Upload the build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: firmware-${{ needs.plan.outputs.kind }}-${{ needs.plan.outputs.version }}
           path: files/*
           if-no-files-found: error
           retention-days: 30
 
+  draft:
+    name: Prepare the draft release (needs the approval of the owner)
+    if: ${{ !inputs.dry_run }}
+    needs: [plan, collect]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    env:
+      KIND: ${{ needs.plan.outputs.kind }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      SHA: ${{ needs.plan.outputs.sha }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ACTOR: ${{ github.actor }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - name: Download the build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: firmware-${{ needs.plan.outputs.kind }}-${{ needs.plan.outputs.version }}
+          path: files
+
       - name: Prepare the draft release with the unsigned files
-        if: ${{ !inputs.dry_run }}
         shell: bash
         run: |
           set -euo pipefail
+          [ "$ACTOR" = "$OWNER" ] || { echo "::error::only the owner may prepare a release"; exit 1; }
           tag="v$VERSION"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "::error::the release $tag already exists: raise the version before a new build"
@@ -264,7 +291,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Download the build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: firmware-${{ needs.plan.outputs.kind }}-${{ needs.plan.outputs.version }}
           path: build
@@ -282,14 +309,14 @@ jobs:
           print("manifest ok:", manifest["project"], manifest["version"], len(manifest["files"]), "files")
           PY
           for file in ./*.bin SHA256SUMS; do
-            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" >/dev/null
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/firmware-build.yml" --source-digest "$GITHUB_SHA" >/dev/null
             echo "attestation ok: $file"
           done
 
   notify:
     name: Tell the owner (issue build-failed)
     if: ${{ always() }}
-    needs: [plan, build, collect, verify]
+    needs: [plan, build, collect, draft, verify]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -315,7 +342,7 @@ jobs:
           run_id = os.environ["GITHUB_RUN_ID"]
           run_url = os.environ["RUN_URL"]
           summary = os.environ["GITHUB_STEP_SUMMARY"]
-          order = ["plan", "build", "collect", "verify"]
+          order = ["plan", "build", "collect", "draft", "verify"]
 
 
           def gh(*args, check=True):
@@ -333,6 +360,8 @@ jobs:
           try:
               needs = json.loads(os.environ["NEEDS"])
               results = {name: needs.get(name, {}).get("result", "missing") for name in order}
+              if os.environ.get("DRY_RUN") == "true" and results.get("draft") == "skipped":
+                  results["draft"] = "success"  # a dry run makes no draft on purpose
               bad = {name: result for name, result in results.items() if result != "success"}
               number = gh("issue", "list", "--repo", repo, "--label", "build-failed", "--state", "open", "--json", "number", "--jq", ".[0].number // empty").strip()
               if bad:
