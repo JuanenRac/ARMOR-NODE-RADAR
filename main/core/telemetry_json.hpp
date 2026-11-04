@@ -73,29 +73,35 @@ inline JsonResult build_health(std::string_view node_id, std::uint64_t timestamp
   return JsonResult::kOk;
 }
 
-// The information message: armor/node/{node_id}/info  {"node_id","timestamp_ms","name","firmware","ip","port"}. It lets a console offer a link to the
+// The information message: armor/node/{node_id}/info  {"node_id","timestamp_ms","name","firmware","ip","port"[,"contract"]}. It lets a console offer a link to the
 // node's own web panel. Nothing is written unless every field satisfies the contract (name 1 to 48 characters of valid UTF-8, firmware x.y.z,
 // a dotted-quad IPv4 address without leading zeros, port 1 to 65535). The firmware is three numbers, or four from 0.8.0 on (the odometer of the family): a node of 0.8.0.x
 // that refused the fourth one never told the server where its panel is, and the link stayed on the address of an older version.
+// `contract` is optional: the version of the contracts the firmware was checked against, in the same shape as the firmware version; empty leaves the field out.
 inline JsonResult build_info(std::string_view node_id, std::uint64_t timestamp_ms, std::string_view name, std::string_view firmware, std::string_view ip, unsigned port,
-                             char* out, std::size_t capacity, std::size_t& length) {
+                             char* out, std::size_t capacity, std::size_t& length, std::string_view contract = {}) {
   length = 0;
   if (!node_id_is_valid(node_id)) return JsonResult::kInvalidNodeId;
   std::size_t characters = 0;
   if (!net::valid_utf8(name, &characters) || characters < 1 || characters > 48) return JsonResult::kInvalidInfo;
   std::uint32_t address = 0;
   if (!net::parse_ipv4(ip, address) || port < 1 || port > 65535) return JsonResult::kInvalidInfo;
-  int dots = 0;
-  bool digit_before = false, ok = !firmware.empty();
-  for (const char c : firmware) {
-    if (c >= '0' && c <= '9') digit_before = true;
-    else if (c == '.' && digit_before) { ++dots; digit_before = false; }
-    else ok = false;
-  }
-  if (!ok || (dots != 2 && dots != 3) || !digit_before) return JsonResult::kInvalidInfo;
+  const auto version_shape = [](std::string_view text) {
+    int parts = 0;
+    bool digit_before = false, shape_ok = !text.empty();
+    for (const char c : text) {
+      if (c >= '0' && c <= '9') digit_before = true;
+      else if (c == '.' && digit_before) { ++parts; digit_before = false; }
+      else shape_ok = false;
+    }
+    return shape_ok && (parts == 2 || parts == 3) && digit_before;
+  };
+  if (!version_shape(firmware) || (!contract.empty() && !version_shape(contract))) return JsonResult::kInvalidInfo;
   json::Writer w;
   w.begin_object().field("node_id", node_id).key("timestamp_ms").integer(static_cast<long long>(timestamp_ms)).field("name", name).field("firmware", firmware).field("ip", ip)
-      .key("port").integer(port).end_object();
+      .key("port").integer(port);
+  if (!contract.empty()) w.field("contract", contract);
+  w.end_object();
   if (w.str().size() + 1 > capacity) return JsonResult::kBufferTooSmall;
   std::memcpy(out, w.str().data(), w.str().size());
   length = w.str().size();

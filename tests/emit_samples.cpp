@@ -25,6 +25,7 @@ int main() {
   emit("telemetry", build_telemetry("north-1", 1000, 0.0f, nullptr, 0, out, sizeof out, length));
   emit("info", build_info("north-1", 7000, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length));
   emit("info", build_info("node_2-b", 8000, "Per\xC3\xADmetro \"norte\" \\ 1", "0.10.20", "255.255.255.255", 65535, out, sizeof out, length));
+  emit("info", build_info("north-1", 7500, "North gate", "0.8.0.1", "192.168.0.181", 80, out, sizeof out, length, "0.8.0.7"));
   const Track one[] = {Track{1, 1, 1200, -300, 0}};
   emit("telemetry", build_telemetry("north-1", 2000, 250.5f, one, 1, out, sizeof out, length));
   std::vector<Track> fifteen;

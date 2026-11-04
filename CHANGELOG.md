@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The node says which contracts its firmware was checked against:** the information message it sends to the server carries an optional `contract` (the version of the shared contracts, kept in `main/contract_version.hpp` and compared with the pin of the reverse-dependency run by a test of the shared repository), so Studio can warn about a node built against other contracts than the server. The serialiser checks its shape; the tests cover the good and bad shapes and the sample the contracts validate.
+
 - **The bench tools talk to a node only over TLS 1.2 or newer, and the pin is checked on the connection that carries the request:** `tools/serial_bridge_client.py` used to check the pinned fingerprint on a separate connection before the request; it now checks it on the connection itself, as `tools/adopt_node.py` does, so nothing is sent to a node that shows another certificate. Without `--fingerprint` and without `--insecure` the certificate chain is verified as before. `--show-fingerprint` reads the certificate with the standard library instead of opening an unverified context. A test with a TLS stand-in node covers the right pin, a wrong pin and no pin.
 - **A control order's command id is sixteen lowercase hexadecimal digits, as in every command of the family** (the shared `control_gate.hpp`).
 - **The launchers find the shared repository through `ARMOR_COMMON_DIR`:** `build`, `build-test`, `test` and `run` (`.sh` and `.bat`) use the folder named by that variable when it is set and the sibling `ARMOR-COMMON` folder otherwise, so a checkout with another layout builds without changing a file.

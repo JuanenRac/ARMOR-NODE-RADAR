@@ -725,6 +725,13 @@ static void test_info_message() {
   CHECK(build_info("node-9", 123456789012ULL, chinese, "10.20.30", "255.255.255.255", 65535, out, sizeof out, length) == JsonResult::kOk && length < 512);
   CHECK(build_info("n1", 5, "\xC3\x28", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);   // broken UTF-8
   CHECK(build_info("n1", 5, "n", "v0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
+  // the contracts the firmware was checked against: optional, in the shape of a version, and written last
+  CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8.0.7") == JsonResult::kOk);
+  CHECK(std::string(out, length) == R"({"node_id":"north-1","timestamp_ms":5,"name":"North gate","firmware":"0.2.3","ip":"192.168.0.181","port":80,"contract":"0.8.0.7"})");
+  CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8") == JsonResult::kInvalidInfo);
+  CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "v0.8.0.7") == JsonResult::kInvalidInfo);
+  CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8.0.7\n") == JsonResult::kInvalidInfo);
+  CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "") == JsonResult::kOk && std::string(out, length).find("contract") == std::string::npos);
   CHECK(build_info("n1", 5, "n", "0.2", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, "n", "0.8.0.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kOk);   // four numbers from 0.8.0 on
   CHECK(std::string(out, length).find("\"firmware\":\"0.8.0.3\"") != std::string::npos);

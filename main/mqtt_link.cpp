@@ -21,6 +21,7 @@ extern "C" {
 #include "freertos/task.h"
 #include "mqtt_client.h"
 }
+#include "contract_version.hpp"
 #include "core/gpio_logic.hpp"
 #include "core/mqtt_tls.hpp"
 #include "node_guard.hpp"
@@ -192,7 +193,7 @@ void publish_info(esp_mqtt_client_handle_t direct) {
   if (!armor::build_topic(g_settings.node_id, "info", topic, sizeof topic)) return;
   // A copy of the whole settings is a few kilobytes: kept on the heap, not on the stack of this small task (it left the telemetry task with 56 bytes of stack and a restart on saving the settings).
   const std::unique_ptr<config::Settings> current(new config::Settings(store::settings()));   // the name may have been changed in the panel since the start
-  if (armor::build_info(g_settings.node_id, wall_clock_ms(), current->node_name, esp_app_get_description()->version, net.ip, 80, payload, sizeof payload, length) != armor::JsonResult::kOk) return;
+  if (armor::build_info(g_settings.node_id, wall_clock_ms(), current->node_name, esp_app_get_description()->version, net.ip, 80, payload, sizeof payload, length, armor::kContractVersion) != armor::JsonResult::kOk) return;
   if (direct != nullptr) esp_mqtt_client_publish(direct, topic, payload, static_cast<int>(length), 1, 0);
   else client_publish(topic, payload, static_cast<int>(length), 1);
 }
