@@ -114,6 +114,7 @@ struct Report {
   std::string family;            // radar, solar, electrical, alarm or hmi
   std::string firmware;          // 0.3.6 or 0.8.0.1
   std::string board;             // may be empty
+  std::string contract;          // the version of the contracts (ARMOR-COMMON) the firmware was checked against, three or four numbers; may be empty (the report does not say it)
   std::uint64_t timestamp_ms = 0;
   std::uint64_t uptime_s = 0;
   std::string reset_reason = "unknown";
@@ -147,6 +148,18 @@ struct Report {
   bootreport::ConfigCheck config_check;
 };
 
+// Three or four numbers separated by dots, as the contract has it (0.8.0 or 0.8.0.7): anything else is left out of the report instead of being sent.
+inline bool valid_contract(const std::string& text) {
+  int parts = 0;
+  std::size_t digits = 0;
+  for (const char c : text) {
+    if (c >= '0' && c <= '9') { if (++digits > 9) return false; }
+    else if (c == '.' && digits > 0) { ++parts; digits = 0; }
+    else return false;
+  }
+  return digits > 0 && (parts == 2 || parts == 3);
+}
+
 inline bool valid_family(const std::string& family) { return family == "radar" || family == "solar" || family == "electrical" || family == "alarm" || family == "hmi"; }
 
 inline std::string topic(const std::string& node_id) { return node_id_is_valid(node_id) ? "armor/health/" + node_id : ""; }
@@ -157,6 +170,7 @@ inline std::string to_json(const Report& r) {
   w.begin_object().field("kind", "node_health").field("node_id", r.node_id).key("timestamp_ms").integer(static_cast<long long>(r.timestamp_ms));
   w.field("family", r.family).field("firmware", r.firmware);
   if (!r.board.empty()) w.field("board", r.board.substr(0, 32));
+  if (valid_contract(r.contract)) w.field("contract", r.contract);
   w.key("uptime_s").integer(static_cast<long long>(r.uptime_s));
   w.field("reset_reason", r.reset_reason);
   const std::uint64_t heap_min = r.heap_min > r.heap_free ? r.heap_free : r.heap_min;

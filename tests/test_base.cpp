@@ -381,6 +381,17 @@ static void test_node_health() {
   const std::string wired = nodehealth::to_json(sample_report());
   CHECK(wired == "{\"kind\":\"node_health\",\"node_id\":\"alarm-1\",\"timestamp_ms\":9000,\"family\":\"alarm\",\"firmware\":\"0.3.6\",\"board\":\"s3-eth\",\"uptime_s\":86400,\"reset_reason\":\"power_on\","
                   "\"heap_free\":142000,\"heap_min\":98000,\"link\":\"ethernet\",\"link_up\":true,\"broker_reconnects\":1,\"low_stack_tasks\":0}");
+  // the contracts the firmware was checked against go out only when they look like a version
+  nodehealth::Report says_contract = sample_report();
+  says_contract.contract = "0.8.0.7";
+  CHECK(nodehealth::to_json(says_contract).find("\"board\":\"s3-eth\",\"contract\":\"0.8.0.7\",\"uptime_s\"") != std::string::npos);
+  says_contract.contract = "0.8.0";
+  CHECK(nodehealth::to_json(says_contract).find("\"contract\":\"0.8.0\"") != std::string::npos);
+  for (const char* bad : {"v0.8.0.7", "0.8", "0.8.0.7\n", "", "0.8.0.7.1", "a.b.c", "0..1", ".0.1.2", "0.8.0.", "1234567890.1.2"}) {
+    nodehealth::Report unsaid = sample_report();
+    unsaid.contract = bad;
+    CHECK(nodehealth::to_json(unsaid).find("contract") == std::string::npos);
+  }
   nodehealth::Report on_wifi = sample_report();
   on_wifi.link = {Link::kWifi, true, -61};
   on_wifi.last_error = "mqtt: refused";

@@ -12,6 +12,7 @@ extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 }
+#include "contract_version.hpp"
 #include "core/node_health.hpp"
 #include "log_buffer.hpp"
 #include "network.hpp"
@@ -43,6 +44,7 @@ nodehealth::Report build(const std::string& node_id, const std::string& family) 
   report.firmware = esp_app_get_description()->version;
   const network::Status net = network::status();
   report.board = net.board;
+  report.contract = armor::kContractVersion;   // main/contract_version.hpp, the pin of the reverse-dependency run
   report.timestamp_ms = stamp_ms();
   report.uptime_s = static_cast<std::uint64_t>(esp_timer_get_time()) / 1000000ULL;
   report.reset_reason = nodehealth::reset_reason_text(static_cast<int>(esp_reset_reason()));
