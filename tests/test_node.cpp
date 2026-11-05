@@ -714,7 +714,7 @@ static void test_info_message() {
   char out[512];
   std::size_t length = 0;
   CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length) == JsonResult::kOk);
-  CHECK(std::string(out, length) == R"({"node_id":"north-1","timestamp_ms":5,"name":"North gate","firmware":"0.2.3","ip":"192.168.0.181","port":80})");
+  CHECK(std::string(out, length) == R"({"kind":"info","node_id":"north-1","timestamp_ms":5,"name":"North gate","firmware":"0.2.3","ip":"192.168.0.181","port":80})");
   CHECK(build_info("North", 5, "n", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidNodeId);
   CHECK(build_info("n1", 5, "", "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   CHECK(build_info("n1", 5, std::string(49, 'x'), "0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
@@ -727,7 +727,7 @@ static void test_info_message() {
   CHECK(build_info("n1", 5, "n", "v0.2.3", "10.0.0.1", 80, out, sizeof out, length) == JsonResult::kInvalidInfo);
   // the contracts the firmware was checked against: optional, in the shape of a version, and written last
   CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8.0.7") == JsonResult::kOk);
-  CHECK(std::string(out, length) == R"({"node_id":"north-1","timestamp_ms":5,"name":"North gate","firmware":"0.2.3","ip":"192.168.0.181","port":80,"contract":"0.8.0.7"})");
+  CHECK(std::string(out, length) == R"({"kind":"info","node_id":"north-1","timestamp_ms":5,"name":"North gate","firmware":"0.2.3","ip":"192.168.0.181","port":80,"contract":"0.8.0.7"})");
   CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8") == JsonResult::kInvalidInfo);
   CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "v0.8.0.7") == JsonResult::kInvalidInfo);
   CHECK(build_info("north-1", 5, "North gate", "0.2.3", "192.168.0.181", 80, out, sizeof out, length, "0.8.0.7\n") == JsonResult::kInvalidInfo);

@@ -48,7 +48,7 @@ inline JsonResult build_telemetry(std::string_view node_id, std::uint64_t timest
     if (++per_sensor[tracks[i].sensor_id] > kTracksPerRadar) return JsonResult::kTooManyTracks;
   }
   std::size_t position = 0;
-  detail::append(out, capacity, position, "{\"node_id\":\"%.*s\",\"timestamp_ms\":%llu,\"lux\":%.1f,\"targets\":[", static_cast<int>(node_id.size()),
+  detail::append(out, capacity, position, "{\"kind\":\"telemetry\",\"node_id\":\"%.*s\",\"timestamp_ms\":%llu,\"lux\":%.1f,\"targets\":[", static_cast<int>(node_id.size()),
                  node_id.data(), static_cast<unsigned long long>(timestamp_ms), static_cast<double>(lux));
   for (std::size_t i = 0; i < track_count; ++i) {
     detail::append(out, capacity, position, "%s{\"sensor_id\":%u,\"track_id\":%u,\"x_mm\":%d,\"y_mm\":%d,\"speed_mm_s\":%d}", i ? "," : "",
@@ -73,7 +73,7 @@ inline JsonResult build_health(std::string_view node_id, std::uint64_t timestamp
   return JsonResult::kOk;
 }
 
-// The information message: armor/node/{node_id}/info  {"node_id","timestamp_ms","name","firmware","ip","port"[,"contract"]}. It lets a console offer a link to the
+// The information message: armor/node/{node_id}/info  {"kind","node_id","timestamp_ms","name","firmware","ip","port"[,"contract"]}. It lets a console offer a link to the
 // node's own web panel. Nothing is written unless every field satisfies the contract (name 1 to 48 characters of valid UTF-8, firmware x.y.z,
 // a dotted-quad IPv4 address without leading zeros, port 1 to 65535). The firmware is three numbers, or four from 0.8.0 on (the odometer of the family): a node of 0.8.0.x
 // that refused the fourth one never told the server where its panel is, and the link stayed on the address of an older version.
@@ -98,7 +98,7 @@ inline JsonResult build_info(std::string_view node_id, std::uint64_t timestamp_m
   };
   if (!version_shape(firmware) || (!contract.empty() && !version_shape(contract))) return JsonResult::kInvalidInfo;
   json::Writer w;
-  w.begin_object().field("node_id", node_id).key("timestamp_ms").integer(static_cast<long long>(timestamp_ms)).field("name", name).field("firmware", firmware).field("ip", ip)
+  w.begin_object().field("kind", "info").field("node_id", node_id).key("timestamp_ms").integer(static_cast<long long>(timestamp_ms)).field("name", name).field("firmware", firmware).field("ip", ip)
       .key("port").integer(port);
   if (!contract.empty()) w.field("contract", contract);
   w.end_object();

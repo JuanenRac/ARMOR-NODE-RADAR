@@ -119,10 +119,10 @@ static void test_telemetry_json() {
   const Track tracks[] = {track(1, 1, 1200, -300, 0), track(3, 2, -5000, 4000, -785)};
   CHECK(build_telemetry("north-1", 1000, 250.5f, tracks, 2, out, sizeof out, length) == JsonResult::kOk);
   CHECK(std::string(out, length) ==
-        "{\"node_id\":\"north-1\",\"timestamp_ms\":1000,\"lux\":250.5,\"targets\":[{\"sensor_id\":1,\"track_id\":1,\"x_mm\":1200,\"y_mm\":-300,\"speed_mm_s\":0},"
+        "{\"kind\":\"telemetry\",\"node_id\":\"north-1\",\"timestamp_ms\":1000,\"lux\":250.5,\"targets\":[{\"sensor_id\":1,\"track_id\":1,\"x_mm\":1200,\"y_mm\":-300,\"speed_mm_s\":0},"
         "{\"sensor_id\":3,\"track_id\":2,\"x_mm\":-5000,\"y_mm\":4000,\"speed_mm_s\":-785}]}");
   CHECK(build_telemetry("north-1", 0, 0.0f, nullptr, 0, out, sizeof out, length) == JsonResult::kOk);
-  CHECK(std::string(out, length) == "{\"node_id\":\"north-1\",\"timestamp_ms\":0,\"lux\":0.0,\"targets\":[]}");
+  CHECK(std::string(out, length) == "{\"kind\":\"telemetry\",\"node_id\":\"north-1\",\"timestamp_ms\":0,\"lux\":0.0,\"targets\":[]}");
 
   CHECK(build_telemetry("Bad Id", 0, 1.0f, nullptr, 0, out, sizeof out, length) == JsonResult::kInvalidNodeId && length == 0);
   CHECK(build_telemetry("n", 0, -0.1f, nullptr, 0, out, sizeof out, length) == JsonResult::kInvalidLux);

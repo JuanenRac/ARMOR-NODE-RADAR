@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Telemetry and the information message say their kind:** both carry `kind` (`telemetry` and `info`), as the shared contracts now allow, so a reader no longer has to take it from the topic. A reader that ignores it loses nothing; the server accepts it. The host tests and the sample vectors are updated.
+
+
 ## [0.8.0.9] - The health report says the contracts too: besides the information message, the health report carries contract (the number of main/contractversion.hpp), as the shared firmware now writes it. The shared firmware files are copied... (and 6 more changes)
 
 - **The health report says the contracts too:** besides the information message, the health report carries `contract` (the number of `main/contract_version.hpp`), as the shared firmware now writes it. The shared firmware files are copied again from the shared repository.
