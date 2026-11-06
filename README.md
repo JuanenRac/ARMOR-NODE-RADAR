@@ -22,13 +22,13 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-7371%20checks-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.8.0.9-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.8.1.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Honesty check - what runs today:** The radar node is the one node that exists as hardware: its firmware runs on a real Waveshare ESP32-S3-ETH board with a radar and reports to the CM5 test bench, and its web panel and over-the-air updates are in use on it. The hardware-independent core (7,371 checks in 14 test programs: the decoders of the LD2450, the LD2461 and four presence sensors, the LD2450 command channel, the settings and their checks, the pin table, users and sessions, the network plan, the message serialiser whose output ARMOR-COMMON accepts, and the release and signature checks) is tested on a computer, the **web panel** is exercised in a real browser against a stand-in node, and the **firmware image builds** in the ESP-IDF 5.5.5 container. What is **not** proven yet: the LD2461 and presence-sensor decoders match only the worked examples of their manuals, with no module behind them; the signature check of the updates and the Bluetooth PIN pairing are proven on a computer with real signatures but not yet on the board; the radar command channel is unchecked against a module; and the panel's HTTPS certificate (made by the node itself) is untried in every browser.
+**Honesty check - what runs today:** The radar node is the one node that exists as hardware: its firmware runs on a real Waveshare ESP32-S3-ETH board with a radar and reports to the CM5 test bench, and its web panel and over-the-air updates are in use on it. The hardware-independent core (7,371 checks in 15 test programs: the decoders of the LD2450, the LD2461 and four presence sensors, the LD2450 command channel, the settings and their checks, the pin table, users and sessions, the network plan, the message serialiser whose output ARMOR-COMMON accepts, and the release and signature checks) is tested on a computer, the **web panel** is exercised in a real browser against a stand-in node, and the **firmware image builds** in the ESP-IDF 5.5.5 container. What is **not** proven yet: the LD2461 and presence-sensor decoders match only the worked examples of their manuals, with no module behind them; the signature check of the updates and the Bluetooth PIN pairing are proven on a computer with real signatures but not yet on the board; the radar command channel is unchecked against a module; and the panel's HTTPS certificate (made by the node itself) is untried in every browser.
 
 ---
 
@@ -36,11 +36,11 @@
 
 | | |
 |---|---|
-| Version | `0.8.0.9` |
+| Version | `0.8.1.0` |
 | Maturity | Established |
 | Role | Radar field node for ESP32-S3 (family: Field Nodes, parent: ARMOR-COMMON) |
 | Stack | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 7371 checks in 14 host programs and 6 Python checks (`ctest`) |
+| Tests | 7371 checks in 15 host programs and 6 Python checks (`ctest`) |
 | Boards | Waveshare ESP32-S3-ETH (Ethernet) and ESP32-S3-WROOM-1 N16R8 (Wi-Fi only) |
 | Sensors | Up to 3 radars (LD2450, LD2461) or presence sensors per node, VEML7700 light sensor |
 | Runs on | Waveshare ESP32-S3-ETH or ESP32-S3-WROOM-1 N16R8; host tests on any computer |
@@ -58,7 +58,7 @@ Each line is one part of this repository and the light says how far it is today.
 | Area | State | What it means here |
 |---|---|---|
 | Software | 🟢 | The firmware builds in the ESP-IDF 5.5.5 container and runs on a real ESP32-S3-ETH board. |
-| Tests | 🟢 | 7,371 checks in 14 host programs pass (`ctest`): the decoders, the settings, the pin table, the users, the network plan, the message serialiser and the release checks. |
+| Tests | 🟢 | 7,371 checks in 15 host programs pass (`ctest`): the decoders, the settings, the pin table, the users, the network plan, the message serialiser and the release checks. |
 | Protocols and data | 🟡 | The LD2450 runs on a real radar; the LD2461 and the four presence-sensor decoders only match the worked examples of their manuals, and the radar command channel is unchecked against a module. |
 | Interface | 🟡 | The web panel is in use on the board and is exercised in a real browser against a stand-in node; its HTTPS certificate, made by the node itself, is untried in every browser. |
 | Hardware | 🟡 | It is the one node that exists as hardware: a real Waveshare ESP32-S3-ETH board with a radar reports to the CM5 test bench; no other sensor module is connected. |
@@ -217,7 +217,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-14 host test programs and 6 Python checks run under `ctest`; 7371 checks counted by the host programs, built with `-Werror`.
+15 host test programs and 6 Python checks run under `ctest`; 7371 checks counted by the host programs, built with `-Werror`.
 
 | Part | What it covers |
 |---|---|
