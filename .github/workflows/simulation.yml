@@ -1,0 +1,44 @@
+# =============================================================================
+# A.R.M.O.R. - the simulation bench of ARMOR-NODE-RADAR
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D)
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# The real firmware code that reads the serial stream of the HLK-LD2450 radar modules, built on a computer and fed by ARMOR-SIMULATOR with that bus spoiled on purpose
+# (python -m armor_simulator.node_bench --bus ld2450); the driver is tests/sim_bench.cpp. No board and no ESP-IDF are involved.
+# A green run says the code copes with the simulated bus; it says nothing about the real equipment.
+name: Simulation bench
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware-in-the-loop:
+    name: The radar serial stream into the real firmware code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Fetch the simulator
+        run: git clone --depth 1 https://github.com/JuanenRac/ARMOR-SIMULATOR.git ../ARMOR-SIMULATOR
+
+      - name: Build the driver from the core files of the firmware
+        run: g++ -std=c++17 -Wall -Wextra -Wpedantic -Werror -O1 -o sim_bench tests/sim_bench.cpp
+
+      - name: Play the bus, spoiled on purpose, into the driver
+        env:
+          PYTHONPATH: ../ARMOR-SIMULATOR/src
+        run: python -m armor_simulator.node_bench --bus ld2450 --driver ./sim_bench
