@@ -24,6 +24,7 @@ add_executable(emit_samples emit_samples.cpp)
 add_executable(test_base test_base.cpp)
 add_executable(test_shared test_shared.cpp)
 add_executable(test_control test_control.cpp)
+add_executable(test_wire test_wire.cpp)
 add_executable(test_diag test_diag.cpp)
 
 enable_testing()
@@ -40,6 +41,7 @@ add_test(NAME board_wifi COMMAND test_board_wifi)
 add_test(NAME base COMMAND test_base)
 add_test(NAME shared COMMAND test_shared)
 add_test(NAME control COMMAND test_control ${CMAKE_CURRENT_SOURCE_DIR}/../../ARMOR-COMMON/conformance)
+add_test(NAME wire COMMAND test_wire ${CMAKE_CURRENT_SOURCE_DIR}/../../ARMOR-COMMON/conformance/wire_cases.tsv)
 add_test(NAME diag COMMAND test_diag)
 
 # the panel's texts: eight languages in every row and a text for every error the firmware can answer with

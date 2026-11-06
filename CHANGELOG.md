@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The messages are tested against a seeded oracle:** the shared firmware now carries the readers and writers that ARMOR-COMMON generates from its schemas (`core/armor_wire.hpp`) and a host test (`tests/test_wire.cpp`) that reads the seeded cases of the contracts (each with the verdict of the Python validator) and checks, with the compiler and the flags of this project, that the generated validator, reader and writer agree on every one. The shared control order is checked the same way.
 - **Telemetry and the information message say their kind:** both carry `kind` (`telemetry` and `info`), as the shared contracts now allow, so a reader no longer has to take it from the topic. A reader that ignores it loses nothing; the server accepts it. The host tests and the sample vectors are updated.
 
 
