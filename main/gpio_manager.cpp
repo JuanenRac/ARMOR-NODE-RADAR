@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <atomic>
 #include <mutex>
 extern "C" {
 #include "driver/gpio.h"
@@ -39,6 +40,7 @@ struct Pin {
   ledc_channel_t channel = LEDC_CHANNEL_0;
   adc_channel_t adc_channel = ADC_CHANNEL_0;
   esp_timer_handle_t pulse = nullptr;
+  std::atomic<bool> pulse_over{false};   // set by the timer when a pulse has run its course; the polling task applies it (the timer task never waits for the lock)
 };
 
 std::mutex g_lock;
@@ -91,11 +93,9 @@ void write_level(Pin& pin, int percent) {
   ledc_update_duty(LEDC_LOW_SPEED_MODE, pin.channel);
 }
 
+// Runs on the timer task, which also serves every other timer of the node: it must never wait for the lock the polling task holds during its sweep. It only marks the end of the pulse.
 void pulse_ended(void* argument) {
-  std::lock_guard<std::mutex> guard(g_lock);
-  Pin* pin = static_cast<Pin*>(argument);
-  write_output(*pin, false);
-  publish(*pin);
+  static_cast<Pin*>(argument)->pulse_over = true;
 }
 
 Pin* find(const std::string& name) {
@@ -201,6 +201,7 @@ void poll_task(void*) {
       std::lock_guard<std::mutex> guard(g_lock);
       for (auto& owned : g_pins) {
         Pin& pin = *owned;
+        if (pin.pulse_over.exchange(false)) { write_output(pin, false); publish(pin); }   // a pulse ended: the output goes back off, under the lock like any other change
         if (pin.cfg.mode == config::PinMode::kInput) {
           const bool raw = gpio::logical_state(gpio_get_level(static_cast<gpio_num_t>(pin.cfg.gpio)) != 0, pin.cfg.invert);
           if (pin.debounce.update(raw, now, static_cast<std::uint32_t>(pin.cfg.debounce_ms))) { pin.on = pin.debounce.level(); publish(pin); }
@@ -261,6 +262,7 @@ Outcome command(const std::string& pin_name, std::string_view payload) {
   const gpio::Command parsed = gpio::parse_command(payload, pin->cfg.mode);
   if (parsed.action == gpio::Action::kNone) return Outcome::kRefused;
   if (pin->pulse != nullptr) esp_timer_stop(pin->pulse);  // any new command cancels a pulse in progress
+  pin->pulse_over = false;   // ... including one that ended a moment ago and was not applied yet
   pin->fell_back = false;
   switch (parsed.action) {
     case gpio::Action::kOn: write_output(*pin, true); break;

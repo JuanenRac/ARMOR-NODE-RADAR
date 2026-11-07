@@ -60,4 +60,6 @@ if(Python3_FOUND)
   add_test(NAME routes COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_routes.py)
   # the PC side of the transparent serial bridge, against a node made up for the test
   add_test(NAME bridge_client COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_bridge_client.py)
+  # the timer task never waits for the pins' lock: the end of a pulse is only marked there and applied by the polling task
+  add_test(NAME gpio_timer COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_gpio_timer.py)
 endif()

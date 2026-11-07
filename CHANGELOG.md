@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The end of a pin pulse no longer makes the timer task wait:** the callback of the pulse timer took the lock that the polling task holds during its whole sweep, so every other timer of the node (such as the Wi-Fi reconnect) could be held back with it. The callback now only marks the end of the pulse and the polling task switches the output off, under the lock, within a few milliseconds; a new command forgets a mark that was not applied yet. A new check (`tests/check_gpio_timer.py`, run by `ctest`) fails if the callback takes the lock again or the polling task stops applying the mark.
+
 - **The gateway watch uses the shared rule:** the radar node's station watch (a ping to the gateway every 20 s, a fresh association after three silent rounds in a row) now takes its decision from `core/link_watch.hpp`, shared with the other nodes, and is covered by the new host program `tests/test_link_watch.cpp`. Same behaviour as before.
 
 - **A shim for the simulator's MQTT output:** `tests/mqtt_shim.cpp` is built from the same core files as the firmware (framer, LD2450 decoder, track builder, information, health and telemetry writers, topic builder) and prints the messages the node would publish for a serial stream, so ARMOR-SIMULATOR can send them to a real broker and the server bench can check that the real server takes them. No board is involved and nothing here has run on one.
