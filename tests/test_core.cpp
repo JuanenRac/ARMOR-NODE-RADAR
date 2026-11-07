@@ -362,6 +362,27 @@ static void test_track_set() {
   CHECK(set.collect(out, 2100) == kTracksPerRadar);
 }
 
+// A radar that reports slowly keeps its tracks for longer than the set's own limit, and 0 puts the set's limit back.
+static void test_track_set_per_radar_age() {
+  TrackSet set(500);
+  Track out[kMaximumTracks];
+  const Track a[] = {Track{1, 1, 100, 1000, 0}};
+  const Track b[] = {Track{2, 1, -300, 3000, -20}};
+  set.set_max_age(2, 3000);
+  set.update(1, a, 1, 1000);
+  set.update(2, b, 1, 1000);
+  CHECK(set.collect(out, 1400) == 2);
+  CHECK(set.collect(out, 2000) == 1 && out[0].sensor_id == 2 && set.any_fresh(2000));   // radar 1 is stale at 500 ms, radar 2 holds for 3000 ms
+  CHECK(set.collect(out, 4000) == 1 && out[0].sensor_id == 2);                           // exactly at the limit still counts
+  CHECK(set.collect(out, 4001) == 0 && !set.any_fresh(4001));
+  set.set_max_age(2, 0);
+  CHECK(set.collect(out, 1600) == 0);                                                    // back to 500 ms
+  set.set_max_age(0, 9999);                                                              // unknown sensors are ignored
+  set.set_max_age(4, 9999);
+  set.update(1, a, 1, 5000);
+  CHECK(set.collect(out, 5400) == 1 && set.collect(out, 5600) == 0);
+}
+
 static bool near(float a, float b, float tolerance) { return std::fabs(a - b) <= tolerance; }
 
 static void test_veml7700() {
@@ -535,6 +556,7 @@ int main() {
   test_ld2450();
   test_ld2450_stream();
   test_track_set();
+  test_track_set_per_radar_age();
   test_veml7700();
   test_radar_health();
   test_270_degree_layout();

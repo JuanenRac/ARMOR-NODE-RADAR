@@ -21,14 +21,14 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 oder neuer">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Sprache">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-13406%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-13714%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Reifegrad">
 </p>
 
 ---
 
-**Ehrlichkeitsprüfung - was heute läuft:** Der Radarknoten ist der einzige Knoten, der als Hardware existiert: Seine Firmware läuft auf einer echten Waveshare-ESP32-S3-ETH-Platine mit einem Radar und meldet an den CM5-Testaufbau, und sein Web-Panel und die Over-the-Air-Updates werden dort genutzt. Der hardwareunabhängige Kern (13,406 Prüfungen in 16 Testprogrammen: die Decoder des LD2450, des LD2461 und von vier Präsenzsensoren, der Befehlskanal des LD2450, die Einstellungen und ihre Prüfungen, die Pin-Tabelle, Benutzer und Sitzungen, der Netzplan, der Nachrichten-Serialisierer, dessen Ausgabe ARMOR-COMMON akzeptiert, und die Versions- und Signaturprüfungen) wird auf einem Computer getestet, das **Web-Panel** wurde in einem echten Browser gegen einen Ersatzknoten geprüft und das **Firmware-Abbild baut** im ESP-IDF-5.5.5-Container. **Noch nicht** bewiesen: Die Decoder des LD2461 und der Präsenzsensoren entsprechen nur den durchgerechneten Beispielen ihrer Handbücher, ohne Modul dahinter; die Signaturprüfung der Updates und die Bluetooth-Kopplung mit PIN sind auf dem Computer mit echten Signaturen bewiesen, aber noch nicht auf der Platine; der Befehlskanal des Radars ist nicht gegen ein Modul geprüft; und das HTTPS-Zertifikat des Panels (vom Knoten selbst erzeugt) ist nicht in allen Browsern erprobt.
+**Ehrlichkeitsprüfung - was heute läuft:** Der Radarknoten ist der einzige Knoten, der als Hardware existiert: Seine Firmware läuft auf einer echten Waveshare-ESP32-S3-ETH-Platine mit einem Radar und meldet an den CM5-Testaufbau, und sein Web-Panel und die Over-the-Air-Updates werden dort genutzt. Der hardwareunabhängige Kern (13,714 Prüfungen in 19 Testprogrammen: die Decoder des LD2450, des LD2461 und von vier Präsenzsensoren, der Befehlskanal des LD2450, die Einstellungen und ihre Prüfungen, die Pin-Tabelle, Benutzer und Sitzungen, der Netzplan, der Nachrichten-Serialisierer, dessen Ausgabe ARMOR-COMMON akzeptiert, und die Versions- und Signaturprüfungen) wird auf einem Computer getestet, das **Web-Panel** wurde in einem echten Browser gegen einen Ersatzknoten geprüft und das **Firmware-Abbild baut** im ESP-IDF-5.5.5-Container. **Noch nicht** bewiesen: Die Decoder des LD2461 und der Präsenzsensoren entsprechen nur den durchgerechneten Beispielen ihrer Handbücher, ohne Modul dahinter; die Signaturprüfung der Updates und die Bluetooth-Kopplung mit PIN sind auf dem Computer mit echten Signaturen bewiesen, aber noch nicht auf der Platine; der Befehlskanal des Radars ist nicht gegen ein Modul geprüft; und das HTTPS-Zertifikat des Panels (vom Knoten selbst erzeugt) ist nicht in allen Browsern erprobt.
 
 ---
 
@@ -40,7 +40,7 @@
 | Reifegrad | Etabliert |
 | Rolle | Radar-Feldknoten für ESP32-S3 (Familie: Field Nodes, übergeordnet: ARMOR-COMMON) |
 | Technik | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 13406 Prüfungen in 16 Host-Programmen und 7 Python-Prüfungen (`ctest`) |
+| Tests | 13714 Prüfungen in 19 Host-Programmen und 7 Python-Prüfungen (`ctest`) |
 | Platinen | Waveshare ESP32-S3-ETH (Ethernet) und ESP32-S3-WROOM-1 N16R8 (nur WLAN) |
 | Sensoren | Bis zu 3 Radare (LD2450, LD2461) oder Präsenzsensoren je Knoten, Lichtsensor VEML7700 |
 | Läuft auf | Waveshare ESP32-S3-ETH oder ESP32-S3-WROOM-1 N16R8; Host-Tests auf jedem Computer |
@@ -58,7 +58,7 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Bereich | Stand | Was das hier bedeutet |
 |---|---|---|
 | Software | 🟢 | Die Firmware wird im ESP-IDF-5.5.5-Container gebaut und läuft auf einer echten ESP32-S3-ETH-Platine. |
-| Tests | 🟢 | 13.406 Prüfungen in 16 Host-Programmen bestehen (`ctest`): die Dekoder, die Einstellungen, die Pin-Tabelle, die Benutzer, der Netzplan, der Nachrichten-Serialisierer und die Versionsprüfungen. |
+| Tests | 🟢 | 13.714 Prüfungen in 19 Host-Programmen bestehen (`ctest`): die Dekoder, die Einstellungen, die Pin-Tabelle, die Benutzer, der Netzplan, der Nachrichten-Serialisierer und die Versionsprüfungen. |
 | Protokolle und Daten | 🟡 | Der LD2450 läuft an einem echten Radar; die Dekoder des LD2461 und der vier Anwesenheitssensoren stimmen nur mit den Beispielen ihrer Handbücher überein, und der Befehlskanal des Radars ist nicht an einem Modul geprüft. |
 | Oberfläche | 🟡 | Das Web-Panel wird auf der Platine genutzt und in einem echten Browser gegen einen nachgebildeten Knoten erprobt; sein vom Knoten selbst erzeugtes HTTPS-Zertifikat ist nicht in jedem Browser erprobt. |
 | Hardware | 🟡 | Es ist der einzige Knoten, den es als Hardware gibt: eine echte Waveshare-ESP32-S3-ETH-Platine mit einem Radar meldet an den CM5-Prüfstand; kein anderes Sensormodul ist angeschlossen. |
@@ -184,6 +184,8 @@ Lies [SECURITY.md](SECURITY.md), um eine Schwachstelle zu melden. Es gab keine u
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | Die Platine: Waveshare ESP32-S3-ETH oder ESP32-S3-WROOM-1 N16R8 (nur WLAN) |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | BOOT 8 s in den ersten 30 s halten, um neu zu beginnen |
 | `system.login_limit_per_minute` | 30 (0-120) | Falsche Passwörter pro Minute, bevor das Panel die Anmeldung für alle sperrt (0 = kein globales Limit); in Studio (eine Schaltfläche an jedem Knoten) oder mit `POST /api/v1/admin/nodes/settings` lesen und ändern, wobei die Panel-Anmeldung einmal benutzt und nie gespeichert wird |
+| `security.ota_check_board` | on | Eine hochgeladene Firmware für die andere Platine (WLAN oder Ethernet) abweisen; das Image trägt ein Kennzeichen seiner Platine, das der Knoten beim Empfang liest |
+| `security.ota_require_board_mark` | on | Auch ein Image ohne Platinenkennzeichen (eine ältere Firmware) abweisen; zum Zurückgehen auf eine Version aus der Zeit vor den Kennzeichen ausschalten |
 
 Die live abgestimmten Einstellungen stehen im Panel und liegen im Flash (zum Beispiel `system.reader_idle_ms`, `security.seal_secrets`, das Limit fehlgeschlagener Anmeldungen pro Minute (30, 0 bis 120) und die Zonen der Perimeter-Engine); die Standardwerte der Firmware stehen in `sdkconfig.defaults` und `sdkconfig.board.*`. Der 16-MB-Flash enthält `nvs` (64 KB), `otadata`, `phy_init`, zwei 3-MB-Slots `ota_0` und `ota_1`, `coredump` (128 KB) und `nvs_keys` (4 KB) (`partitions.csv`).
 
@@ -217,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-16 Host-Testprogramme und 7 Python-Prüfungen laufen unter `ctest`; 13406 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
+19 Host-Testprogramme und 7 Python-Prüfungen laufen unter `ctest`; 13714 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
 
 | Teil | Was sie abdeckt |
 |---|---|

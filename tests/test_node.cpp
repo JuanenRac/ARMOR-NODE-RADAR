@@ -187,6 +187,7 @@ static void test_settings_defaults_and_roundtrip() {
   CHECK(back.mqtt.backup.size() == 1 && back.mqtt.backup[0].uri == "mqtt://10.0.0.5:1883" && back.mqtt.backup[0].username == "backup-user" && back.mqtt.backup[0].password == "backup-password");
   CHECK(back.auto_restart_hours == 12 && back.login_limit_per_minute == 45 && back.reader_idle_ms == 250);
   CHECK(back.seal_secrets && !config::Settings{}.seal_secrets);   // written, read back, and off until it says otherwise
+  CHECK(config::Settings{}.ota_check_board && config::Settings{}.ota_require_board_mark && back.ota_check_board && back.ota_require_board_mark);   // the board check of an upload is on until it says otherwise, and is written back
   CHECK(back.time.zone == "CET-1CEST,M3.5.0,M10.5.0/3" && back.time.ntp == "time.example.org" && !back.time.ntp_enabled);
   CHECK(back.pins.size() == 3 && back.pins[0].name == "garden_light" && back.pins[0].invert && back.pins[0].safe == config::SafeState::kOff && back.pins[0].link_timeout_s == 60);
   CHECK(back.pins[1].report == "open" && back.pins[1].pull == config::Pull::kUp && back.pins[2].scale == 0.0057 && back.pins[2].offset == -0.1);
@@ -323,6 +324,8 @@ static void test_settings_rejections() {
   CHECK(rejected(R"({"system":{"login_limit_per_minute":121}})", "system.login_limit_per_minute", "range"));
   CHECK(rejected(R"({"system":{"login_limit_per_minute":-1}})", "system.login_limit_per_minute", "range"));
   CHECK(rejected(R"({"security":{"seal_secrets":"yes"}})", "security.seal_secrets", "invalid"));
+  CHECK(rejected(R"({"security":{"ota_check_board":1}})", "security.ota_check_board", "invalid"));
+  CHECK(rejected(R"({"security":{"ota_require_board_mark":"no"}})", "security.ota_require_board_mark", "invalid"));
   CHECK(rejected(R"({"system":{"reader_idle_ms":501}})", "system.reader_idle_ms", "range"));
   CHECK(rejected(R"({"system":{"reader_idle_ms":5}})", "system.reader_idle_ms", "range"));   // between 1 and 9 is neither polling (0) nor a sleep a task can keep
   CHECK(rejected(R"({"system":{"reader_idle_ms":-1}})", "system.reader_idle_ms", "range"));
@@ -933,6 +936,18 @@ static void test_sensor_models_in_settings() {
   CHECK(config::load(R"({"radars":[{"model":"ld2461"}]})", base, out, problems) && out.radars[0].model == "ld2461" && out.radars[1].model == "ld2450");
   problems.clear();
   CHECK(config::load(R"({"radars":[{"model":"ld2461","baud":115200}]})", base, out, problems) && out.radars[0].baud == 115200);
+  problems.clear();
+  // how long the tracks of a frame stay valid: left to the model by default, settable for a tracker, refused for a presence sensor and below 100 ms
+  CHECK(base.radars[0].track_max_age_ms == 0 && base.radars[1].track_max_age_ms == 0 && base.radars[2].track_max_age_ms == 0);
+  CHECK(config::load(R"({"radars":[{"model":"ld2461","track_max_age_ms":2500}]})", base, out, problems) && out.radars[0].track_max_age_ms == 2500 && out.radars[1].track_max_age_ms == 0);
+  problems.clear();
+  CHECK(!config::load(R"({"radars":[{"track_max_age_ms":99}]})", base, out, problems) && has_problem(problems, "radars.0.track_max_age_ms", "range"));
+  problems.clear();
+  CHECK(!config::load(R"({"radars":[{"track_max_age_ms":60001}]})", base, out, problems) && has_problem(problems, "radars.0.track_max_age_ms", "range"));
+  problems.clear();
+  CHECK(!config::load(R"({"radars":[{"model":"ld2410","name":"hall","track_max_age_ms":1000}]})", base, out, problems) && has_problem(problems, "radars.0.track_max_age_ms", "unsupported"));
+  problems.clear();
+  CHECK(config::load(R"({"radars":[{"track_max_age_ms":100}]})", base, out, problems) && out.radars[0].track_max_age_ms == 100);
   problems.clear();
   // a presence sensor is a device: it needs a name, which may not clash with a pin's or another sensor's
   CHECK(!config::load(R"({"radars":[{"model":"ld2410"}]})", base, out, problems) && has_problem(problems, "radars.0.name", "required"));

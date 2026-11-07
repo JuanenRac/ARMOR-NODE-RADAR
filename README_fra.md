@@ -21,14 +21,14 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 ou ultérieure">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Langage">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-13406%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-13714%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturité">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (13,406 vérifications dans 16 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.5.5. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (13,714 vérifications dans 19 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.5.5. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
 
 ---
 
@@ -40,7 +40,7 @@
 | Maturité | Établi |
 | Rôle | Nœud de terrain radar pour ESP32-S3 (famille : Field Nodes, parent : ARMOR-COMMON) |
 | Technologie | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 13406 vérifications dans 16 programmes hôte et 7 contrôles Python (`ctest`) |
+| Tests | 13714 vérifications dans 19 programmes hôte et 7 contrôles Python (`ctest`) |
 | Cartes | Waveshare ESP32-S3-ETH (Ethernet) et ESP32-S3-WROOM-1 N16R8 (Wi-Fi seul) |
 | Capteurs | Jusqu'à 3 radars (LD2450, LD2461) ou capteurs de présence par nœud, capteur de lumière VEML7700 |
 | Fonctionne sur | Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8 ; tests sur hôte sur n'importe quel ordinateur |
@@ -58,7 +58,7 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Domaine | État | Ce que cela veut dire ici |
 |---|---|---|
 | Logiciel | 🟢 | Le firmware compile dans le conteneur ESP-IDF 5.5.5 et tourne sur une vraie carte ESP32-S3-ETH. |
-| Tests | 🟢 | 13 406 vérifications dans 16 programmes d'hôte réussissent (`ctest`) : les décodeurs, les réglages, la table des broches, les utilisateurs, le plan réseau, le sérialiseur de messages et les contrôles de version. |
+| Tests | 🟢 | 13 714 vérifications dans 19 programmes d'hôte réussissent (`ctest`) : les décodeurs, les réglages, la table des broches, les utilisateurs, le plan réseau, le sérialiseur de messages et les contrôles de version. |
 | Protocoles et données | 🟡 | Le LD2450 tourne avec un vrai radar ; les décodeurs du LD2461 et des quatre capteurs de présence ne correspondent qu'aux exemples de leurs notices, et le canal de commandes du radar n'a pas été vérifié avec un module. |
 | Interface | 🟡 | Le panneau web est utilisé sur la carte et essayé dans un vrai navigateur contre un nœud simulé ; son certificat HTTPS, créé par le nœud lui-même, n'a pas été essayé dans tous les navigateurs. |
 | Matériel | 🟡 | C'est le seul nœud qui existe en matériel : une vraie carte Waveshare ESP32-S3-ETH avec un radar rend compte au banc d'essai CM5 ; aucun autre module de capteur n'est branché. |
@@ -184,6 +184,8 @@ Lisez [SECURITY.md](SECURITY.md) pour signaler une vulnérabilité. Il n'y a pas
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | La carte : Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8 (Wi-Fi seulement) |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | Maintenez BOOT 8 s dans les 30 premières s pour recommencer |
 | `system.login_limit_per_minute` | 30 (0-120) | Mots de passe erronés par minute avant que le panneau verrouille la connexion pour tous (0 = pas de limite globale) ; on le lit et le change depuis Studio (un bouton sur chaque nœud) ou avec `POST /api/v1/admin/nodes/settings`, l'identifiant du panneau étant utilisé une fois et jamais conservé |
+| `security.ota_check_board` | on | Refuser un firmware envoyé construit pour l'autre carte (Wi-Fi ou Ethernet) ; l'image porte une marque de sa carte que le nœud lit à l'arrivée |
+| `security.ota_require_board_mark` | on | Refuser aussi une image sans marque de carte (un ancien firmware) ; à désactiver pour revenir à une version faite avant les marques |
 
 Les réglages ajustés en direct sont dans le panneau et gardés en flash (par exemple `system.reader_idle_ms`, `security.seal_secrets`, la limite d'échecs de connexion par minute (30, de 0 à 120) et les zones du moteur de périmètre) ; les valeurs par défaut du firmware sont dans `sdkconfig.defaults` et `sdkconfig.board.*`. La flash de 16 Mo contient `nvs` (64 Ko), `otadata`, `phy_init`, deux emplacements de 3 Mo `ota_0` et `ota_1`, `coredump` (128 Ko) et `nvs_keys` (4 Ko) (`partitions.csv`).
 
@@ -217,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-16 programmes de test sur hôte et 7 contrôles Python tournent sous `ctest` ; 13406 vérifications comptées par les programmes hôte, compilés avec `-Werror`.
+19 programmes de test sur hôte et 7 contrôles Python tournent sous `ctest` ; 13714 vérifications comptées par les programmes hôte, compilés avec `-Werror`.
 
 | Partie | Ce qu'il couvre |
 |---|---|

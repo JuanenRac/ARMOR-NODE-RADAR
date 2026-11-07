@@ -33,6 +33,7 @@ extern "C" {
 #include "ble_provision.hpp"
 #include "clock_sync.hpp"
 #include "improv_serial.hpp"
+#include "core/image_board.hpp"
 #include "core/network_plan.hpp"
 #include "core/radar_report.hpp"
 #include "gpio_manager.hpp"
@@ -127,6 +128,7 @@ extern "C" void app_main() {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   const armor::config::Settings settings = armor::store::settings();
   const bool setup = armor::store::users_empty();
+  armor::image_board::keep();   // the mark of the board this image was built for (what an upload of a firmware is checked against) stays in the image
   ESP_LOGI(kTag, "A.R.M.O.R. node %s, firmware %s, MAC tail %s%s", settings.node_id.c_str(), esp_app_get_description()->version, armor::store::mac_tail().c_str(), setup ? ", NOT SET UP YET" : "");
   const armor::config::Problems problems = armor::config::validate(settings);
   for (const armor::config::Problem& problem : problems) ESP_LOGE(kTag, "settings problem: %s (%s)", problem.path.c_str(), problem.code.c_str());

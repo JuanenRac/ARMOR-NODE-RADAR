@@ -50,6 +50,9 @@ static void test_models() {
   CHECK(!sensors::from_text("ld9999", none) && !sensors::from_text("", none));
   CHECK(sensors::info(Model::kLd2450).default_baud == 256000 && sensors::info(Model::kLd2461).default_baud == 9600 && sensors::info(Model::kLd2412).default_baud == 115200);
   CHECK(sensors::info(Model::kLd2461).max_targets == 5 && sensors::info(Model::kLd2461).half_angle_deg == 45 && sensors::info(Model::kLd2450).half_angle_deg == 60);
+  // the age of a track: trackers have one (a slow model has a longer one), a presence sensor has none
+  CHECK(sensors::info(Model::kLd2450).track_max_age_ms == 500 && sensors::info(Model::kLd2461).track_max_age_ms > sensors::info(Model::kLd2450).track_max_age_ms);
+  for (const sensors::ModelInfo& entry : sensors::kModels) CHECK(entry.tracker == (entry.track_max_age_ms > 0));
   CHECK(sensors::info(Model::kMr24hpc1).default_baud == 9600 && !sensors::info(Model::kMr24hpc1).tracker && !sensors::info(Model::kMr24hpc1).command_family);
 }
 

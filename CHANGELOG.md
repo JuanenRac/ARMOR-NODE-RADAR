@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The log hook no longer takes 224 bytes of the stack of every task that logs:** the line is formatted into one static buffer shared by all the tasks (tried, never waited for, with a small buffer on the stack as the way out), so the tasks with 3 KiB of stack have room and the lines of the panel's log are cut at 383 characters instead of 223. The rule of what is kept is `core/log_line.hpp`, host-tested.
+
+- **A firmware for the other board is refused:** both boards run this project, so an uploaded image for the other one passed the check by project name and, on the Ethernet board, left the node off the cable for good. Every image now carries a small mark with the board it was built for (`core/image_board.hpp`, found while the image arrives, never held whole); the upload and the switch to the other slot are checked against it. Two settings in the panel, both on by default: `security.ota_check_board` and `security.ota_require_board_mark` (also refuse an older image with no mark). Host tests for the mark, the scanner at every piece size and the settings.
+
+- **The age of a track is set per sensor:** `radars[].track_max_age_ms` (0 or 100 to 60000, 0 = the model's own: 500 ms for the LD2450, 3000 ms for the LD2461, which may report less than twice a second). A slow sensor no longer has its tracks counted as old and its telemetry held back. Field in the panel in eight languages, host tests for the set, the model table and the settings.
+
 - **The end of a pin pulse no longer makes the timer task wait:** the callback of the pulse timer took the lock that the polling task holds during its whole sweep, so every other timer of the node (such as the Wi-Fi reconnect) could be held back with it. The callback now only marks the end of the pulse and the polling task switches the output off, under the lock, within a few milliseconds; a new command forgets a mark that was not applied yet. A new check (`tests/check_gpio_timer.py`, run by `ctest`) fails if the callback takes the lock again or the polling task stops applying the mark.
 
 - **The gateway watch uses the shared rule:** the radar node's station watch (a ping to the gateway every 20 s, a fresh association after three silent rounds in a row) now takes its decision from `core/link_watch.hpp`, shared with the other nodes, and is covered by the new host program `tests/test_link_watch.cpp`. Same behaviour as before.

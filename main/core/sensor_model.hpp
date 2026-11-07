@@ -25,15 +25,16 @@ struct ModelInfo {
   std::uint16_t range_dm;       // longest distance the manual promises for a person, in decimetres
   std::uint8_t max_targets;     // trackers
   bool command_family;          // speaks the FD FC FB FA ... 04 03 02 01 command frames (LD2450, LD2410, LD2412, LD2410S)
+  std::uint32_t track_max_age_ms; // trackers: how long the tracks of a frame stay valid (a few report periods of the model); 0 for a presence sensor
 };
 
 constexpr ModelInfo kModels[kModelCount] = {
-    {Model::kLd2450, "ld2450", "HLK-LD2450", true, 256000, 60, 60, 3, true},      // 3 targets, +-60 degrees, 6 m (manual V1.00)
-    {Model::kLd2461, "ld2461", "HLK-LD2461", true, 9600, 45, 80, 5, false},       // 5 tracks, +-45 degrees, 8 m moving (specification V1.1)
-    {Model::kLd2410, "ld2410", "HLK-LD2410B / LD2410C", false, 256000, 0, 60, 0, true},
-    {Model::kLd2412, "ld2412", "HLK-LD2412", false, 115200, 0, 60, 0, true},
-    {Model::kLd2410s, "ld2410s", "HLK-LD2410S", false, 115200, 0, 60, 0, true},
-    {Model::kMr24hpc1, "mr24hpc1", "Seeed MR24HPC1", false, 9600, 0, 40, 0, false},
+    {Model::kLd2450, "ld2450", "HLK-LD2450", true, 256000, 60, 60, 3, true, 500},      // 3 targets, +-60 degrees, 6 m (manual V1.00)
+    {Model::kLd2461, "ld2461", "HLK-LD2461", true, 9600, 45, 80, 5, false, 3000},       // 5 tracks, +-45 degrees, 8 m moving (specification V1.1)
+    {Model::kLd2410, "ld2410", "HLK-LD2410B / LD2410C", false, 256000, 0, 60, 0, true, 0},
+    {Model::kLd2412, "ld2412", "HLK-LD2412", false, 115200, 0, 60, 0, true, 0},
+    {Model::kLd2410s, "ld2410s", "HLK-LD2410S", false, 115200, 0, 60, 0, true, 0},
+    {Model::kMr24hpc1, "mr24hpc1", "Seeed MR24HPC1", false, 9600, 0, 40, 0, false, 0},
 };
 
 constexpr const ModelInfo& info(Model model) { return kModels[static_cast<std::size_t>(model)]; }

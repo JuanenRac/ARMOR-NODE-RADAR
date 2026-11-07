@@ -118,6 +118,9 @@ struct RadarLine {
   int gate_min = 1;                // 1 to 13
   int gate_max = 0;                // 0: not managed; 1 to 13
   int unmanned_s = 5;              // 0 to 65535
+  // Trackers: how long the tracks of a frame stay valid, in milliseconds. 0: the model's own (sensor_model.hpp: 500 for the LD2450, 3000 for the LD2461, which may report less than twice a second).
+  // Measure the real report rate of the sensor and set about three periods here if the model's value is not right for it.
+  int track_max_age_ms = 0;        // 0, or 100 to 60000
 };
 
 struct Sensors {
@@ -197,6 +200,11 @@ struct Settings {
   // Keep the secrets this node stores (the passwords of its networks and users, tokens, keys, PINs) sealed in its flash (core/secret_seal.hpp). Off, as the node always was: they are readable text. Turning it on needs no
   // eFuse and does not encrypt the flash, so it does not protect against someone who reads the whole chip; the panel says so.
   bool seal_secrets = false;
+  // What an upload of a firmware image does about the board the image was built for (image_board.hpp). Both boards run the same project, so an image for the other one is
+  // accepted by the project name alone; on the Ethernet board it would leave the node off the cable for good. On by default: an image that names another board is refused. The second one
+  // also refuses an image that carries no mark at all (an old image); turn it off to go back to a version that predates the marks.
+  bool ota_check_board = true;
+  bool ota_require_board_mark = true;
   // How the task that reads the sensors waits for them (core/uart_wake.hpp): 0 looks at the serial lines every 10 ms, as the first versions did; 10 to 500 sleeps until a sensor sends
   // something and, when none does, at most this many milliseconds before it does its periodic work. 100 by default.
   int reader_idle_ms = uartwake::kIdleMsDefault;
@@ -548,6 +556,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       read_int(item, "gate_min", s.radars[i].gate_min, 1, 13, base + "gate_min", problems);
       read_int(item, "gate_max", s.radars[i].gate_max, 0, 13, base + "gate_max", problems);
       read_int(item, "unmanned_s", s.radars[i].unmanned_s, 0, 65535, base + "unmanned_s", problems);
+      read_int(item, "track_max_age_ms", s.radars[i].track_max_age_ms, 0, 60000, base + "track_max_age_ms", problems);
       if (const json::Value* zones = item.get("zones"); zones != nullptr) {
         if (!zones->is_object()) bad(problems, base + "zones", "invalid");
         else {
@@ -628,7 +637,11 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       if (!uartwake::idle_ms_is_valid(idle)) bad(problems, "system.reader_idle_ms", "range"); else s.reader_idle_ms = idle;
     }
   }
-  if (const json::Value* security = document.get("security"); security != nullptr && security->is_object()) read_bool(*security, "seal_secrets", s.seal_secrets, "security.seal_secrets", problems);
+  if (const json::Value* security = document.get("security"); security != nullptr && security->is_object()) {
+    read_bool(*security, "seal_secrets", s.seal_secrets, "security.seal_secrets", problems);
+    read_bool(*security, "ota_check_board", s.ota_check_board, "security.ota_check_board", problems);
+    read_bool(*security, "ota_require_board_mark", s.ota_require_board_mark, "security.ota_require_board_mark", problems);
+  }
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
     if (!p->is_object()) bad(problems, "perimeter", "invalid"); else read_perimeter(*p, s.perimeter, problems);
@@ -815,6 +828,7 @@ inline Problems validate(const Settings& s) {
     else {
       static const int kSpeeds[] = {9600, 19200, 38400, 57600, 115200, 230400, 256000, 460800};
       if (radar.baud != 0 && std::find(std::begin(kSpeeds), std::end(kSpeeds), radar.baud) == std::end(kSpeeds)) bad(problems, base + "baud", "range");
+      if (radar.track_max_age_ms != 0 && (radar.track_max_age_ms < 100 || !sensors::info(model).tracker)) bad(problems, base + "track_max_age_ms", sensors::info(model).tracker ? "range" : "unsupported");
       if (radar.gate_max != 0 && (model != sensors::Model::kLd2412 || radar.gate_min > radar.gate_max)) bad(problems, base + "gate_max", model != sensors::Model::kLd2412 ? "unsupported" : "range");
       if (!sensors::info(model).tracker) {   // a presence sensor is a device: it needs a name for its topic
         if (!valid_slug(radar.name)) bad(problems, base + "name", radar.name.empty() ? "required" : "invalid");
@@ -916,7 +930,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   for (const RadarLine& radar : s.radars) {
     w.begin_object().field("enabled", radar.enabled).field("model", radar.model).field("baud", radar.baud).field("name", radar.name).field("rx", radar.rx).field("tx", radar.tx)
         .field("offset_x_mm", radar.offset_x_mm).field("offset_y_mm", radar.offset_y_mm).field("yaw_deg", radar.yaw_deg).field("pitch_deg", radar.pitch_deg).field("target_mode", radar.target_mode)
-        .field("gate_min", radar.gate_min).field("gate_max", radar.gate_max).field("unmanned_s", radar.unmanned_s);
+        .field("gate_min", radar.gate_min).field("gate_max", radar.gate_max).field("unmanned_s", radar.unmanned_s).field("track_max_age_ms", radar.track_max_age_ms);
     w.key("zones").begin_object().field("type", radar.zone_type).key("list").begin_array();
     for (const ZoneRect& rect : radar.zones) w.begin_object().field("x1", rect.x1).field("y1", rect.y1).field("x2", rect.x2).field("y2", rect.y2).end_object();
     w.end_array().end_object().end_object();
@@ -936,7 +950,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();
-  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).end_object();
+  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).field("ota_check_board", s.ota_check_board).field("ota_require_board_mark", s.ota_require_board_mark).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

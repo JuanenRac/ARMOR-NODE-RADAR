@@ -851,6 +851,7 @@ void start(const config::Settings& settings, Publisher publisher) {
     if (!sensors::from_text(wanted.model, line.model)) line.model = sensors::Model::kLd2450;
     if (!line.enabled) continue;
     const sensors::ModelInfo& model = sensors::info(line.model);
+    if (model.tracker) g_tracks.set_max_age(static_cast<std::uint8_t>(i + 1), wanted.track_max_age_ms != 0 ? static_cast<std::uint32_t>(wanted.track_max_age_ms) : model.track_max_age_ms);
     const int baud = wanted.baud != 0 ? wanted.baud : static_cast<int>(model.default_baud);
     switch (line.model) {
       case sensors::Model::kLd2450: break;

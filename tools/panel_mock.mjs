@@ -45,7 +45,7 @@ const config = {
   ble: { mode: "setup" },
   time: { ntp_enabled: true, ntp: "pool.ntp.org", zone: "CET-1CEST,M3.5.0,M10.5.0/3" },
   system: { auto_restart_hours: 0, login_limit_per_minute: 30, reader_idle_ms: 100 },
-  security: { seal_secrets: false },
+  security: { seal_secrets: false, ota_check_board: true, ota_require_board_mark: true },
   fusion: { merge_mm: 0 },
   sensor_security: { bluetooth_off: true },
   perimeter: {

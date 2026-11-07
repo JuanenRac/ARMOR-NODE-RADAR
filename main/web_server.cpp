@@ -40,6 +40,7 @@ extern "C" {
 #include "core/serial_bridge.hpp"
 #include "core/zone_control.hpp"
 #include "core/gpio_logic.hpp"
+#include "core/image_board.hpp"
 #include "core/json.hpp"
 #include "core/web_policy.hpp"
 #include "core/ld2450_command.hpp"
@@ -769,6 +770,18 @@ esp_err_t post_reboot(httpd_req_t* r) {
   return send_ok(r);
 }
 
+// Reads a slot back and looks for the board marks of the image in it (image_board.hpp). A slot written before the marks existed has none.
+image_board::Verdict slot_board_verdict(const esp_partition_t* slot) {
+  image_board::Scanner scanner;
+  static std::uint8_t piece[2048];
+  for (std::size_t at = 0; at < slot->size; at += sizeof piece) {
+    const std::size_t n = slot->size - at < sizeof piece ? slot->size - at : sizeof piece;
+    if (esp_partition_read(slot, at, piece, n) != ESP_OK) break;
+    scanner.feed(piece, n);
+  }
+  return scanner.verdict(board::kId);
+}
+
 // Boots the other firmware slot (ota_0 <-> ota_1): the way back to the version that ran before an update, or forward to the one just installed.
 // The other slot must hold a firmware of this same node type, and setting it as the boot slot checks the whole image first.
 esp_err_t post_ota_switch(httpd_req_t* r) {
@@ -778,6 +791,12 @@ esp_err_t post_ota_switch(httpd_req_t* r) {
   esp_app_desc_t description{};
   if (other == nullptr || esp_ota_get_partition_description(other, &description) != ESP_OK) return send_error(r, 409, "slot_empty");
   if (std::strcmp(description.project_name, esp_app_get_description()->project_name) != 0) return send_error(r, 422, "wrong_firmware");
+  {   // the other slot may hold the version that ran before (made before the marks existed), so only an image that names another board is refused here
+    image_board::Policy slot_policy;
+    slot_policy.check_board = store::settings().ota_check_board;
+    slot_policy.require_mark = false;
+    if (image_board::decide(slot_board_verdict(other), slot_policy) != image_board::Decision::kAccept) return send_error(r, 422, "wrong_board");
+  }
   if (esp_ota_set_boot_partition(other) != ESP_OK) return send_error(r, 500, "ota_boot");
   ESP_LOGW(kTag, "boot slot changed to %s (firmware %s) by \"%s\"; restarting", other->label, description.version, who.user.c_str());
   json::Writer w;
@@ -875,6 +894,7 @@ esp_err_t post_ota(httpd_req_t* r) {
   mbedtls_sha256_context sha;
   mbedtls_sha256_init(&sha);
   mbedtls_sha256_starts(&sha, 0);
+  image_board::Scanner board_scanner;   // the mark of the board the image was built for, found while it arrives
   std::vector<std::uint8_t> chunk_buffer(2048);   // of its own: the two servers (80 and 443) run in different tasks
   std::uint8_t* const chunk = chunk_buffer.data();
   std::size_t got = 0;
@@ -891,6 +911,7 @@ esp_err_t post_ota(httpd_req_t* r) {
     }
     if (esp_ota_write(handle, chunk, static_cast<std::size_t>(n)) != ESP_OK) { esp_ota_abort(handle); mbedtls_sha256_free(&sha); return send_error(r, 500, "ota_write"); }
     mbedtls_sha256_update(&sha, chunk, static_cast<std::size_t>(n));
+    board_scanner.feed(chunk, static_cast<std::size_t>(n));
     got += static_cast<std::size_t>(n);
   }
   std::uint8_t digest[32];
@@ -899,6 +920,18 @@ esp_err_t post_ota(httpd_req_t* r) {
   if (esp_ota_end(handle) != ESP_OK) return send_error(r, 422, "image_invalid");
   esp_app_desc_t description{};
   if (esp_ota_get_partition_description(target, &description) != ESP_OK || std::strcmp(description.project_name, esp_app_get_description()->project_name) != 0) return send_error(r, 422, "wrong_firmware");
+  {   // both boards run this project: the image must also be the one built for THIS board (security.ota_check_board and security.ota_require_board_mark)
+    const config::Settings board_settings = store::settings();
+    image_board::Policy board_policy;
+    board_policy.check_board = board_settings.ota_check_board;
+    board_policy.require_mark = board_settings.ota_require_board_mark;
+    const image_board::Decision board_decision = image_board::decide(board_scanner.verdict(board::kId), board_policy);
+    if (board_decision != image_board::Decision::kAccept) {
+      ESP_LOGW(kTag, "firmware upload refused (%s) for the board %s", image_board::decision_code(board_decision), board::kId);
+      if (board_decision == image_board::Decision::kWrongBoard) return send_error(r, 422, "wrong_board");
+      return send_error(r, 422, "no_board_mark");
+    }
+  }
   if (esp_ota_set_boot_partition(target) != ESP_OK) return send_error(r, 500, "ota_boot");
   ESP_LOGW(kTag, "firmware %s (%u bytes) installed in %s by \"%s\"; restarting", description.version, static_cast<unsigned>(total), target->label, who.user.c_str());
   json::Writer w;

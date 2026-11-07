@@ -147,7 +147,14 @@ inline std::size_t to_tracks(std::uint8_t sensor_id, const Frame& frame, Track* 
 // targets behind, so tracks older than `max_age_ms` are not reported.
 class TrackSet {
  public:
-  explicit TrackSet(std::uint32_t max_age_ms = 500) : max_age_ms_(max_age_ms) {}
+  explicit TrackSet(std::uint32_t max_age_ms = 500) : max_age_ms_(max_age_ms) { for (Slot& slot : slots_) slot.max_age_ms = max_age_ms; }
+
+  // The age limit of one radar (1 to kRadarCount). A sensor that reports slowly (an LD2461 may send less than twice a second) needs a longer limit than
+  // the 500 ms of the LD2450, or its tracks would always count as stale. 0 puts back the limit the set was made with.
+  void set_max_age(std::uint8_t sensor_id, std::uint32_t max_age_ms) {
+    if (sensor_id < 1 || sensor_id > kRadarCount) return;
+    slots_[sensor_id - 1].max_age_ms = max_age_ms != 0 ? max_age_ms : max_age_ms_;
+  }
 
   // Replace the tracks of one radar (1 to kRadarCount) with those of its newest frame.
   void update(std::uint8_t sensor_id, const Track* tracks, std::size_t count, std::uint64_t now_ms) {
@@ -163,7 +170,7 @@ class TrackSet {
   std::size_t collect(Track* out, std::uint64_t now_ms) const {
     std::size_t total = 0;
     for (const Slot& slot : slots_) {
-      if (!slot.seen || now_ms - slot.updated_ms > max_age_ms_) continue;
+      if (!slot.seen || now_ms - slot.updated_ms > slot.max_age_ms) continue;
       for (std::size_t i = 0; i < slot.count; ++i) out[total++] = slot.tracks[i];
     }
     return total;
@@ -171,7 +178,7 @@ class TrackSet {
 
   // True when at least one radar has reported recently (even an empty frame proves it is alive).
   bool any_fresh(std::uint64_t now_ms) const {
-    for (const Slot& slot : slots_) if (slot.seen && now_ms - slot.updated_ms <= max_age_ms_) return true;
+    for (const Slot& slot : slots_) if (slot.seen && now_ms - slot.updated_ms <= slot.max_age_ms) return true;
     return false;
   }
 
@@ -180,6 +187,7 @@ class TrackSet {
     Track tracks[kTracksPerRadar]{};
     std::size_t count = 0;
     std::uint64_t updated_ms = 0;
+    std::uint32_t max_age_ms = 500;
     bool seen = false;
   };
   Slot slots_[kRadarCount];

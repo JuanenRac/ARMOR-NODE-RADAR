@@ -47,6 +47,12 @@ Protocol document V1.1 and specification V1.1. Big-endian frames `FF EE DD | len
 Unchanged from before. The report frame is from the manufacturer's manual; the **command channel is not in the manual** (it follows the
 family's public framing, `FD FC FB FA … 04 03 02 01`), so a wrong answer is shown raw in the panel. Try "Read information" first.
 
+### How long a track stays valid
+
+The tracks of a frame are reported until they are older than a limit, so a radar that stops leaves no ghost targets. The limit is a setting of each radar line,
+`radars[].track_max_age_ms`: 0 (the default) takes the model's own value, 500 ms for the LD2450 and 3000 ms for the LD2461, which the document says may report less than
+twice a second; 100 to 60000 sets it by hand (about three report periods of the sensor measured on the bench). A presence sensor has no tracks and refuses the setting.
+
 ## Presence sensors: they become devices of the server
 
 A presence sensor has no position. Each one is a **device** of the server with the name given in `radars[].name` (lowercase letters, digits,

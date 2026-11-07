@@ -339,8 +339,13 @@ auth::Result user_add(std::string_view name, std::string_view password, auth::Ro
 }
 
 bool user_verify(std::string_view name, std::string_view password, auth::Role& role) {
-  std::lock_guard<std::mutex> guard(g_lock);
-  return g_users.verify(name, password, hash_password, role);
+  // The hash of the password (10 000 rounds, about a third of a second) is computed on a copy of the users with the lock of the store let go, so that the other tasks that read the settings do not wait for it.
+  auth::UserStore users;
+  {
+    std::lock_guard<std::mutex> guard(g_lock);
+    users = g_users;
+  }
+  return users.verify(name, password, hash_password, role);
 }
 
 auth::Result user_set_password(std::string_view name, std::string_view password) {

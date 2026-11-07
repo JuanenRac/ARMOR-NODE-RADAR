@@ -21,14 +21,14 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-13406%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-13714%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.0-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**Verificação de honestidade - o que funciona hoje:** O nó radar é o único nó que existe como hardware: o seu firmware corre numa placa real Waveshare ESP32-S3-ETH com um radar e reporta à bancada de testes do CM5, e o seu painel web e as atualizações pelo ar são usados nela. O núcleo independente do hardware (13,406 verificações em 16 programas de teste: os descodificadores do LD2450, do LD2461 e de quatro sensores de presença, o canal de comandos do LD2450, as definições e as suas verificações, a tabela de pinos, utilizadores e sessões, o plano de rede, o serializador de mensagens cuja saída o ARMOR-COMMON aceita, e as verificações de versão e assinatura) é testado num computador, o **painel web** foi exercitado num navegador real contra um nó de substituição e a **imagem do firmware compila** no contentor ESP-IDF 5.5.5. O que **ainda não** está provado: os descodificadores do LD2461 e dos sensores de presença só coincidem com os exemplos resolvidos dos seus manuais, sem um módulo por trás; a verificação da assinatura das atualizações e o emparelhamento Bluetooth com PIN estão provados no computador com assinaturas reais mas ainda não na placa; o canal de comandos do radar não foi confrontado com um módulo; e o certificado HTTPS do painel (feito pelo próprio nó) não foi experimentado em todos os navegadores.
+**Verificação de honestidade - o que funciona hoje:** O nó radar é o único nó que existe como hardware: o seu firmware corre numa placa real Waveshare ESP32-S3-ETH com um radar e reporta à bancada de testes do CM5, e o seu painel web e as atualizações pelo ar são usados nela. O núcleo independente do hardware (13,714 verificações em 19 programas de teste: os descodificadores do LD2450, do LD2461 e de quatro sensores de presença, o canal de comandos do LD2450, as definições e as suas verificações, a tabela de pinos, utilizadores e sessões, o plano de rede, o serializador de mensagens cuja saída o ARMOR-COMMON aceita, e as verificações de versão e assinatura) é testado num computador, o **painel web** foi exercitado num navegador real contra um nó de substituição e a **imagem do firmware compila** no contentor ESP-IDF 5.5.5. O que **ainda não** está provado: os descodificadores do LD2461 e dos sensores de presença só coincidem com os exemplos resolvidos dos seus manuais, sem um módulo por trás; a verificação da assinatura das atualizações e o emparelhamento Bluetooth com PIN estão provados no computador com assinaturas reais mas ainda não na placa; o canal de comandos do radar não foi confrontado com um módulo; e o certificado HTTPS do painel (feito pelo próprio nó) não foi experimentado em todos os navegadores.
 
 ---
 
@@ -40,7 +40,7 @@
 | Maturidade | Estabelecido |
 | Função | Nó de campo radar para ESP32-S3 (família: Field Nodes, pai: ARMOR-COMMON) |
 | Tecnologia | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Testes | 13406 verificações em 16 programas de anfitrião e 7 em Python (`ctest`) |
+| Testes | 13714 verificações em 19 programas de anfitrião e 7 em Python (`ctest`) |
 | Placas | Waveshare ESP32-S3-ETH (Ethernet) e ESP32-S3-WROOM-1 N16R8 (só Wi-Fi) |
 | Sensores | Até 3 radares (LD2450, LD2461) ou sensores de presença por nó, sensor de luz VEML7700 |
 | Funciona em | Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8; testes de anfitrião em qualquer computador |
@@ -58,7 +58,7 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Área | Estado | O que significa aqui |
 |---|---|---|
 | Software | 🟢 | O firmware compila no contentor ESP-IDF 5.5.5 e funciona numa placa ESP32-S3-ETH real. |
-| Testes | 🟢 | Passam 13.406 verificações em 16 programas de anfitrião (`ctest`): os descodificadores, as definições, a tabela de pinos, os utilizadores, o plano de rede, o serializador de mensagens e as verificações de versão. |
+| Testes | 🟢 | Passam 13.714 verificações em 19 programas de anfitrião (`ctest`): os descodificadores, as definições, a tabela de pinos, os utilizadores, o plano de rede, o serializador de mensagens e as verificações de versão. |
 | Protocolos e dados | 🟡 | O LD2450 funciona com um radar real; os descodificadores do LD2461 e dos quatro sensores de presença só coincidem com os exemplos dos seus manuais, e o canal de comandos do radar não foi verificado com um módulo. |
 | Interface | 🟡 | O painel web está em uso na placa e foi exercitado num navegador real contra um nó simulado; o seu certificado HTTPS, criado pelo próprio nó, não foi experimentado em todos os navegadores. |
 | Hardware | 🟡 | É o único nó que existe como hardware: uma placa Waveshare ESP32-S3-ETH real com um radar reporta à bancada de testes CM5; não há mais nenhum módulo de sensor ligado. |
@@ -184,6 +184,8 @@ Leia [SECURITY.md](SECURITY.md) para comunicar uma vulnerabilidade. Não houve r
 | `CONFIG_ARMOR_BOARD_S3_ETH` / `_S3_WIFI` | eth | A placa: Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8 (só Wi-Fi) |
 | `CONFIG_ARMOR_BOOT_FACTORY_RESET` | y | Mantenha BOOT 8 s nos primeiros 30 s para recomeçar |
 | `system.login_limit_per_minute` | 30 (0-120) | Palavras-passe erradas por minuto antes de o painel bloquear o início de sessão a todos (0 = sem limite global); lê-se e altera-se no Studio (um botão em cada nó) ou com `POST /api/v1/admin/nodes/settings`, onde o acesso ao painel é usado uma vez e nunca guardado |
+| `security.ota_check_board` | on | Recusar um firmware enviado feito para a outra placa (Wi-Fi ou Ethernet); a imagem leva uma marca da sua placa que o nó lê enquanto chega |
+| `security.ota_require_board_mark` | on | Recusar também uma imagem sem marca de placa (um firmware antigo); desligue para voltar a uma versão feita antes das marcas |
 
 As definições afinadas em direto estão no painel e guardam-se na flash (por exemplo `system.reader_idle_ms`, `security.seal_secrets`, o limite de falhas de início de sessão por minuto (30, de 0 a 120) e as zonas do motor de perímetro); os valores por omissão do firmware estão em `sdkconfig.defaults` e `sdkconfig.board.*`. A flash de 16 MB contém `nvs` (64 KB), `otadata`, `phy_init`, duas ranhuras de 3 MB `ota_0` e `ota_1`, `coredump` (128 KB) e `nvs_keys` (4 KB) (`partitions.csv`).
 
@@ -217,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-16 programas de teste de anfitrião e 7 verificações Python correm com `ctest`; 13406 verificações contadas pelos programas de anfitrião, compiladas com `-Werror`.
+19 programas de teste de anfitrião e 7 verificações Python correm com `ctest`; 13714 verificações contadas pelos programas de anfitrião, compiladas com `-Werror`.
 
 | Parte | O que cobre |
 |---|---|

@@ -5,10 +5,12 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <mutex>
 extern "C" {
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 }
+#include "core/log_line.hpp"
 
 namespace armor::logbuf {
 namespace {
@@ -25,13 +27,26 @@ void append(const char* text, std::size_t length) {
   portEXIT_CRITICAL(&g_spin);
 }
 
+// One buffer for every task, not 224 bytes on the stack of each one that logs. The lock is only tried: a task never waits to write a log line, and the one that finds the buffer taken formats into a small
+// one of its own (so its line is cut shorter, never lost). The console gets the line from the same arguments as before, so what it shows does not depend on this buffer.
+char g_line[kSharedLine];
+std::mutex g_line_lock;
+
 int hook(const char* format, va_list args) {
-  char line[224];
   va_list copy;
   va_copy(copy, args);
-  const int written = std::vsnprintf(line, sizeof line, format, copy);
+  if (g_line_lock.try_lock()) {
+    const int written = std::vsnprintf(g_line, sizeof g_line, format, copy);
+    const std::size_t kept = kept_length(written, sizeof g_line);
+    if (kept > 0) append(g_line, kept);
+    g_line_lock.unlock();
+  } else {
+    char spare[kSpareLine];
+    const int written = std::vsnprintf(spare, sizeof spare, format, copy);
+    const std::size_t kept = kept_length(written, sizeof spare);
+    if (kept > 0) append(spare, kept);
+  }
   va_end(copy);
-  if (written > 0) append(line, static_cast<std::size_t>(written) < sizeof line ? static_cast<std::size_t>(written) : sizeof line - 1);
   return g_previous != nullptr ? g_previous(format, args) : std::vprintf(format, args);
 }
 }  // namespace
