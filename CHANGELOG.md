@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A shim for the simulator's MQTT output:** `tests/mqtt_shim.cpp` is built from the same core files as the firmware (framer, LD2450 decoder, track builder, information, health and telemetry writers, topic builder) and prints the messages the node would publish for a serial stream, so ARMOR-SIMULATOR can send them to a real broker and the server bench can check that the real server takes them. No board is involved and nothing here has run on one.
+
 ## [0.8.1.0] - Simulation bench: tests/simbench.cpp is built from the same core files as the firmware and is fed by ARMOR-SIMULATOR (python -m armorsimulator.nodebench --bus ld2450) with the serial stream of the HLK-LD2450 modules (noise,... (and 2 more changes)
 
 - **Simulation bench:** `tests/sim_bench.cpp` is built from the same core files as the firmware and is fed by ARMOR-SIMULATOR (`python -m armor_simulator.node_bench --bus ld2450`) with the serial stream of the HLK-LD2450 modules (noise, cut or garbled frames, impossible targets, pieces, silence), and the answers are compared with what the documented rules require. The workflow `Simulation bench` runs it on every push, with no board and no ESP-IDF.
