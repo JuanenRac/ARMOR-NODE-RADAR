@@ -30,6 +30,7 @@ extern "C" {
 #if !defined(ARMOR_BOARD_S3_WIFI)
 #include "board_ethernet.hpp"
 #endif
+#include "core/link_watch.hpp"
 #include "core/net_text.hpp"
 
 namespace armor::network {
@@ -155,8 +156,7 @@ void reconnect_station(void*) {
 // radio stays "connected" (no WIFI_EVENT_STA_DISCONNECTED, the signal is good, nothing in the log says anything went wrong) but the node stops being
 // reachable - the gateway itself stops answering it - until it is reset by hand. This task notices that from the inside and forces a fresh association,
 // since nothing else here would ever find out on its own.
-constexpr int kLinkCheckEverySeconds = 20;
-constexpr int kLinkBadRoundsBeforeReconnect = 3;   // three rounds with not even one reply: about a minute of the gateway not answering
+constexpr int kLinkCheckEverySeconds = linkwatch::kDefaultCheckEverySeconds;   // the rule (one reply in a round is enough; three silent rounds in a row reconnect) is core/link_watch.hpp
 
 struct PingRound { SemaphoreHandle_t done; uint32_t replies; };
 
@@ -181,7 +181,7 @@ bool gateway_answers(const esp_ip4_addr_t& gateway) {
   bool answered = true;
   if (esp_ping_new_session(&config, &callbacks, &session) == ESP_OK) {
     esp_ping_start(session);
-    if (xSemaphoreTake(round.done, pdMS_TO_TICKS(8000)) == pdTRUE) answered = round.replies > 0;
+    if (xSemaphoreTake(round.done, pdMS_TO_TICKS(8000)) == pdTRUE) answered = linkwatch::round_answered(round.replies, config.count);
     esp_ping_delete_session(session);
   }
   vSemaphoreDelete(round.done);
@@ -189,21 +189,20 @@ bool gateway_answers(const esp_ip4_addr_t& gateway) {
 }
 
 void link_watchdog_task(void*) {
-  int bad_rounds = 0;
+  linkwatch::Watch watch;
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(kLinkCheckEverySeconds * 1000));
     bool has_ip;
     { std::lock_guard<std::mutex> guard(g_lock); has_ip = g_status.has_ip; }
-    if (!has_ip || g_ip_netif == nullptr) { bad_rounds = 0; continue; }
     esp_netif_ip_info_t info{};
-    if (esp_netif_get_ip_info(g_ip_netif, &info) != ESP_OK || info.gw.addr == 0) { bad_rounds = 0; continue; }
-    if (gateway_answers(info.gw)) { bad_rounds = 0; continue; }
-    bad_rounds += 1;
-    ESP_LOGW(kTag, "the gateway has not answered a single ping in %d round(s) of %d s", bad_rounds, kLinkCheckEverySeconds);
-    if (bad_rounds >= kLinkBadRoundsBeforeReconnect) {
-      ESP_LOGW(kTag, "the station looks connected but the gateway never answers: forcing a fresh association");
-      bad_rounds = 0;
-      esp_wifi_disconnect();   // the disconnect handler already schedules a reconnect a few seconds later
+    if (!has_ip || g_ip_netif == nullptr || esp_netif_get_ip_info(g_ip_netif, &info) != ESP_OK || info.gw.addr == 0) { watch.idle(); continue; }
+    switch (watch.round(gateway_answers(info.gw))) {
+      case linkwatch::Verdict::kHealthy: break;
+      case linkwatch::Verdict::kSuspect: ESP_LOGW(kTag, "the gateway has not answered a single ping in %d round(s) of %d s", watch.bad_rounds(), kLinkCheckEverySeconds); break;
+      case linkwatch::Verdict::kReconnect:
+        ESP_LOGW(kTag, "the station looks connected but the gateway never answers: forcing a fresh association");
+        esp_wifi_disconnect();   // the disconnect handler already schedules a reconnect a few seconds later
+        break;
     }
   }
 }
