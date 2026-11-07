@@ -40,7 +40,7 @@
 | 成熟度 | 確立 |
 | 役割 | ESP32-S3 用レーダーフィールドノード（ファミリー：Field Nodes、親：ARMOR-COMMON） |
 | 技術 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| テスト | 13406 件の検査（ホスト用プログラム 16 本と Python 検査 6 個、`ctest`） |
+| テスト | 13406 件の検査（ホスト用プログラム 16 本と Python 検査 7 個、`ctest`） |
 | 基板 | Waveshare ESP32-S3-ETH（Ethernet）と ESP32-S3-WROOM-1 N16R8（Wi-Fi のみ） |
 | センサー | ノードあたり最大 3 台のレーダー（LD2450、LD2461）または人感センサー、光センサー VEML7700 |
 | 動作環境 | Waveshare ESP32-S3-ETH または ESP32-S3-WROOM-1 N16R8、ホストテストは任意のコンピューター |
