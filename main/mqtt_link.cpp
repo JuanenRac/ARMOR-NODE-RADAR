@@ -12,8 +12,12 @@
 #include <mutex>
 #include <vector>
 #include <ctime>
+#include <cerrno>
 extern "C" {
+#include <fcntl.h>
 #include <sys/time.h>
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -22,7 +26,9 @@ extern "C" {
 #include "mqtt_client.h"
 }
 #include "contract_version.hpp"
+#include "core/broker_uri.hpp"
 #include "core/gpio_logic.hpp"
+#include "core/link_watch.hpp"
 #include "core/mqtt_tls.hpp"
 #include "node_guard.hpp"
 #include "node_health.hpp"
@@ -297,22 +303,55 @@ void start_client(const config::Broker& broker) {
 constexpr int kBrokerCheckEverySeconds = 10;
 constexpr int kBrokerBadRoundsBeforeSwitch = 3;   // about 30 s disconnected before trying the next saved broker
 
+// Whether something answers at the address of a broker: a TCP connection, tried for at most three seconds. (The watchdog asks before it leaves a broker that works for one that did not.)
+bool broker_answers(const std::string& uri) {
+  const broker_uri::HostPort where = broker_uri::parse(uri);
+  if (!where.ok) return false;
+  addrinfo hints{};
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  addrinfo* found = nullptr;
+  if (getaddrinfo(where.host.c_str(), std::to_string(where.port).c_str(), &hints, &found) != 0 || found == nullptr) return false;
+  bool answered = false;
+  const int sock = socket(found->ai_family, found->ai_socktype, found->ai_protocol);
+  if (sock >= 0) {
+    fcntl(sock, F_SETFL, fcntl(sock, F_GETFL, 0) | O_NONBLOCK);
+    const int result = connect(sock, found->ai_addr, found->ai_addrlen);
+    if (result == 0) answered = true;
+    else if (errno == EINPROGRESS) {
+      fd_set writable;
+      FD_ZERO(&writable);
+      FD_SET(sock, &writable);
+      timeval wait{3, 0};
+      int error = 0;
+      socklen_t size = sizeof error;
+      if (select(sock + 1, nullptr, &writable, nullptr, &wait) > 0 && getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &size) == 0 && error == 0) answered = true;
+    }
+    close(sock);
+  }
+  freeaddrinfo(found);
+  return answered;
+}
+
 // The same idea as main/network.cpp's Wi-Fi link watchdog, for the broker: tried only when the connection has stayed down
 // for a while, and only when another saved broker exists - never while the one above still works.
 void broker_watchdog_task(void*) {
   int bad_rounds = 0;
-  int rounds_on_backup = 0;
+  linkwatch::BackupReturn back_to_first;
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(kBrokerCheckEverySeconds * 1000));
     if (g_connected) {
       bad_rounds = 0;
       // On a saved broker that is not the first one for half an hour: the first one is tried again (it used to be forgotten until the next restart). If it is still down the watchdog
       // moves on to the next saved one after the usual wait.
-      if (g_broker_index != 0 && ++rounds_on_backup * kBrokerCheckEverySeconds >= 1800) {
-        rounds_on_backup = 0;
+      // The rule (when to ask, and to go back only when the first broker answers) is core/link_watch.hpp's, tested on a computer: leaving a broker that works for one that is still down
+      // cost a minute of silence every half hour.
+      const config::Broker first = current_broker(g_settings, 0);
+      const linkwatch::BackStep step = back_to_first.connected_round(g_broker_index, kBrokerCheckEverySeconds, [&first]() { return broker_answers(first.uri); });
+      if (step == linkwatch::BackStep::kFirstStillDown) { ESP_LOGI(kTag, "the first saved broker (%s) does not answer yet: staying on the one that works", first.uri.c_str()); continue; }
+      if (step == linkwatch::BackStep::kGoBack) {
         g_broker_index = 0;
-        const config::Broker first = current_broker(g_settings, 0);
-        ESP_LOGI(kTag, "back to the first saved broker (%s) to see whether it answers again", first.uri.c_str());
+        ESP_LOGI(kTag, "back to the first saved broker (%s): it answers again", first.uri.c_str());
         esp_mqtt_client_handle_t old = nullptr;
         { std::lock_guard<std::mutex> guard(g_client_lock); old = g_client; g_client = nullptr; }
         g_connected = false;
@@ -321,7 +360,7 @@ void broker_watchdog_task(void*) {
       }
       continue;
     }
-    rounds_on_backup = 0;
+    back_to_first.reset();
     bool no_client = false;
     { std::lock_guard<std::mutex> guard(g_client_lock); no_client = g_client == nullptr; }
     if (no_client) {   // the client could not be created or started: it is tried again, after about half a minute

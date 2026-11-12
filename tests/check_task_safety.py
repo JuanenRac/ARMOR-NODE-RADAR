@@ -210,6 +210,7 @@ def analyse(root: Path) -> tuple[list[tuple[str, int, str, str]], list[str]]:
                             + ". Put them on the heap (std::unique_ptr / new (std::nothrow)) or mark each `// task-stack-ok: <reason>`")
     problems += http_buffer_problems(root, sources)
     problems += scan_guard_problems(sources)
+    problems += adc_lock_problems(sources)
     seen_problems: list[str] = []
     for p in problems:
         if p not in seen_problems:
@@ -218,10 +219,26 @@ def analyse(root: Path) -> tuple[list[tuple[str, int, str, str]], list[str]]:
 
 
 def found_configs(text):
-    return list(re.finditer(r"buffer_size\s*=\s*[^;]+;", text))
+    return list(re.finditer(r"\bbuffer_size\s*=\s*[^;]+;", text))
 
 
 HEADER_BUFFER_MIN = 6144               # the redirect of a GitHub download carries about 5.2 KB of headers
+
+
+def adc_lock_problems(sources: dict[Path, str]) -> list[str]:
+    """The converter is shared: the random source of the chip (bootloader_random_enable) reconfigures it and is not safe while another part reads it, so every file of the node that reads the converter
+    takes adc_lock() and the entropy code takes it before it switches the noise source on."""
+    problems: list[str] = []
+    for path, text in sources.items():
+        reads = re.search(r"\badc_(?:oneshot_read|continuous_read|continuous_start)\s*\(", text)
+        if reads and not re.search(r"\badc_lock\s*\(\s*\)", text):
+            problems.append(f"{path.name}:{line_of(text, reads.start())}: the converter is read without taking adc_lock() (the noise source of the random generator reconfigures it)")
+        enable = re.search(r"\bbootloader_random_enable\s*\(", text)
+        if enable:
+            lock = re.search(r"lock_guard<std::mutex>\s+\w+\s*\(\s*adc_lock\s*\(\s*\)\s*\)", text)
+            if lock is None or lock.start() > enable.start():
+                problems.append(f"{path.name}:{line_of(text, enable.start())}: bootloader_random_enable() is not preceded by the lock of the converter")
+    return problems
 
 
 def scan_guard_problems(sources: dict[Path, str]) -> list[str]:
@@ -253,7 +270,7 @@ def http_buffer_problems(root: Path, sources: dict[Path, str]) -> list[str]:
                 problems.append(f"{path.name}:{line_of(text, m.start())}: buffer_size = {expression} is not header_buffer() nor a number of {HEADER_BUFFER_MIN} or more")
     for path, text in updater:
         # the REQUEST buffer too: after GitHub's redirect the request line carries an address of about a thousand characters, and the client's default of 512 bytes says "Out of buffer"
-        tx = list(re.finditer(r"buffer_size_tx\s*=\s*([^;]+);", text))
+        tx = list(re.finditer(r"\bbuffer_size_tx\s*=\s*([^;]+);", text))
         if len(tx) < len(found_configs(text)):
             problems.append(f"{path.name}: an HTTP client does not set buffer_size_tx (the default 512 bytes cannot hold GitHub's redirect address)")
         for m in tx:

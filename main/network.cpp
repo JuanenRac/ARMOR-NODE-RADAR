@@ -48,6 +48,7 @@ esp_eth_handle_t g_eth = nullptr;
 esp_timer_handle_t g_reconnect_timer = nullptr;
 bool g_wifi_running = false;   // the driver was started by start() (an access point, a station, or both)
 std::mutex g_scan_lock;
+std::atomic<bool> g_scan_switched_mode{false};   // true while scan() has changed the mode of the radio only to be able to search
 
 // Which saved network the station is on now (0: the one above, 1..: settings.sta.backup[index-1]) and how many times in a row
 // it has failed to connect since the last success or switch. After enough failures, and only when another saved network
@@ -223,7 +224,10 @@ void on_wifi_event(void*, esp_event_base_t, int32_t event_id, void* data) {
       ESP_LOGI(kTag, "a client left the access point: %s", mac_text(event->mac).c_str());
       break;
     }
-    case WIFI_EVENT_STA_START: esp_wifi_connect(); break;
+    case WIFI_EVENT_STA_START:
+      // The search of the access point mode (below) starts the station only to look around: it has no network to join, and a station that is "connecting" refuses the search.
+      if (!g_scan_switched_mode) esp_wifi_connect();
+      break;
     case WIFI_EVENT_STA_CONNECTED: {
       g_sta_attempts = 0;   // forget past failures of this network now that it has worked
       std::string ssid;
@@ -253,9 +257,10 @@ void on_wifi_event(void*, esp_event_base_t, int32_t event_id, void* data) {
       int total;
       {
         std::lock_guard<std::mutex> guard(g_lock);
-        g_status.link_up = false;
-        g_status.sta_connected = false;
-        g_status.has_ip = false;
+        const netplan::LinkFlags after = netplan::after_station_lost({g_status.link_up, g_status.sta_connected, g_status.has_ip}, g_settings.uplink == config::Uplink::kEthernet);
+        g_status.link_up = after.link_up;
+        g_status.sta_connected = after.sta_connected;
+        g_status.has_ip = after.has_ip;   // on the cable the address is the cable's: a search of the access point mode must not take it away
         g_status.sta_error = error;
         ssid = g_status.sta_ssid;
         total = station_network_count(g_settings);
@@ -570,7 +575,7 @@ bool scan(std::vector<ScanEntry>& out, std::string& error) {
     started_here = true;
   } else {
     esp_wifi_get_mode(&previous);
-    if (previous == WIFI_MODE_AP) esp_wifi_set_mode(WIFI_MODE_APSTA);   // an access point alone cannot search
+    if (previous == WIFI_MODE_AP) { g_scan_switched_mode = true; esp_wifi_set_mode(WIFI_MODE_APSTA); }   // an access point alone cannot search
   }
   wifi_scan_config_t config{};
   config.show_hidden = false;
@@ -598,7 +603,7 @@ bool scan(std::vector<ScanEntry>& out, std::string& error) {
     error = result == ESP_ERR_WIFI_STATE ? "wifi_busy" : "scan_failed";
   }
   if (started_here) { esp_wifi_stop(); esp_wifi_deinit(); }
-  else if (previous == WIFI_MODE_AP) esp_wifi_set_mode(WIFI_MODE_AP);
+  else if (previous == WIFI_MODE_AP) { esp_wifi_set_mode(WIFI_MODE_AP); g_scan_switched_mode = false; }
   return ok;
 }
 

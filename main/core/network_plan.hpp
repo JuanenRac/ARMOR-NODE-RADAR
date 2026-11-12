@@ -33,6 +33,17 @@ struct AccessPointPlan {
   int bandwidth_mhz = 20;
 };
 
+// What the station's loss of its network does to the node's link state. On a node that reaches the network over the cable (kEthernet, kEthernetBridgedAp and kEthernetWithAp), the station only ever
+// exists to look around or to serve the access point: its "disconnected" says nothing about the cable, so the link and the address that came from the cable stay as they are. Only a node whose way in
+// IS the station loses its link and its address. (The same rule is in the shared firmware of the other nodes, netplan.hpp.)
+struct LinkFlags { bool link_up = false, sta_connected = false, has_ip = false; };
+inline LinkFlags after_station_lost(LinkFlags now, bool wired_uplink) {
+  LinkFlags out = now;
+  out.sta_connected = false;
+  if (!wired_uplink) { out.link_up = false; out.has_ip = false; }
+  return out;
+}
+
 struct Plan {
   Layout layout = Layout::kEthernet;
   AccessPointPlan ap;

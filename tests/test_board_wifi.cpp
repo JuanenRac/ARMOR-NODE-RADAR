@@ -88,8 +88,27 @@ static void test_layouts() {
   CHECK(plan.layout == netplan::Layout::kWifiStationWithAp && !plan.ap.bridged);
 }
 
+// The station losing its network on a node that uses the cable keeps the cable's link and address (the same rule as the shared firmware of the other nodes).
+static void test_station_lost_on_the_cable() {
+  using namespace armor::netplan;
+  const LinkFlags up{true, true, true};
+  const LinkFlags wifi = after_station_lost(up, false);
+  CHECK(!wifi.link_up && !wifi.sta_connected && !wifi.has_ip);
+  const LinkFlags cable = after_station_lost(up, true);
+  CHECK(cable.link_up && !cable.sta_connected && cable.has_ip);
+  for (int bits = 0; bits < 8; ++bits) {
+    const LinkFlags in{(bits & 1) != 0, (bits & 2) != 0, (bits & 4) != 0};
+    for (const bool wired : {false, true}) {
+      const LinkFlags out = after_station_lost(in, wired);
+      CHECK(!out.sta_connected && (!out.link_up || in.link_up) && (!out.has_ip || in.has_ip));
+      CHECK(wired ? (out.link_up == in.link_up && out.has_ip == in.has_ip) : (!out.link_up && !out.has_ip));
+    }
+  }
+}
+
 int main() {
   test_profile_and_pins();
+  test_station_lost_on_the_cable();
   test_settings();
   test_layouts();
   std::printf("%d checks, %d failures\n", checks, failures);

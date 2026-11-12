@@ -58,4 +58,32 @@ class Watch {
   int fruitless_ = 0;
 };
 
+// The way back to the first saved broker. A node that works on a backup broker asks, once in a while, whether the first one answers again: it only goes back when it does, because leaving a broker
+// that works for one that is still down costs a minute of silence every time. The rule is here so that it is tested on a computer; the node's task counts its rounds and does the connecting.
+enum class BackStep {
+  kStay,           // nothing to decide this round
+  kFirstStillDown, // the time has come, the first broker did not answer: stay where it works
+  kGoBack,         // the time has come and the first broker answers: go back to it
+};
+
+class BackupReturn {
+ public:
+  explicit BackupReturn(int after_seconds = 1800) : after_seconds_(after_seconds < 1 ? 1 : after_seconds) {}
+  // One round of a connected node (`every_seconds` apart). `broker_index` 0 is the first saved broker. `first_answers` is asked only when the time has come.
+  template <class Ask>
+  BackStep connected_round(int broker_index, int every_seconds, Ask first_answers) {
+    if (broker_index == 0) { rounds_ = 0; return BackStep::kStay; }
+    if (++rounds_ * (every_seconds < 1 ? 1 : every_seconds) < after_seconds_) return BackStep::kStay;
+    rounds_ = 0;
+    return first_answers() ? BackStep::kGoBack : BackStep::kFirstStillDown;
+  }
+  // The connection went down (or the broker changed): the count starts again.
+  void reset() { rounds_ = 0; }
+  int rounds() const { return rounds_; }
+
+ private:
+  int after_seconds_;
+  int rounds_ = 0;
+};
+
 }  // namespace armor::linkwatch

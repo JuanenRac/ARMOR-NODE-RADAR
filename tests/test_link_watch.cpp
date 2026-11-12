@@ -142,7 +142,33 @@ static void test_a_new_address_forgets_that_the_watch_stood_down() {
   CHECK(ping_round(watch, 0) == Verdict::kReconnect);   // one fresh try again
 }
 
+// The way back to the first saved broker: never on the first broker, only when the time has come, and only when the first broker answers.
+static void test_the_way_back_to_the_first_broker() {
+  BackupReturn back(1800);
+  int asked = 0;
+  const auto answers = [&asked]() { ++asked; return true; };
+  const auto down = [&asked]() { ++asked; return false; };
+  for (int i = 0; i < 1000; ++i) CHECK(back.connected_round(0, 10, answers) == BackStep::kStay);   // on the first broker nothing is ever asked
+  CHECK(asked == 0 && back.rounds() == 0);
+  for (int i = 1; i < 180; ++i) CHECK(back.connected_round(1, 10, answers) == BackStep::kStay);   // 179 rounds of 10 s: 1790 s, not yet
+  CHECK(asked == 0);
+  CHECK(back.connected_round(1, 10, down) == BackStep::kFirstStillDown && asked == 1 && back.rounds() == 0);   // the 180th: asked, still down, the count starts again
+  for (int i = 1; i < 180; ++i) CHECK(back.connected_round(2, 10, answers) == BackStep::kStay);
+  CHECK(back.connected_round(2, 10, answers) == BackStep::kGoBack && asked == 2);                // answers: go back
+  back.connected_round(1, 10, answers);
+  back.reset();
+  CHECK(back.rounds() == 0);
+  BackupReturn never(0);                                                                         // a limit of zero is one second, never a division or a stall
+  CHECK(never.connected_round(1, 0, answers) == BackStep::kGoBack);
+  BackupReturn slow(100);
+  CHECK(slow.connected_round(1, 60, answers) == BackStep::kStay && slow.connected_round(1, 60, answers) == BackStep::kGoBack);   // rounds of another length
+  BackupReturn mixed(1800);
+  for (int i = 0; i < 100; ++i) mixed.connected_round(1, 10, answers);
+  CHECK(mixed.connected_round(0, 10, answers) == BackStep::kStay && mixed.rounds() == 0);        // back on the first broker by other means: the count is forgotten
+}
+
 int main() {
+  test_the_way_back_to_the_first_broker();
   test_a_router_that_never_answers_pings();
   test_a_gateway_that_answered_and_then_went_silent_is_always_an_outage();
   test_a_new_address_forgets_that_the_watch_stood_down();
