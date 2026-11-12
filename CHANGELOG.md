@@ -4,7 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
-- **A floor for the test coverage of `core/`:** the workflow `coverage-floor.yml` builds the host tests with gcov counters, runs them and fails when the lines or the branches they execute fall below `docs/coverage_threshold.json` (floor: lines 97.3, branches 85.2; measured 97.8 and 85.7). Raising it is a change of that file with a figure measured by a run of the workflow.
+- **Tests of the small tables that nothing reached:** `tests/test_cover_gaps.cpp` checks every name of an event and of a bridge refusal (none repeated), the five layouts of the network, every setting of the light sensor, the step of its ladder at both ends, the text a presence sensor gives the server and the words of the Bluetooth state of a sensor.
+
+- **A floor for the test coverage of `core/`:** the workflow `coverage-floor.yml` builds the host tests with gcov counters, runs them and fails when the lines or the branches they execute fall below `docs/coverage_threshold.json` (floor: lines 97.6, branches 85.4; measured 98.1 and 85.9). Raising it is a change of that file with a figure measured by a run of the workflow.
 
 - **More tests of the rules the nodes share:** `tests/test_shared_more.cpp` (the same file in every node) tries the words of the health report and each optional part of it, and has the generated reader of the contract accept and write back a full report; the report of a dirty start (every cause, the guard's records, the out-of-memory and the last look before a crash); the reading of the settings kept in flash (a field that cannot be accepted is left out, the rest is kept); and the operations of the Bluetooth channel with a stand-in for the radio and the storage (who may ask what, the set-up, the throttle on wrong passwords per phone and for all of them).
 
