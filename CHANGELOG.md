@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared wire header knows the field `challenge` of the voice turn result:** the generated `core/armor_wire.hpp` (copied from ARMOR-COMMON) describes the optional number of two to six digits that the voice service sends in the mode `challenge` of its silence confirmation. This node does not use it; the copy only follows the contract.
+
 - **The log hook no longer takes 224 bytes of the stack of every task that logs:** the line is formatted into one static buffer shared by all the tasks (tried, never waited for, with a small buffer on the stack as the way out), so the tasks with 3 KiB of stack have room and the lines of the panel's log are cut at 383 characters instead of 223. The rule of what is kept is `core/log_line.hpp`, host-tested.
 
 - **A firmware for the other board is refused:** both boards run this project, so an uploaded image for the other one passed the check by project name and, on the Ethernet board, left the node off the cable for good. Every image now carries a small mark with the board it was built for (`core/image_board.hpp`, found while the image arrives, never held whole); the upload and the switch to the other slot are checked against it. Two settings in the panel, both on by default: `security.ota_check_board` and `security.ota_require_board_mark` (also refuse an older image with no mark). Host tests for the mark, the scanner at every piece size and the settings.
