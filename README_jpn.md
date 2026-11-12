@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-15291%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-15636%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
@@ -40,7 +40,7 @@
 | 成熟度 | 確立 |
 | 役割 | ESP32-S3 用レーダーフィールドノード（ファミリー：Field Nodes、親：ARMOR-COMMON） |
 | 技術 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| テスト | 15291 件の検査（ホスト用プログラム 22 本と Python 検査 7 個、`ctest`） |
+| テスト | 15636 件の検査（ホスト用プログラム 22 本と Python 検査 7 個、`ctest`） |
 | 基板 | Waveshare ESP32-S3-ETH（Ethernet）と ESP32-S3-WROOM-1 N16R8（Wi-Fi のみ） |
 | センサー | ノードあたり最大 3 台のレーダー（LD2450、LD2461）または人感センサー、光センサー VEML7700 |
 | 動作環境 | Waveshare ESP32-S3-ETH または ESP32-S3-WROOM-1 N16R8、ホストテストは任意のコンピューター |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-ホスト用テストプログラム 22 個と Python の検査 6 個を `ctest` で実行します。ホストのプログラムが数えた検査は 15291 件で、`-Werror` でビルドします。
+ホスト用テストプログラム 22 個と Python の検査 6 個を `ctest` で実行します。ホストのプログラムが数えた検査は 15636 件で、`-Werror` でビルドします。
 
 | 部分 | 対象 |
 |---|---|

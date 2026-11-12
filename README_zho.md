@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-15291%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-15636%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
@@ -40,7 +40,7 @@
 | 成熟度 | 成熟 |
 | 角色 | ESP32-S3 雷达现场节点（家族：Field Nodes，上级：ARMOR-COMMON） |
 | 技术栈 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| 测试 | 15291 项检查（22 个主机程序和 7 项 Python 检查，`ctest`） |
+| 测试 | 15636 项检查（22 个主机程序和 7 项 Python 检查，`ctest`） |
 | 电路板 | Waveshare ESP32-S3-ETH（以太网）和 ESP32-S3-WROOM-1 N16R8（仅 Wi-Fi） |
 | 传感器 | 每个节点最多 3 台雷达（LD2450、LD2461）或存在传感器，以及 VEML7700 光传感器 |
 | 运行位置 | Waveshare ESP32-S3-ETH 或 ESP32-S3-WROOM-1 N16R8；主机测试可在任何计算机上运行 |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-`ctest` 运行 22 个主机测试程序和 7 个 Python 检查；主机程序统计的检查共 15291 项，使用 `-Werror` 构建。
+`ctest` 运行 22 个主机测试程序和 7 个 Python 检查；主机程序统计的检查共 15636 项，使用 `-Werror` 构建。
 
 | 部分 | 覆盖内容 |
 |---|---|

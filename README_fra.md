@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 ou ultérieure">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Langage">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-15291%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-15636%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturité">
 </p>
@@ -40,7 +40,7 @@
 | Maturité | Établi |
 | Rôle | Nœud de terrain radar pour ESP32-S3 (famille : Field Nodes, parent : ARMOR-COMMON) |
 | Technologie | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 15291 vérifications dans 22 programmes hôte et 7 contrôles Python (`ctest`) |
+| Tests | 15636 vérifications dans 22 programmes hôte et 7 contrôles Python (`ctest`) |
 | Cartes | Waveshare ESP32-S3-ETH (Ethernet) et ESP32-S3-WROOM-1 N16R8 (Wi-Fi seul) |
 | Capteurs | Jusqu'à 3 radars (LD2450, LD2461) ou capteurs de présence par nœud, capteur de lumière VEML7700 |
 | Fonctionne sur | Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8 ; tests sur hôte sur n'importe quel ordinateur |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 programmes de test sur hôte et 7 contrôles Python tournent sous `ctest` ; 15291 vérifications comptées par les programmes hôte, compilés avec `-Werror`.
+22 programmes de test sur hôte et 7 contrôles Python tournent sous `ctest` ; 15636 vérifications comptées par les programmes hôte, compilés avec `-Werror`.
 
 | Partie | Ce qu'il couvre |
 |---|---|
