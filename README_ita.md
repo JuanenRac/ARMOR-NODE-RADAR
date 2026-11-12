@@ -21,14 +21,14 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 o successiva">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Linguaggio">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-14161%20checks-2ea44f.svg" alt="Test">
+  <img src="https://img.shields.io/badge/Tests-15256%20checks-2ea44f.svg" alt="Test">
   <img src="https://img.shields.io/badge/Version-0.8.1.0-0f6cbd.svg" alt="Versione">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturità">
 </p>
 
 ---
 
-**Controllo di onestà - cosa funziona oggi:** Il nodo radar è l'unico nodo che esiste come hardware: il suo firmware gira su una vera scheda Waveshare ESP32-S3-ETH con un radar e riferisce al banco di prova CM5, e il suo pannello web e gli aggiornamenti via etere vi sono in uso. Il nucleo indipendente dall'hardware (14,161 controlli in 21 programmi di test: i decodificatori dell'LD2450, dell'LD2461 e di quattro sensori di presenza, il canale di comando dell'LD2450, le impostazioni e i loro controlli, la tabella dei pin, utenti e sessioni, il piano di rete, il serializzatore di messaggi la cui uscita è accettata da ARMOR-COMMON, e i controlli di versione e firma) è provato su un computer, il **pannello web** è stato esercitato in un vero browser contro un nodo sostitutivo e l'**immagine del firmware si compila** nel contenitore ESP-IDF 5.5.5. Ciò che **non** è ancora provato: i decodificatori dell'LD2461 e dei sensori di presenza corrispondono solo agli esempi svolti dei loro manuali, senza un modulo dietro; il controllo della firma degli aggiornamenti e l'abbinamento Bluetooth con PIN sono provati su computer con firme vere ma non ancora sulla scheda; il canale di comando del radar non è verificato con un modulo; e il certificato HTTPS del pannello (fatto dal nodo stesso) non è provato in tutti i browser.
+**Controllo di onestà - cosa funziona oggi:** Il nodo radar è l'unico nodo che esiste come hardware: il suo firmware gira su una vera scheda Waveshare ESP32-S3-ETH con un radar e riferisce al banco di prova CM5, e il suo pannello web e gli aggiornamenti via etere vi sono in uso. Il nucleo indipendente dall'hardware (15,256 controlli in 22 programmi di test: i decodificatori dell'LD2450, dell'LD2461 e di quattro sensori di presenza, il canale di comando dell'LD2450, le impostazioni e i loro controlli, la tabella dei pin, utenti e sessioni, il piano di rete, il serializzatore di messaggi la cui uscita è accettata da ARMOR-COMMON, e i controlli di versione e firma) è provato su un computer, il **pannello web** è stato esercitato in un vero browser contro un nodo sostitutivo e l'**immagine del firmware si compila** nel contenitore ESP-IDF 5.5.5. Ciò che **non** è ancora provato: i decodificatori dell'LD2461 e dei sensori di presenza corrispondono solo agli esempi svolti dei loro manuali, senza un modulo dietro; il controllo della firma degli aggiornamenti e l'abbinamento Bluetooth con PIN sono provati su computer con firme vere ma non ancora sulla scheda; il canale di comando del radar non è verificato con un modulo; e il certificato HTTPS del pannello (fatto dal nodo stesso) non è provato in tutti i browser.
 
 ---
 
@@ -40,7 +40,7 @@
 | Maturità | Consolidato |
 | Ruolo | Nodo di campo radar per ESP32-S3 (famiglia: Field Nodes, padre: ARMOR-COMMON) |
 | Tecnologia | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Test | 14161 verifiche in 21 programmi host e 7 verifiche Python (`ctest`) |
+| Test | 15256 verifiche in 22 programmi host e 7 verifiche Python (`ctest`) |
 | Schede | Waveshare ESP32-S3-ETH (Ethernet) e ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
 | Sensori | Fino a 3 radar (LD2450, LD2461) o sensori di presenza per nodo, sensore di luce VEML7700 |
 | Gira su | Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8; test su host su qualsiasi computer |
@@ -58,7 +58,7 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Area | Stato | Cosa significa qui |
 |---|---|---|
 | Software | 🟢 | Il firmware compila nel contenitore ESP-IDF 5.5.5 e gira su una scheda ESP32-S3-ETH reale. |
-| Test | 🟢 | Superano 14.161 controlli in 21 programmi host (`ctest`): i decodificatori, le impostazioni, la tabella dei pin, gli utenti, il piano di rete, il serializzatore dei messaggi e i controlli di versione. |
+| Test | 🟢 | Superano 15.256 controlli in 22 programmi host (`ctest`): i decodificatori, le impostazioni, la tabella dei pin, gli utenti, il piano di rete, il serializzatore dei messaggi e i controlli di versione. |
 | Protocolli e dati | 🟡 | L'LD2450 funziona con un radar reale; i decodificatori dell'LD2461 e dei quattro sensori di presenza corrispondono solo agli esempi dei loro manuali e il canale di comando del radar non è stato verificato con un modulo. |
 | Interfaccia | 🟡 | Il pannello web è in uso sulla scheda e provato in un browser reale contro un nodo simulato; il suo certificato HTTPS, creato dal nodo stesso, non è stato provato in tutti i browser. |
 | Hardware | 🟡 | È l'unico nodo che esiste come hardware: una scheda Waveshare ESP32-S3-ETH reale con un radar riferisce al banco di prova CM5; nessun altro modulo sensore è collegato. |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-21 programmi di test su host e 7 verifiche Python girano con `ctest`; 14161 verifiche contate dai programmi host, compilati con `-Werror`.
+22 programmi di test su host e 7 verifiche Python girano con `ctest`; 15256 verifiche contate dai programmi host, compilati con `-Werror`.
 
 | Parte | Cosa copre |
 |---|---|

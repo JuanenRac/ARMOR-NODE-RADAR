@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The readers and writers of the messages are tried with every member of their contract:** a new test program (`test_wire_full`, shared with the other nodes) reads and writes back, for every message, documents that hold every member the schema declares and documents that leave out about half of the optional ones, and feeds the decoder of the text patterns text that is not UTF-8; the branch coverage of the generated reader and writer goes from 79 % to 88 %, the floor goes from 98.0 % of the lines and 86.3 % of the branches to 99.0 % and 89.5 % (measured 99.3 % and 89.8 %).
+
 - **More of the shared rules are tried:** the shared test program covers the diagnostic package, the release signature text and the Bluetooth frames branch by branch; the floor of the branch coverage goes from 85.4 % to 86.3 % (measured 86.8 %).
 
 - **Tests of the small tables that nothing reached:** `tests/test_cover_gaps.cpp` checks every name of an event and of a bridge refusal (none repeated), the five layouts of the network, every setting of the light sensor, the step of its ladder at both ends, the text a presence sensor gives the server and the words of the Bluetooth state of a sensor.
