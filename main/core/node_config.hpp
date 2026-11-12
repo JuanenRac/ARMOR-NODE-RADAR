@@ -42,6 +42,8 @@ enum class Pull { kNone, kUp, kDown };
 enum class SafeState { kOff, kOn, kKeep };
 // When the node accepts configuration over Bluetooth: never, only while it has no user (set-up), or always.
 enum class BleMode { kOff, kSetup, kAlways };
+// When the node listens on its USB serial line for an Improv Wi-Fi packet (ESP Web Tools): never, only while no Wi-Fi network is stored (the default), or always.
+enum class ImprovMode { kOff, kSetup, kAlways };
 // The panel over plain HTTP only, over HTTP and HTTPS (a certificate the node made for itself), or over HTTPS only (port 80 sends the browser to HTTPS).
 enum class WebMode { kHttp, kBoth, kHttps };
 
@@ -188,6 +190,10 @@ struct Settings {
   Sensors sensors;
   std::vector<MappedPin> pins;
   BleMode ble = BleMode::kSetup;
+  // Improv Wi-Fi over the USB cable: "setup" (only while the node has no Wi-Fi network stored), "always" or "off". See core/improv.hpp (should_listen).
+  ImprovMode improv = ImprovMode::kSetup;
+  // The waits before a retry. The defaults are the waits the firmware has always used (1 s growing to 30 s for the Wi-Fi, to 60 s for the broker, 20 % scatter).
+  int retry_wifi_first_ms = 1000, retry_wifi_max_ms = 30000, retry_mqtt_first_ms = 1000, retry_mqtt_max_ms = 60000, retry_scatter_percent = 20;
   WebMode web = WebMode::kBoth;
   std::string admin_sources;   // the networks that may use the panel; empty = the private ranges of a house (see admin_sources.hpp)
   std::string language = "en";
@@ -234,6 +240,7 @@ inline const char* to_text(PinMode v) {
 }
 inline const char* to_text(Pull v) { return v == Pull::kUp ? "up" : v == Pull::kDown ? "down" : "none"; }
 inline const char* to_text(WebMode v) { return v == WebMode::kHttps ? "https" : v == WebMode::kHttp ? "http" : "both"; }
+inline const char* to_text(ImprovMode v) { return v == ImprovMode::kAlways ? "always" : v == ImprovMode::kOff ? "off" : "setup"; }
 inline const char* to_text(BleMode v) { return v == BleMode::kAlways ? "always" : v == BleMode::kOff ? "off" : "setup"; }
 inline const char* to_text(SafeState v) { return v == SafeState::kOn ? "on" : v == SafeState::kOff ? "off" : "keep"; }
 
@@ -616,6 +623,16 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       }
     }
   }
+  if (const json::Value* improv = document.get("improv"); improv != nullptr && improv->is_object()) {
+    if (!read_choice<ImprovMode>(*improv, "mode", {{"off", ImprovMode::kOff}, {"setup", ImprovMode::kSetup}, {"always", ImprovMode::kAlways}}, s.improv)) bad(problems, "improv.mode", "invalid");
+  }
+  if (const json::Value* retry = document.get("retry"); retry != nullptr && retry->is_object()) {
+    read_int(*retry, "wifi_first_ms", s.retry_wifi_first_ms, 200, 60000, "retry.wifi_first_ms", problems);
+    read_int(*retry, "wifi_max_ms", s.retry_wifi_max_ms, 200, 600000, "retry.wifi_max_ms", problems);
+    read_int(*retry, "mqtt_first_ms", s.retry_mqtt_first_ms, 200, 60000, "retry.mqtt_first_ms", problems);
+    read_int(*retry, "mqtt_max_ms", s.retry_mqtt_max_ms, 200, 600000, "retry.mqtt_max_ms", problems);
+    read_int(*retry, "scatter_percent", s.retry_scatter_percent, 0, 90, "retry.scatter_percent", problems);
+  }
   if (const json::Value* ble = document.get("ble"); ble != nullptr && ble->is_object()) {
     if (!read_choice<BleMode>(*ble, "mode", {{"off", BleMode::kOff}, {"setup", BleMode::kSetup}, {"always", BleMode::kAlways}}, s.ble)) bad(problems, "ble.mode", "invalid");
   }
@@ -759,6 +776,8 @@ inline Problems validate(const Settings& s) {
   else if (!net::valid_utf8(s.node_name, &name_characters) || name_characters > 48) bad(problems, "node.name", "invalid");
   if (!language_is_known(s.language)) bad(problems, "ui.language", "invalid");
   if (!auto_restart_hours_is_valid(s.auto_restart_hours)) bad(problems, "system.auto_restart_hours", "invalid");
+  if (s.retry_wifi_max_ms < s.retry_wifi_first_ms) bad(problems, "retry.wifi_max_ms", "invalid");     // the ceiling is never below the first wait
+  if (s.retry_mqtt_max_ms < s.retry_mqtt_first_ms) bad(problems, "retry.mqtt_max_ms", "invalid");
   if (!uartwake::idle_ms_is_valid(s.reader_idle_ms)) bad(problems, "system.reader_idle_ms", "range");
 
   // network
@@ -946,6 +965,8 @@ inline std::string to_json(const Settings& s, bool secrets) {
   }
   w.end_array();
   w.key("ble").begin_object().field("mode", to_text(s.ble)).end_object();
+  w.key("improv").begin_object().field("mode", to_text(s.improv)).end_object();
+  w.key("retry").begin_object().field("wifi_first_ms", s.retry_wifi_first_ms).field("wifi_max_ms", s.retry_wifi_max_ms).field("mqtt_first_ms", s.retry_mqtt_first_ms).field("mqtt_max_ms", s.retry_mqtt_max_ms).field("scatter_percent", s.retry_scatter_percent).end_object();
   w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();

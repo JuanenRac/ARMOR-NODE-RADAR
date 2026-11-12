@@ -226,6 +226,50 @@ static void test_credentials_rules() {
   CHECK(to_text(Role::kAdmin) == std::string("admin") && to_text(Role::kViewer) == std::string("viewer"));
 }
 
+// The identity of a node is its Wi-Fi station MAC: the same code for the same MAC whatever other address the Ethernet port shows, another code for another MAC or another secret, and the sources
+// of the code in their order.
+static void test_identity_and_setup_code_choice() {
+  using namespace auth;
+  const std::uint8_t wifi[6] = {0x34, 0x85, 0x18, 0xaa, 0xbb, 0xcc};
+  const std::uint8_t ethernet[6] = {0x34, 0x85, 0x18, 0xaa, 0xbb, 0xcd};   // the cable's address is the next one: never used
+  CHECK(identity_mac_text(wifi) == "348518aabbcc" && identity_mac_text(ethernet) == "348518aabbcd");
+  // a stand-in for HMAC-SHA256 that depends on the key and on the message
+  const HmacSha256 fake = [](std::string_view key, std::string_view message, std::uint8_t* digest) {
+    std::uint32_t h = 2166136261u;
+    for (const char c : std::string(key) + "|" + std::string(message)) { h ^= static_cast<std::uint8_t>(c); h *= 16777619u; }
+    for (int i = 0; i < 32; ++i) { h = h * 1664525u + 1013904223u; digest[i] = static_cast<std::uint8_t>(h >> 24); }
+    return true;
+  };
+  const HmacSha256 broken = [](std::string_view, std::string_view, std::uint8_t*) { return false; };
+  const std::string secret = "0123456789abcdef-fleet";
+  const std::string code = setup_code_from_fleet_secret(secret, wifi, fake);
+  CHECK(code.size() == 10 && code == setup_code_from_fleet_secret(secret, wifi, fake));
+  CHECK(code != setup_code_from_fleet_secret(secret, ethernet, fake));                      // another MAC, another code
+  CHECK(code != setup_code_from_fleet_secret(secret + "x", wifi, fake));                    // another secret, another code
+  CHECK(setup_code_from_fleet_secret("0123456789abcde", wifi, fake).empty());               // 15 characters: not a secret
+  CHECK(setup_code_from_fleet_secret(secret, wifi, broken).empty() && setup_code_from_fleet_secret(secret, wifi, HmacSha256()).empty());
+  int drawn = 0;
+  const auto random = [&drawn](std::uint8_t* bytes, std::size_t length) { ++drawn; for (std::size_t i = 0; i < length; ++i) bytes[i] = static_cast<std::uint8_t>(i * 7 + 1); };
+  // 1) the fleet secret wins over everything
+  SetupCodeChoice c = choose_setup_code(secret, "build-code-1", "STORED-CODE", wifi, fake, random);
+  CHECK(c.code == code && !c.keep && drawn == 0);
+  // 2) no secret: the code of the image, in capitals
+  c = choose_setup_code("", "build-code-1", "STORED-CODE", wifi, fake, random);
+  CHECK(c.code == "BUILD-CODE-1" && !c.keep && drawn == 0);
+  c = choose_setup_code("short", "abcdefg", "STORED-CODE", wifi, fake, random);            // a secret that is too short and a built-in code that is too short: both are skipped
+  CHECK(c.code == "STORED-CODE" && !c.keep && drawn == 0);
+  // 3) what is kept in flash
+  c = choose_setup_code("", "", "STORED-CODE", wifi, fake, random);
+  CHECK(c.code == "STORED-CODE" && !c.keep);
+  // 4) nothing: a random one, and it must be written to flash so that it is the same at every start
+  c = choose_setup_code("", "", "short", wifi, fake, random);
+  CHECK(c.code.size() == 8 && c.keep && drawn == 1);
+  c = choose_setup_code("", "", "", wifi, fake, std::function<void(std::uint8_t*, std::size_t)>());
+  CHECK(c.code.size() == 8 && c.keep);
+  // the same on a node whose cable is plugged in: the code only depends on the Wi-Fi MAC passed in
+  CHECK(choose_setup_code(secret, "", "", wifi, fake, random).code == code);
+}
+
 static void test_setup_code_and_passkey() {
   using namespace auth;
   std::uint8_t all[256];
@@ -724,6 +768,7 @@ int main() {
   test_json_writer();
   test_credentials_rules();
   test_setup_code_and_passkey();
+  test_identity_and_setup_code_choice();
   test_user_store();
   test_user_store_persistence();
   test_sessions();

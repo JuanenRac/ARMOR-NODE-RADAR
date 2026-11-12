@@ -75,6 +75,44 @@ inline std::string setup_code_from(const std::uint8_t* bytes, std::size_t length
   return out;
 }
 
+// The identity of a node is its Wi-Fi station MAC address, on both boards and whatever cable is plugged in: the name, the setup code and the code derived from the fleet secret all come from
+// these twelve digits. (The MAC the Ethernet port shows is another address and is only displayed, never used to derive anything.)
+inline std::string identity_mac_text(const std::uint8_t* wifi_station_mac) { return to_hex(wifi_station_mac, 6); }
+
+// HMAC-SHA256 as the board has it (mbedTLS) or as a stand-in in the tests: key, message, 32 bytes out; false when it failed.
+using HmacSha256 = std::function<bool(std::string_view key, std::string_view message, std::uint8_t* digest)>;
+constexpr std::size_t kMinFleetSecret = 16;   // a shorter secret is not a secret: it derives nothing
+constexpr std::size_t kMinSetupCode = 8;
+
+// The setup code the fleet secret gives to the node with this Wi-Fi MAC: ten symbols of the HMAC of the twelve hexadecimal digits. Empty when the secret is too short or the HMAC failed.
+inline std::string setup_code_from_fleet_secret(std::string_view fleet_secret, const std::uint8_t* wifi_station_mac, const HmacSha256& hmac) {
+  if (fleet_secret.size() < kMinFleetSecret || !hmac) return std::string();
+  std::uint8_t digest[32];
+  if (!hmac(fleet_secret, identity_mac_text(wifi_station_mac), digest)) return std::string();
+  return setup_code_from(digest, 10);
+}
+
+// Where the board's setup code comes from, in this order: the fleet secret (the owner can always work it out again), the code built into the image (written in capitals, as the panel's form
+// writes it), the code kept in flash, and last a random one. `stored` is what was read from flash ("" when nothing); `random_bytes` gives eight bytes; `keep` says that the code must be written to flash.
+struct SetupCodeChoice { std::string code; bool keep = false; };
+inline SetupCodeChoice choose_setup_code(std::string_view fleet_secret, std::string_view built_in, std::string_view stored, const std::uint8_t* wifi_station_mac, const HmacSha256& hmac,
+                                         const std::function<void(std::uint8_t*, std::size_t)>& random_bytes) {
+  SetupCodeChoice out;
+  out.code = setup_code_from_fleet_secret(fleet_secret, wifi_station_mac, hmac);
+  if (!out.code.empty()) return out;
+  if (built_in.size() >= kMinSetupCode) {
+    out.code.assign(built_in);
+    for (char& c : out.code) if (c >= 'a' && c <= 'z') c = static_cast<char>(c - 'a' + 'A');
+    return out;
+  }
+  if (stored.size() >= kMinSetupCode) { out.code.assign(stored); return out; }
+  std::uint8_t bytes[8] = {};
+  if (random_bytes) random_bytes(bytes, sizeof bytes);
+  out.code = setup_code_from(bytes, sizeof bytes);
+  out.keep = true;
+  return out;
+}
+
 // The passkey of Bluetooth pairing: six digits that depend on this node's setup code and on nothing else, so the node needs to keep nothing more and whoever has the label or the USB
 // console has the PIN. The node shows it where it shows the setup code; the phone asks for it when it pairs. It is a one-way mix: the PIN does not give the setup code back.
 inline std::uint32_t ble_passkey_from(const std::string& setup_code) {
