@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 oder neuer">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Sprache">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-15921%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Reifegrad">
 </p>
@@ -40,7 +40,7 @@
 | Reifegrad | Etabliert |
 | Rolle | Radar-Feldknoten für ESP32-S3 (Familie: Field Nodes, übergeordnet: ARMOR-COMMON) |
 | Technik | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 15921 Prüfungen in 22 Host-Programmen und 7 Python-Prüfungen (`ctest`) |
+| Tests | 17321 Prüfungen in 22 Host-Programmen und 7 Python-Prüfungen (`ctest`) |
 | Platinen | Waveshare ESP32-S3-ETH (Ethernet) und ESP32-S3-WROOM-1 N16R8 (nur WLAN) |
 | Sensoren | Bis zu 3 Radare (LD2450, LD2461) oder Präsenzsensoren je Knoten, Lichtsensor VEML7700 |
 | Läuft auf | Waveshare ESP32-S3-ETH oder ESP32-S3-WROOM-1 N16R8; Host-Tests auf jedem Computer |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 Host-Testprogramme und 7 Python-Prüfungen laufen unter `ctest`; 15921 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
+22 Host-Testprogramme und 7 Python-Prüfungen laufen unter `ctest`; 17321 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
 
 | Teil | Was sie abdeckt |
 |---|---|

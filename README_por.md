@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-15921%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.1-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
@@ -40,7 +40,7 @@
 | Maturidade | Estabelecido |
 | Função | Nó de campo radar para ESP32-S3 (família: Field Nodes, pai: ARMOR-COMMON) |
 | Tecnologia | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Testes | 15921 verificações em 22 programas de anfitrião e 7 em Python (`ctest`) |
+| Testes | 17321 verificações em 22 programas de anfitrião e 7 em Python (`ctest`) |
 | Placas | Waveshare ESP32-S3-ETH (Ethernet) e ESP32-S3-WROOM-1 N16R8 (só Wi-Fi) |
 | Sensores | Até 3 radares (LD2450, LD2461) ou sensores de presença por nó, sensor de luz VEML7700 |
 | Funciona em | Waveshare ESP32-S3-ETH ou ESP32-S3-WROOM-1 N16R8; testes de anfitrião em qualquer computador |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 programas de teste de anfitrião e 7 verificações Python correm com `ctest`; 15921 verificações contadas pelos programas de anfitrião, compiladas com `-Werror`.
+22 programas de teste de anfitrião e 7 verificações Python correm com `ctest`; 17321 verificações contadas pelos programas de anfitrião, compiladas com `-Werror`.
 
 | Parte | O que cobre |
 |---|---|
