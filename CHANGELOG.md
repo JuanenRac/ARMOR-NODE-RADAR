@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **More of the shared rules are tried:** the shared test program covers the diagnostic package, the release signature text and the Bluetooth frames branch by branch; the floor of the branch coverage goes from 85.4 % to 86.3 % (measured 86.8 %).
+
 - **Tests of the small tables that nothing reached:** `tests/test_cover_gaps.cpp` checks every name of an event and of a bridge refusal (none repeated), the five layouts of the network, every setting of the light sensor, the step of its ladder at both ends, the text a presence sensor gives the server and the words of the Bluetooth state of a sensor.
 
 - **A floor for the test coverage of `core/`:** the workflow `coverage-floor.yml` builds the host tests with gcov counters, runs them and fails when the lines or the branches they execute fall below `docs/coverage_threshold.json` (floor: lines 97.6, branches 85.4; measured 98.1 and 85.9). Raising it is a change of that file with a figure measured by a run of the workflow.
