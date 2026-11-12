@@ -476,6 +476,29 @@ static void test_web_policy() {
   CHECK(cookie_attributes(false, 1800) == "Path=/; HttpOnly; SameSite=Strict; Max-Age=1800" && cookie_attributes(true, 0) == "Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=0");
 }
 
+// The station losing its network (a search of networks in the access point mode, a router that went away) on a node that uses the cable keeps the cable's link and address.
+static void test_station_lost_on_the_cable() {
+  using namespace netplan;
+  const LinkFlags up{true, true, true};
+  const LinkFlags wifi = after_station_lost(up, false);
+  CHECK(!wifi.link_up && !wifi.sta_connected && !wifi.has_ip);                 // the station was the way in: everything is lost
+  const LinkFlags cable = after_station_lost(up, true);
+  CHECK(cable.link_up && !cable.sta_connected && cable.has_ip);                // the cable keeps its link and its address
+  const LinkFlags only_cable{true, false, true};
+  const LinkFlags again = after_station_lost(only_cable, true);
+  CHECK(again.link_up && again.has_ip && !again.sta_connected);                // repeated: nothing changes
+  const LinkFlags none = after_station_lost(LinkFlags{}, true);
+  CHECK(!none.link_up && !none.has_ip && !none.sta_connected);                 // a cable that has no link has none afterwards either
+  for (int bits = 0; bits < 8; ++bits) {                                       // whatever the flags were: never a flag raised by a loss, and the station is never connected
+    const LinkFlags in{(bits & 1) != 0, (bits & 2) != 0, (bits & 4) != 0};
+    for (const bool wired : {false, true}) {
+      const LinkFlags out = after_station_lost(in, wired);
+      CHECK(!out.sta_connected && (!out.link_up || in.link_up) && (!out.has_ip || in.has_ip));
+      CHECK(wired ? (out.link_up == in.link_up && out.has_ip == in.has_ip) : (!out.link_up && !out.has_ip));
+    }
+  }
+}
+
 static void test_netplan() {
   using namespace armor::netplan;
   CHECK(std::string(to_text(Layout::kSetupAp)) == "setup-ap" && std::string(to_text(Layout::kStation)) == "wifi-station" && std::string(to_text(Layout::kStationWithAp)) == "wifi-station+ap" &&
@@ -781,6 +804,7 @@ int main() {
   test_topic_filters();
   test_web_policy();
   test_netplan();
+  test_station_lost_on_the_cable();
 #endif
   (void)contains;
   std::printf("%d checks, %d failures\n", checks, failures);
