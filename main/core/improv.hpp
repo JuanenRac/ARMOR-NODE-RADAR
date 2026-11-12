@@ -138,4 +138,17 @@ inline Join join_progress(bool connected, bool has_ip, std::uint32_t waited_ms, 
 // The address the page is sent to: the panel on the node's own address, over HTTPS when the node serves only HTTPS (otherwise plain HTTP on port 80, which a node in either mode answers).
 inline std::string panel_url(const std::string& ip, bool https_only) { return std::string(https_only ? "https://" : "http://") + ip + "/"; }
 
+// Whether the node listens for Improv packets on its USB line at all (the setting `improv.mode`): "off" never, "always" always, "setup" (the default) only while no Wi-Fi network is stored in the node, so a node
+// that already has its network stops reading the console for a page that could change it. A start that is waiting to tell the page how a network given over the cable went (`answer_owed`) listens whatever the mode.
+enum class Mode { kOff, kSetup, kAlways };
+inline bool should_listen(Mode mode, bool wifi_network_stored, bool answer_owed) {
+  if (answer_owed) return true;
+  switch (mode) {
+    case Mode::kOff: return false;
+    case Mode::kAlways: return true;
+    case Mode::kSetup: return !wifi_network_stored;
+  }
+  return false;
+}
+
 }  // namespace armor::improv

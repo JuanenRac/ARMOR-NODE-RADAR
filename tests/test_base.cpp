@@ -250,6 +250,14 @@ static void test_improv_packets() {
   CHECK(big[8] == 255 && big.size() == 9 + 255 + 2);
 }
 
+static void test_improv_listening() {
+  using improv::Mode;
+  CHECK(!improv::should_listen(Mode::kOff, false, false) && !improv::should_listen(Mode::kOff, true, false));
+  CHECK(improv::should_listen(Mode::kAlways, false, false) && improv::should_listen(Mode::kAlways, true, false));
+  CHECK(improv::should_listen(Mode::kSetup, false, false) && !improv::should_listen(Mode::kSetup, true, false));   // "setup": only while no Wi-Fi network is stored
+  CHECK(improv::should_listen(Mode::kOff, true, true) && improv::should_listen(Mode::kSetup, true, true));         // an answer owed to the page is given whatever the mode
+}
+
 static void test_improv_join_and_address() {
   // "provisioned" only once the node is on the network and has an address; the page is told it could not connect only after the wait
   CHECK(improv::join_progress(false, false, 0, 45000) == improv::Join::kWaiting);
@@ -482,6 +490,21 @@ static void test_task_health() {
   CHECK(text.find("\"meters\"") < text.find("\"mqtt\"") && text.find("\"mqtt\"") < text.find("\"idle\"") && text.find("\"idle\"") < text.find("\"main\""));
   CHECK(contains(text, "{\"name\":\"meters\",\"stack_free\":300,\"priority\":5,\"state\":\"B\",\"low\":true}") && contains(text, "\"name\":\"main\",\"stack_free\":2048,\"priority\":1,\"state\":\"B\",\"low\":false"));
   CHECK(health::tasks_json({}) == "[]" && health::low_count({}) == 0);
+  // the task the health report names: the least stack left, a tie by name, none when there are no tasks
+  const health::TaskInfo* tight = health::tightest(tasks);
+  CHECK(tight != nullptr && tight->name == "meters" && tight->stack_free == 300);
+  CHECK(health::tightest({}) == nullptr);
+  const std::vector<health::TaskInfo> single{{"only", 1234, 1, 'B'}};
+  CHECK(health::tightest(single) != nullptr && health::tightest(single)->name == "only");
+  // ... and the report says it only when the node read its tasks, the two members together
+  nodehealth::Report with_stack = sample_report();
+  CHECK(!contains(nodehealth::to_json(with_stack), "stack_min"));
+  with_stack.has_stack = true; with_stack.stack_min_free = 300; with_stack.stack_min_task = "meters";
+  CHECK(contains(nodehealth::to_json(with_stack), "\"low_stack_tasks\":0,\"stack_min_free\":300,\"stack_min_task\":\"meters\""));
+  with_stack.stack_min_task = "";
+  CHECK(!contains(nodehealth::to_json(with_stack), "stack_min"));   // a name is never left out of the pair
+  with_stack.stack_min_task = std::string(40, 'x');
+  CHECK(contains(nodehealth::to_json(with_stack), std::string("\"stack_min_task\":\"") + std::string(32, 'x') + "\""));
 }
 
 // ---- the sessions of the panel ------------------------------------------------------------------------------------------------------------
@@ -1061,6 +1084,7 @@ int main() {
   test_backoff();
   test_improv_packets();
   test_improv_parser();
+  test_improv_listening();
   test_improv_join_and_address();
   test_improv_rpc();
   test_task_health();

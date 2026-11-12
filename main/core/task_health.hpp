@@ -37,6 +37,15 @@ inline std::string tasks_json(std::vector<TaskInfo> tasks) {
   return w.str();
 }
 
+// The task with the least stack left (the name breaks a tie), or null when there are no tasks: the one the health report names.
+inline const TaskInfo* tightest(const std::vector<TaskInfo>& tasks) {
+  const TaskInfo* found = nullptr;
+  for (const TaskInfo& task : tasks) {
+    if (found == nullptr || task.stack_free < found->stack_free || (task.stack_free == found->stack_free && task.name < found->name)) found = &task;
+  }
+  return found;
+}
+
 // How many of them are short of stack: what a person looks at first.
 inline int low_count(const std::vector<TaskInfo>& tasks) {
   int n = 0;

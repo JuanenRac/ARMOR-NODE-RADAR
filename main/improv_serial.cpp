@@ -126,6 +126,10 @@ void start() {
     store::blob_write(kWaitKey, "");   // once: a later restart does not wait again
     g_waiting = true;
   }
+  // The switch is the node's setting `improv.mode` ("setup" unless the panel says otherwise): see core/improv.hpp (should_listen).
+  const std::unique_ptr<config::Settings> s(new (std::nothrow) config::Settings(store::settings()));
+  const improv::Mode mode = !s ? improv::Mode::kOff : s->improv == config::ImprovMode::kAlways ? improv::Mode::kAlways : s->improv == config::ImprovMode::kOff ? improv::Mode::kOff : improv::Mode::kSetup;
+  if (!improv::should_listen(mode, s && !s->sta.ssid.empty(), g_waiting)) { ESP_LOGI(kTag, "Improv over the USB cable is not listening (setting improv.mode)"); return; }
   xTaskCreate(listen_task, "improv", 5120, nullptr, 2, nullptr);
 }
 

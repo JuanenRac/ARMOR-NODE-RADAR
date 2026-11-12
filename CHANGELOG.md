@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **Waits before a retry and Improv over the cable are settings of the node, and the health report names the task with the least stack:** the settings gain `retry` (the first wait and the ceiling for a lost Wi-Fi network and for a lost broker, and the scatter; the defaults are the waits the firmware always used) and `improv.mode` (`setup`, the default, listens for a Wi-Fi network from an ESP Web Tools page only while the node has none stored; `always`; `off`), and the report to the server carries the optional `stack_min_free` and `stack_min_task`. Shared with the other nodes; host tests of the settings, of the rule for when Improv listens and of the report.
+
 ## [0.8.1.1] - The readers and writers of the messages are tried with every member of their contract: a new test program (`test_wire_full`, shared with the other nodes) reads and writes back, for every message, documents that hold every member the schema
 
 - **The readers and writers of the messages are tried with every member of their contract:** a new test program (`test_wire_full`, shared with the other nodes) reads and writes back, for every message, documents that hold every member the schema declares and documents that leave out about half of the optional ones, and feeds the decoder of the text patterns text that is not UTF-8; the branch coverage of the generated reader and writer goes from 79 % to 88 %, the floor goes from 98.0 % of the lines and 86.3 % of the branches to 99.0 % and 89.5 % (measured 99.3 % and 89.8 %).

@@ -126,6 +126,10 @@ struct Report {
   LinkInfo link;
   std::uint32_t broker_reconnects = 0;
   int low_stack_tasks = 0;
+  // The least stack any task has had free at its worst, and which task it is: said only when `has_stack` is set and the name is not empty (the two go together).
+  bool has_stack = false;
+  std::uint32_t stack_min_free = 0;
+  std::string stack_min_task;
   std::string last_error;        // may be empty
   // What the server has made of the node (see control_gate.hpp): whether it works, since when and for whom, the maintenance flag. Said only when `has_control` is set.
   bool has_control = false;
@@ -187,6 +191,7 @@ inline std::string to_json(const Report& r) {
   if (r.link.link == Link::kWifi && up) w.key("rssi_dbm").integer(r.link.rssi_dbm);
   w.key("broker_reconnects").integer(static_cast<long long>(r.broker_reconnects));
   w.key("low_stack_tasks").integer(r.low_stack_tasks < 0 ? 0 : (r.low_stack_tasks > 64 ? 64 : r.low_stack_tasks));
+  if (r.has_stack && !r.stack_min_task.empty()) w.key("stack_min_free").integer(static_cast<long long>(r.stack_min_free)).field("stack_min_task", r.stack_min_task.substr(0, 32));
   if (!r.last_error.empty()) w.field("last_error", r.last_error.substr(0, kMaxErrorChars));
   if (r.has_control) {
     // Since and by go only with a pause or a standby, the time left only with a pause, the maintenance time only with the flag on (the contract says so).

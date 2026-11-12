@@ -54,7 +54,9 @@ nodehealth::Report build(const std::string& node_id, const std::string& family) 
   report.has_memory = true;
   report.link = nodehealth::choose_link(net.ethernet_available, net.link_up, net.has_ip, net.sta_connected, net.sta_rssi);
   report.broker_reconnects = g_connects;
-  report.low_stack_tasks = health::low_count(taskhealth::tasks());
+  const std::vector<health::TaskInfo> task_list = taskhealth::tasks();
+  report.low_stack_tasks = health::low_count(task_list);
+  if (const health::TaskInfo* tight = health::tightest(task_list); tight != nullptr && !tight->name.empty()) { report.has_stack = true; report.stack_min_free = tight->stack_free; report.stack_min_task = tight->name; }
   std::uint32_t next = 0;
   report.last_error = nodehealth::last_error_of_log(logbuf::read_from(0, next, 8192));
   const node_control::Status ctl = node_control::status();   // a node that is not controlled by the server is always running
