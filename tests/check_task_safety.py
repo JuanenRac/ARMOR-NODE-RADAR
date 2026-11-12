@@ -209,6 +209,7 @@ def analyse(root: Path) -> tuple[list[tuple[str, int, str, str]], list[str]]:
             problems.append(f"task '{name}' ({size} bytes) can reach {total} bytes of big locals, more than half its stack: " + "; ".join(text for _, text in contributions)
                             + ". Put them on the heap (std::unique_ptr / new (std::nothrow)) or mark each `// task-stack-ok: <reason>`")
     problems += http_buffer_problems(root, sources)
+    problems += scan_guard_problems(sources)
     seen_problems: list[str] = []
     for p in problems:
         if p not in seen_problems:
@@ -221,6 +222,21 @@ def found_configs(text):
 
 
 HEADER_BUFFER_MIN = 6144               # the redirect of a GitHub download carries about 5.2 KB of headers
+
+
+def scan_guard_problems(sources: dict[Path, str]) -> list[str]:
+    """The search of Wi-Fi networks of the access point mode starts the station only to look around: the start event must not call esp_wifi_connect() while the search is on (a station that is
+    "connecting" refuses the search and the node would try to join a network it has no settings for), and the flag that says so is raised by the search and lowered when it ends."""
+    problems: list[str] = []
+    for path, text in sources.items():
+        if path.name != "network.cpp" or "g_scan_switched_mode" not in text:
+            continue
+        start = re.search(r"case WIFI_EVENT_STA_START:(.*?)break;", text, re.S)
+        if start is None or not re.search(r"if\s*\(\s*!\s*g_scan_switched_mode\s*\)\s*esp_wifi_connect\(\)", start.group(1)):
+            problems.append(f"{path.name}: the station-start event must not connect while the search of networks has switched the mode (g_scan_switched_mode)")
+        if not re.search(r"g_scan_switched_mode\s*=\s*true", text) or not re.search(r"g_scan_switched_mode\s*=\s*false", text):
+            problems.append(f"{path.name}: g_scan_switched_mode is never raised or never lowered")
+    return problems
 
 
 def http_buffer_problems(root: Path, sources: dict[Path, str]) -> list[str]:
