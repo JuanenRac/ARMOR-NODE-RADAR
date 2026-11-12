@@ -12,6 +12,7 @@ namespace armor::linkwatch {
 constexpr int kDefaultCheckEverySeconds = 20;        // one round every 20 s
 constexpr int kDefaultBadRoundsBeforeReconnect = 3;  // three rounds in a row without a single reply: about a minute of silence
 constexpr int kMaxBadRounds = 20;                    // anything above is clamped: a watch that never fires is the same as no watch
+constexpr int kMaxFruitlessReconnects = 1;           // a gateway that has NEVER answered a ping since the node got its address may simply not answer ICMP: one fresh association is tried, then the watch stands down
 
 // What a round did to the watch.
 enum class Verdict {
@@ -30,21 +31,31 @@ class Watch {
   void set_limit(int bad_rounds) { limit_ = bad_rounds < 1 ? 1 : (bad_rounds > kMaxBadRounds ? kMaxBadRounds : bad_rounds); }
   int limit() const { return limit_; }
   int bad_rounds() const { return bad_; }
+  // True once the gateway has answered at least one round since the node got its address (so a later silence is an outage and not a router that does not answer pings).
+  bool gateway_answers_pings() const { return answered_; }
+  // True when the watch has stood down: the gateway never answered and a fresh association did not change that. It is not an outage the node can cure; a reply (or a new address) ends it.
+  bool stood_down() const { return fruitless_ > kMaxFruitlessReconnects; }
 
   // The node has no address, no gateway or is not a station: nothing to judge, forget the count.
-  Verdict idle() { bad_ = 0; return Verdict::kHealthy; }
+  Verdict idle() { bad_ = 0; answered_ = false; fruitless_ = 0; return Verdict::kHealthy; }
 
   // The outcome of one round to the gateway.
   Verdict round(bool answered) {
-    if (answered) { bad_ = 0; return Verdict::kHealthy; }
+    if (answered) { bad_ = 0; answered_ = true; fruitless_ = 0; return Verdict::kHealthy; }
     bad_ += 1;
-    if (bad_ >= limit_) { bad_ = 0; return Verdict::kReconnect; }   // after the order, count from zero: the fresh association gets its own chance
+    if (bad_ >= limit_) {
+      bad_ = 0;   // after the order, count from zero: the fresh association gets its own chance
+      if (!answered_ && ++fruitless_ > kMaxFruitlessReconnects) return Verdict::kSuspect;   // a router that never answers a ping is not "dead": do not reassociate every minute for ever
+      return Verdict::kReconnect;
+    }
     return Verdict::kSuspect;
   }
 
  private:
   int limit_ = kDefaultBadRoundsBeforeReconnect;
   int bad_ = 0;
+  bool answered_ = false;
+  int fruitless_ = 0;
 };
 
 }  // namespace armor::linkwatch

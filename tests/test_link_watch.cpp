@@ -77,6 +77,7 @@ static void test_the_limit_is_clamped_and_changeable() {
   Watch five(5);
   for (int i = 0; i < 4; ++i) CHECK(five.round(false) == Verdict::kSuspect);
   CHECK(five.round(false) == Verdict::kReconnect);
+  CHECK(five.round(true) == Verdict::kHealthy);   // the gateway does answer, so a later silence is an outage
   five.set_limit(2);
   CHECK(five.round(false) == Verdict::kSuspect && five.round(false) == Verdict::kReconnect);
 }
@@ -107,7 +108,44 @@ static void test_a_long_run_with_a_seeded_pattern() {
   }
 }
 
+// A router that never answers a ping (many drop ICMP): the node tries one fresh association, then stands down instead of reassociating every minute for ever.
+static void test_a_router_that_never_answers_pings() {
+  Watch watch;
+  CHECK(!watch.gateway_answers_pings() && !watch.stood_down());
+  for (int i = 0; i < 2; ++i) CHECK(ping_round(watch, 0) == Verdict::kSuspect);
+  CHECK(ping_round(watch, 0) == Verdict::kReconnect && !watch.stood_down());   // the first time: a fresh association is worth a try
+  for (int i = 0; i < 2; ++i) CHECK(ping_round(watch, 0) == Verdict::kSuspect);
+  CHECK(ping_round(watch, 0) == Verdict::kSuspect && watch.stood_down());      // it did not help: no second order
+  for (int i = 0; i < 300; ++i) CHECK(ping_round(watch, 0) == Verdict::kSuspect);   // and none later, however long the silence
+  CHECK(ping_round(watch, 1) == Verdict::kHealthy && watch.gateway_answers_pings() && !watch.stood_down());   // an answer ends it
+}
+
+// A gateway that answered before and then goes silent is an outage: the watch keeps working for it, again and again.
+static void test_a_gateway_that_answered_and_then_went_silent_is_always_an_outage() {
+  Watch watch;
+  CHECK(ping_round(watch, 3) == Verdict::kHealthy && watch.gateway_answers_pings());
+  for (int cycle = 0; cycle < 10; ++cycle) {
+    CHECK(ping_round(watch, 0) == Verdict::kSuspect);
+    CHECK(ping_round(watch, 0) == Verdict::kSuspect);
+    CHECK(ping_round(watch, 0) == Verdict::kReconnect && !watch.stood_down());
+  }
+}
+
+// A new address (idle) starts the judgement again: a router that did not answer on the old network may answer on the new one.
+static void test_a_new_address_forgets_that_the_watch_stood_down() {
+  Watch watch;
+  for (int i = 0; i < 12; ++i) ping_round(watch, 0);
+  CHECK(watch.stood_down());
+  watch.idle();
+  CHECK(!watch.stood_down() && !watch.gateway_answers_pings() && watch.bad_rounds() == 0);
+  for (int i = 0; i < 2; ++i) CHECK(ping_round(watch, 0) == Verdict::kSuspect);
+  CHECK(ping_round(watch, 0) == Verdict::kReconnect);   // one fresh try again
+}
+
 int main() {
+  test_a_router_that_never_answers_pings();
+  test_a_gateway_that_answered_and_then_went_silent_is_always_an_outage();
+  test_a_new_address_forgets_that_the_watch_stood_down();
   test_a_round_is_answered_with_one_reply();
   test_three_silent_rounds_in_a_row_reconnect();
   test_one_answer_clears_the_count();
