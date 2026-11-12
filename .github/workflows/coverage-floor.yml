@@ -1,0 +1,69 @@
+# =============================================================================
+# A.R.M.O.R. - the floor of the test coverage of this repository
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D)
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# The host tests of core/ are built with gcov counters and run by CTest, and the run fails when the lines or the branches that they execute fall below the floor in
+# docs/coverage_threshold.json. The floor is a little under what the tests reach; raising it is a change of that file, made with a figure measured by a run of this workflow.
+name: Coverage floor
+
+on:
+  push:
+    paths:
+      - "core/**"
+      - "tests/**"
+      - "docs/coverage_threshold.json"
+      - ".github/workflows/coverage-floor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  floor:
+    name: Measure the coverage and hold the floor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Fetch the repositories the tests compare against and install the tools
+        run: |
+          git clone --depth 1 https://github.com/JuanenRac/ARMOR-COMMON.git ../ARMOR-COMMON
+          sudo apt-get update
+          sudo apt-get install --yes mosquitto
+          sudo systemctl stop mosquitto || true
+          python -m pip install --quiet gcovr
+
+      - name: Build the host tests with coverage counters and run them
+        env:
+          ARMOR_REQUIRE_MOSQUITTO: "1"
+          ARMOR_REQUIRE_SIBLINGS: "1"
+        run: |
+          cmake -S tests -B build-cov -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="--coverage -O0"
+          cmake --build build-cov -j2
+          ctest --test-dir build-cov --output-on-failure -j2
+
+      - name: Report the coverage of core/
+        run: |
+          gcovr -r . --object-directory build-cov --filter '.*core/' --gcov-ignore-errors=all --exclude-throw-branches --exclude-unreachable-branches --txt --txt-metric line -o -
+          gcovr -r . --object-directory build-cov --filter '.*core/' --gcov-ignore-errors=all --exclude-throw-branches --exclude-unreachable-branches --json-summary -o coverage.json
+
+      - name: Hold the floor
+        run: |
+          python - <<'PY'
+          import json, sys
+          totals = json.load(open("coverage.json"))
+          floor = json.load(open("docs/coverage_threshold.json"))
+          lines, branches = totals["line_percent"], totals["branch_percent"]
+          print(f"lines {lines:.2f} % (floor {floor['lines']}), branches {branches:.2f} % (floor {floor['branches']})")
+          if lines < floor["lines"] or branches < floor["branches"]:
+              sys.exit("the coverage fell below the floor of docs/coverage_threshold.json")
+          PY

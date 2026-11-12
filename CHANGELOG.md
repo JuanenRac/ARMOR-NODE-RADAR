@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A floor for the test coverage of `core/`:** the workflow `coverage-floor.yml` builds the host tests with gcov counters, runs them and fails when the lines or the branches they execute fall below `docs/coverage_threshold.json` (floor: lines 97.3, branches 85.2; measured 97.8 and 85.7). Raising it is a change of that file with a figure measured by a run of the workflow.
+
+- **More tests of the rules the nodes share:** `tests/test_shared_more.cpp` (the same file in every node) tries the words of the health report and each optional part of it, and has the generated reader of the contract accept and write back a full report; the report of a dirty start (every cause, the guard's records, the out-of-memory and the last look before a crash); the reading of the settings kept in flash (a field that cannot be accepted is left out, the rest is kept); and the operations of the Bluetooth channel with a stand-in for the radio and the storage (who may ask what, the set-up, the throttle on wrong passwords per phone and for all of them).
+
 - **The shared wire header knows the field `challenge` of the voice turn result:** the generated `core/armor_wire.hpp` (copied from ARMOR-COMMON) describes the optional number of two to six digits that the voice service sends in the mode `challenge` of its silence confirmation. This node does not use it; the copy only follows the contract.
 
 - **The log hook no longer takes 224 bytes of the stack of every task that logs:** the line is formatted into one static buffer shared by all the tasks (tried, never waited for, with a small buffer on the stack as the way out), so the tasks with 3 KiB of stack have room and the lines of the panel's log are cut at 383 characters instead of 223. The rule of what is kept is `core/log_line.hpp`, host-tested.
