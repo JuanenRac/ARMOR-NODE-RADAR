@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.8.1.2] - Backup broker return, station guard and shared base lock
+
 - **The way back to the first saved broker is decided in one place and tested on a computer:** a node that works on a backup broker asks, every half hour, whether the first one answers again and goes back only when it does (leaving a broker that works for one that is still down cost a minute of silence each time); the rule is `linkwatch::BackupReturn` and the node's task only counts its rounds and connects. The radar node had the old behaviour (it went back without asking) and now has the check too.
 - **A check keeps the converter shared:** every file of the node that reads the converter must take its lock and the random generator takes it before it switches the noise source on, which reconfigures the converter; the host tests fail if an edit reads the converter without it.
 - **A Wi-Fi search on the cabled node no longer connects the empty station or takes the cable's address away:** in the access point layouts a search of networks starts the station only to look around, so its start event no longer calls connect while the search is on, and the station losing its network keeps the link and the address that came from the cable (`netplan::after_station_lost`, with host tests for every combination of the flags).
