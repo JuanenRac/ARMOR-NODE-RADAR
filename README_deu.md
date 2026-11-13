@@ -40,7 +40,7 @@
 | Reifegrad | Etabliert |
 | Rolle | Radar-Feldknoten für ESP32-S3 (Familie: Field Nodes, übergeordnet: ARMOR-COMMON) |
 | Technik | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 17321 Prüfungen in 22 Host-Programmen und 7 Python-Prüfungen (`ctest`) |
+| Tests | 17321 Prüfungen in 22 Host-Programmen und 8 Python-Prüfungen (`ctest`) |
 | Platinen | Waveshare ESP32-S3-ETH (Ethernet) und ESP32-S3-WROOM-1 N16R8 (nur WLAN) |
 | Sensoren | Bis zu 3 Radare (LD2450, LD2461) oder Präsenzsensoren je Knoten, Lichtsensor VEML7700 |
 | Läuft auf | Waveshare ESP32-S3-ETH oder ESP32-S3-WROOM-1 N16R8; Host-Tests auf jedem Computer |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 Host-Testprogramme und 7 Python-Prüfungen laufen unter `ctest`; 17321 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
+22 Host-Testprogramme und 8 Python-Prüfungen laufen unter `ctest`; 17321 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
 
 | Teil | Was sie abdeckt |
 |---|---|

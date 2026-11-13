@@ -40,7 +40,7 @@
 | Maturity | Established |
 | Role | Radar field node for ESP32-S3 (family: Field Nodes, parent: ARMOR-COMMON) |
 | Stack | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 17321 checks in 22 host programs and 7 Python checks (`ctest`) |
+| Tests | 17321 checks in 22 host programs and 8 Python checks (`ctest`) |
 | Boards | Waveshare ESP32-S3-ETH (Ethernet) and ESP32-S3-WROOM-1 N16R8 (Wi-Fi only) |
 | Sensors | Up to 3 radars (LD2450, LD2461) or presence sensors per node, VEML7700 light sensor |
 | Runs on | Waveshare ESP32-S3-ETH or ESP32-S3-WROOM-1 N16R8; host tests on any computer |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 host test programs and 7 Python checks run under `ctest`; 17321 checks counted by the host programs, built with `-Werror`.
+22 host test programs and 8 Python checks run under `ctest`; 17321 checks counted by the host programs, built with `-Werror`.
 
 | Part | What it covers |
 |---|---|
