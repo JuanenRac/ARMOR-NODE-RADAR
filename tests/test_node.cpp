@@ -922,7 +922,7 @@ static void test_ble_setting() {
   config::Problems problems;
   CHECK(config::load(R"({"ble":{"mode":"always"}})", s, out, problems) && out.ble == config::BleMode::kAlways);
   problems.clear();
-  CHECK(config::load(R"({"ble":{"mode":"off"}})", s, out, problems) && out.ble == config::BleMode::kOff && config::to_json(out, true).find(R"("ble":{"mode":"off"})") != std::string::npos);
+  CHECK(config::load(R"({"ble":{"mode":"off"}})", s, out, problems) && out.ble == config::BleMode::kOff && config::to_json(out, true).find(R"("ble":{"mode":"off")") != std::string::npos);
   problems.clear();
   CHECK(!config::load(R"({"ble":{"mode":"loud"}})", s, out, problems) && has_problem(problems, "ble.mode", "invalid"));
   // the pairing PIN comes from the setup code unless the node is told to make a random one
