@@ -40,7 +40,7 @@
 | Madurez | Establecido |
 | Función | Nodo de campo radar para ESP32-S3 (familia: Field Nodes, padre: ARMOR-COMMON) |
 | Tecnología | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Pruebas | 17321 comprobaciones en 22 programas de host y 7 de Python (`ctest`) |
+| Pruebas | 17321 comprobaciones en 22 programas de host y 8 de Python (`ctest`) |
 | Placas | Waveshare ESP32-S3-ETH (Ethernet) y ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
 | Sensores | Hasta 3 radares (LD2450, LD2461) o sensores de presencia por nodo, sensor de luz VEML7700 |
 | Funciona en | Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8; pruebas de host en cualquier ordenador |
@@ -219,7 +219,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-22 programas de prueba de host y 7 comprobaciones en Python se ejecutan con `ctest`; 17321 comprobaciones contadas por los programas de host, compilados con `-Werror`.
+22 programas de prueba de host y 8 comprobaciones en Python se ejecutan con `ctest`; 17321 comprobaciones contadas por los programas de host, compilados con `-Werror`.
 
 | Parte | Qué cubre |
 |---|---|
