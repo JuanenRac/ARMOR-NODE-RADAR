@@ -688,6 +688,9 @@ esp_err_t get_ble_pin(httpd_req_t* r) {
   Who who;
   if (!require(r, who, true, false)) return ESP_OK;
   if (store::setup_code().empty()) return send_json(r, 200, "{\"pin\":null}");
+  bool random_pin = false;
+  random_pin = store::settings().ble_passkey == config::BlePasskeyMode::kRandomDisplay;
+  if (random_pin) return send_json(r, 200, "{\"pin\":null,\"random\":true}");   // the PIN is made for each pairing and shown only on the node's console
   char pin[12];
   std::snprintf(pin, sizeof pin, "%06u", static_cast<unsigned>(auth::ble_passkey_from(store::setup_code())));
   return send_json(r, 200, std::string("{\"pin\":\"") + pin + "\"}");

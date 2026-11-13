@@ -123,6 +123,16 @@ inline std::uint32_t ble_passkey_from(const std::string& setup_code) {
   return static_cast<std::uint32_t>(h % 1000000ULL);
 }
 
+// The PIN of a pairing in the mode `random_display`: six digits made from a random number of the radio's generator, never from the setup code, so the label does not give it away.
+// Rejection sampling keeps every digit equally likely.
+template <typename Random32>
+inline std::uint32_t ble_random_passkey(Random32 random32) {
+  constexpr std::uint32_t kLimit = 4294000000u;   // the largest multiple of 1,000,000 that fits in 32 bits
+  std::uint32_t value = random32();
+  for (int tries = 0; value >= kLimit && tries < 8; ++tries) value = random32();
+  return (value >= kLimit ? value - kLimit : value) % 1000000u;
+}
+
 enum class Result { kOk, kInvalidName, kWeakPassword, kExists, kNotFound, kTooMany, kLastAdmin, kWrongPassword, kStorage };   // kStorage: the change could not be written to flash, so it was not made
 
 class UserStore {

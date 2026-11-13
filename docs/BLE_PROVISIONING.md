@@ -95,3 +95,7 @@ and then `reboot`. `wifi.scan` gives the app the list of networks to choose from
 * The set-up code and the passwords are sent inside the encrypted link; a phone that pairs with an impostor node would send them to it.
 
 Where the setup code and the Bluetooth PIN come from, which image gives which kind of code and how to read it: [SETUP_CODE.md](SETUP_CODE.md).
+
+## Random PIN
+
+Setting `ble.passkey_mode`: `derived` (the default) keeps the PIN derived from the setup code. `random_display` makes a new random six-digit PIN for each pairing and writes it only to the node's own console, so whoever sees the label cannot pair; the person needs to be at the node (USB console).
