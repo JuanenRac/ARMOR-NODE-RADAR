@@ -49,6 +49,12 @@ bool should_send_targets(const Track* tracks, std::size_t count, std::uint64_t n
 bool learn_start(unsigned seconds);
 void learn_stop();
 
+// Assisted alignment of one radar (sensor 1 to 3): the installer stands on a marked point of the shared plane (begin), stays still for a few seconds, and the mean reading is kept (finish, false
+// when there were too few readings or no mark was open). Nothing is applied: the panel shows the heading and the offset that come out, and a person copies them into the radar's settings.
+bool align_begin(unsigned sensor, double ref_x_mm, double ref_y_mm);
+bool align_finish();
+void align_reset();
+
 struct Summary {
   bool enabled = false;
   bool masked = false;

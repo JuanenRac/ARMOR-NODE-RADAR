@@ -176,10 +176,11 @@ const server = createServer(async (request, response) => {
     return json(response, 200, { enabled: p.enabled, armed: false, masked: false, wifi_jam: false, stream: p.stream, targets: 1, raw_targets: 1, movement: { still: 0, walking: 1, running: 0 },
       zones: p.zones.filter(z => z.enabled).map(z => ({ name: z.name, exclude: z.exclude, active: z.active, on: z.active, occupied: !z.exclude && z.name.length % 2 === 0, latched: false, occupants: 1, entries: 3, last_dwell_s: 12 })),
       lines: p.lines.filter(l => l.enabled).map(l => ({ name: l.name, ins: 4, outs: 2 })), events: { sent: 12, replayed: 0, buffered: 0, limited: 0, dropped: 0, flash_failures: 0 },
-      learner: { active: false, progress: 100, frames: 1800, suggestions: [{ x_mm: -400, y_mm: 1800, width_mm: 500, height_mm: 400, frames: 1700 }] } });
+      learner: { active: false, progress: 100, frames: 1800, suggestions: [{ x_mm: -400, y_mm: 1800, width_mm: 500, height_mm: 400, frames: 1700 }] },
+      align: { sensor: 1, reading: false, samples: 0, points: 2, ok: true, in_range: true, yaw_deg: 12, offset_x_mm: 340, offset_y_mm: -120, rms_mm: 35 } });
   }
   if (method === "POST" && route === "perimeter/zone") { if (!needAdmin()) return; const z = config.perimeter.zones.find(x => x.enabled && x.name === body.name); if (!z) return json(response, 404, { error: "unknown_zone" }); if (body.order === "on") z.active = true; else if (body.order === "off") z.active = false; return json(response, 200, { ok: true, restart_required: false }); }
-  if (method === "POST" && (route === "perimeter/armed" || route === "perimeter/learn")) { if (!needAdmin()) return; return json(response, 200, { ok: true, restart_required: false }); }
+  if (method === "POST" && (route === "perimeter/armed" || route === "perimeter/learn" || route === "perimeter/align")) { if (!needAdmin()) return; return json(response, 200, { ok: true, restart_required: false }); }
   if (method === "GET" && route === "bridge") { if (!needAdmin()) return; if (bridge.active && Date.now() > bridge.until) bridge.active = false; return json(response, 200, { active: bridge.active, sensor: bridge.sensor, baud: bridge.baud, seconds_left: Math.max(0, Math.round((bridge.until - Date.now()) / 1000)), by: bridge.by, to_sensor: 0, from_sensor: 0 }); }
   if (method === "POST" && route === "bridge/open") {
     if (!needAdmin()) return;

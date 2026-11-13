@@ -98,9 +98,33 @@ static void test_session() {
   CHECK(session.points() == 0 && !session.result().ok && session.begin_point(0, 0));
 }
 
+static armor::Track target(std::uint8_t sensor, std::uint8_t id, int x, int y) {
+  armor::Track out{};
+  out.sensor_id = sensor; out.track_id = id; out.x_mm = static_cast<std::int16_t>(x); out.y_mm = static_cast<std::int16_t>(y);
+  return out;
+}
+
+static void test_feed_from_tracks() {
+  AlignSession session;
+  const armor::Track one[] = {target(1, 1, 100, 2000)};
+  CHECK(!session.feed_tracks(one, 1, 1));                  // no mark is open
+  CHECK(session.begin_point(0, 2000) && session.reading() && session.samples() == 0);
+  CHECK(session.feed_tracks(one, 1, 1) && session.samples() == 1);
+  CHECK(!session.feed_tracks(one, 1, 2));                  // another radar: left out
+  CHECK(!session.feed_tracks(nullptr, 0, 1) && !session.feed_tracks(one, 0, 1));
+  const armor::Track two[] = {target(1, 1, 100, 2000), target(1, 2, -900, 3000), target(2, 1, 5, 5)};
+  CHECK(!session.feed_tracks(two, 3, 1) && session.samples() == 1);   // two people on the radar: no telling which one
+  CHECK(session.feed_tracks(two, 3, 2) && session.samples() == 2);    // one on the other radar is still one
+  const armor::Track invalid[] = {target(1, 0, 100, 2000), target(0, 1, 100, 2000), target(9, 1, 100, 2000)};
+  CHECK(!session.feed_tracks(invalid, 3, 1) && session.samples() == 2);
+  for (int i = 0; i < 25; ++i) session.feed_tracks(one, 1, 1);
+  CHECK(session.finish_point() && !session.reading() && session.points() == 1);
+}
+
 int main() {
   test_alignment();
   test_session();
+  test_feed_from_tracks();
   std::printf("%d checks, %d failures\n", checks, failures);
   return failures == 0 ? 0 : 1;
 }

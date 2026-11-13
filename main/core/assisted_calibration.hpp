@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "../radar_tracks.hpp"
+
 namespace armor::calibration {
 
 // Where the person stood on the shared plane (the marked point), and what the radar read there (the mean of a few seconds), both in millimetres.
@@ -86,6 +88,21 @@ class AlignSession {
     sum_x_ += raw_x; sum_y_ += raw_y; ++samples_;
   }
 
+  // One look at the raw targets (before the radar's own calibration): the reading counts when exactly one target of `sensor_id` is seen. With two or more at once there is no telling which one is
+  // the person standing on the mark, so the look is left out. True when it counted.
+  bool feed_tracks(const armor::Track* tracks, std::size_t count, std::uint8_t sensor_id) {
+    if (!reading_ || tracks == nullptr) return false;
+    const armor::Track* only = nullptr;
+    for (std::size_t i = 0; i < count; ++i) {
+      if (!armor::track_is_valid(tracks[i]) || tracks[i].sensor_id != sensor_id) continue;
+      if (only != nullptr) return false;
+      only = &tracks[i];
+    }
+    if (only == nullptr) return false;
+    sample(only->x_mm, only->y_mm);
+    return true;
+  }
+
   // Keeps the mark when it had `min_samples` readings at least; the person is asked to stay otherwise (the mark stays open).
   bool finish_point(std::size_t min_samples = 20) {
     if (!reading_ || samples_ < min_samples) return false;
@@ -98,6 +115,8 @@ class AlignSession {
 
   void reset() { count_ = 0; reading_ = false; samples_ = 0; }
   std::size_t points() const { return count_; }
+  bool reading() const { return reading_; }
+  std::size_t samples() const { return samples_; }
   Alignment result(double max_rms_mm = 250.0) const { return align(points_, count_, max_rms_mm); }
 
  private:
