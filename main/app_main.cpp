@@ -58,8 +58,13 @@ void setup_reminder_task(void*) {
   for (;;) {
     if (!armor::store::users_empty()) vTaskDelete(nullptr);
     const armor::network::Status n = armor::network::status();
-    ESP_LOGW(kTag, "SETUP: this node has no user yet. Open http://%s/ (or join the Wi-Fi \"%s\" and open http://192.168.4.1/) and enter the setup code %s (to pair over Bluetooth the phone asks for the PIN %06u)",
-             n.has_ip ? n.ip.c_str() : "<its address>", n.ap_ssid.empty() ? "ARMOR-SETUP-..." : n.ap_ssid.c_str(), armor::store::setup_code().c_str(), static_cast<unsigned>(armor::auth::ble_passkey_from(armor::store::setup_code())));
+    bool random_pin = false;
+    random_pin = armor::store::settings().ble_passkey == armor::config::BlePasskeyMode::kRandomDisplay;
+    char pin_text[40];
+    if (random_pin) std::snprintf(pin_text, sizeof pin_text, "random, shown here when a phone pairs");
+    else std::snprintf(pin_text, sizeof pin_text, "%06u", static_cast<unsigned>(armor::auth::ble_passkey_from(armor::store::setup_code())));
+    ESP_LOGW(kTag, "SETUP: this node has no user yet. Open http://%s/ (or join the Wi-Fi \"%s\" and open http://192.168.4.1/) and enter the setup code %s (to pair over Bluetooth the phone asks for the PIN %s)",
+             n.has_ip ? n.ip.c_str() : "<its address>", n.ap_ssid.empty() ? "ARMOR-SETUP-..." : n.ap_ssid.c_str(), armor::store::setup_code().c_str(), pin_text);
     vTaskDelay(pdMS_TO_TICKS(15000));
   }
 }

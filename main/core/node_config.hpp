@@ -42,6 +42,8 @@ enum class Pull { kNone, kUp, kDown };
 enum class SafeState { kOff, kOn, kKeep };
 // When the node accepts configuration over Bluetooth: never, only while it has no user (set-up), or always.
 enum class BleMode { kOff, kSetup, kAlways };
+// Where the Bluetooth pairing PIN comes from: derived from the setup code on the label (the default) or a random one made for each pairing and shown only on the node's own console.
+enum class BlePasskeyMode { kDerived, kRandomDisplay };
 // When the node listens on its USB serial line for an Improv Wi-Fi packet (ESP Web Tools): never, only while no Wi-Fi network is stored (the default), or always.
 enum class ImprovMode { kOff, kSetup, kAlways };
 // The panel over plain HTTP only, over HTTP and HTTPS (a certificate the node made for itself), or over HTTPS only (port 80 sends the browser to HTTPS).
@@ -189,6 +191,7 @@ struct Settings {
   std::array<RadarLine, kRadarCount> radars;
   Sensors sensors;
   std::vector<MappedPin> pins;
+  BlePasskeyMode ble_passkey = BlePasskeyMode::kDerived;   // "derived" (default) or "random_display"
   BleMode ble = BleMode::kSetup;
   // Improv Wi-Fi over the USB cable: "setup" (only while the node has no Wi-Fi network stored), "always" or "off". See core/improv.hpp (should_listen).
   ImprovMode improv = ImprovMode::kSetup;
@@ -241,6 +244,7 @@ inline const char* to_text(PinMode v) {
 inline const char* to_text(Pull v) { return v == Pull::kUp ? "up" : v == Pull::kDown ? "down" : "none"; }
 inline const char* to_text(WebMode v) { return v == WebMode::kHttps ? "https" : v == WebMode::kHttp ? "http" : "both"; }
 inline const char* to_text(ImprovMode v) { return v == ImprovMode::kAlways ? "always" : v == ImprovMode::kOff ? "off" : "setup"; }
+inline const char* to_text(BlePasskeyMode v) { return v == BlePasskeyMode::kRandomDisplay ? "random_display" : "derived"; }
 inline const char* to_text(BleMode v) { return v == BleMode::kAlways ? "always" : v == BleMode::kOff ? "off" : "setup"; }
 inline const char* to_text(SafeState v) { return v == SafeState::kOn ? "on" : v == SafeState::kOff ? "off" : "keep"; }
 
@@ -635,6 +639,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   }
   if (const json::Value* ble = document.get("ble"); ble != nullptr && ble->is_object()) {
     if (!read_choice<BleMode>(*ble, "mode", {{"off", BleMode::kOff}, {"setup", BleMode::kSetup}, {"always", BleMode::kAlways}}, s.ble)) bad(problems, "ble.mode", "invalid");
+    if (!read_choice<BlePasskeyMode>(*ble, "passkey_mode", {{"derived", BlePasskeyMode::kDerived}, {"random_display", BlePasskeyMode::kRandomDisplay}}, s.ble_passkey)) bad(problems, "ble.passkey_mode", "invalid");
   }
   if (const json::Value* web = document.get("web"); web != nullptr && web->is_object()) {
     if (!read_choice<WebMode>(*web, "mode", {{"http", WebMode::kHttp}, {"both", WebMode::kBoth}, {"https", WebMode::kHttps}}, s.web)) bad(problems, "web.mode", "invalid");
@@ -964,7 +969,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
         .field("offset", pin.offset).end_object();
   }
   w.end_array();
-  w.key("ble").begin_object().field("mode", to_text(s.ble)).end_object();
+  w.key("ble").begin_object().field("mode", to_text(s.ble)).field("passkey_mode", to_text(s.ble_passkey)).end_object();
   w.key("improv").begin_object().field("mode", to_text(s.improv)).end_object();
   w.key("retry").begin_object().field("wifi_first_ms", s.retry_wifi_first_ms).field("wifi_max_ms", s.retry_wifi_max_ms).field("mqtt_first_ms", s.retry_mqtt_first_ms).field("mqtt_max_ms", s.retry_mqtt_max_ms).field("scatter_percent", s.retry_scatter_percent).end_object();
   w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();

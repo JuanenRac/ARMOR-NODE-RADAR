@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The Bluetooth pairing PIN can be random, behind a setting that is `derived` by default:** `ble.passkey_mode` set to `random_display` makes a new six-digit PIN for every pairing, shown only on the node's own console (the setup banner and `GET` of the PIN say so instead of showing a PIN). Derived, the PIN is the one from the setup code, as before.
 - **The firmware upload is guarded against an image made for another board:** a new check (`ota_board`) reads the panel's server and fails when the chunks are not scanned for the board mark, when the decision is taken after the new slot is set as the boot slot, when a wrong board is not answered with 422, or when the switch to the other slot does not look at the mark of that slot; it also tries damaged copies of the source to show the guard fails
 - **The shared wire header gives the followed object number of a vision event a ceiling:** `track_id` is at most 9007199254740991 (copy of the shared firmware base, with its lock).
 - **The host check of the shared firmware also refuses a sign-in that hashes the password while the lock of the settings store is held** (synchronised from the common base, with its lock file updated).

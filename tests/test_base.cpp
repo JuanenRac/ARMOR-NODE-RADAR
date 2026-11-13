@@ -190,6 +190,19 @@ static void test_ble_passkey() {
   CHECK(different >= 23);                                     // spread, not a pattern
 }
 
+static void test_ble_random_passkey() {
+  // always six digits, whatever the generator gives, and the label (the setup code) plays no part
+  for (std::uint32_t raw : {0u, 1u, 999999u, 1000000u, 4293999999u, 4294000000u, 4294967295u}) CHECK(armor::auth::ble_random_passkey([raw] { return raw; }) < 1000000u);
+  CHECK(armor::auth::ble_random_passkey([] { return 123456u; }) == 123456u);
+  // a value in the biased tail is drawn again
+  int calls = 0;
+  CHECK(armor::auth::ble_random_passkey([&calls] { return ++calls == 1 ? 4294500000u : 777u; }) == 777u && calls == 2);
+  // a run of different draws gives different PINs
+  std::uint32_t state = 12345u; int distinct = 0; std::uint32_t last = 0;
+  for (int i = 0; i < 50; ++i) { const std::uint32_t pin = armor::auth::ble_random_passkey([&state] { state = state * 1664525u + 1013904223u; return state; }); if (pin != last) ++distinct; last = pin; }
+  CHECK(distinct >= 49);
+}
+
 static void test_backoff() {
   retry::Backoff plain(1000, 30000, 0);   // no scatter: the schedule itself
   const std::uint32_t expected[] = {1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000};
@@ -1080,6 +1093,7 @@ int main() {
   test_ed25519();
   test_fw_trust();
   test_ble_passkey();
+  test_ble_random_passkey();
   test_remembered_session_is_not_taken_after_half_an_hour();
   test_backoff();
   test_improv_packets();
