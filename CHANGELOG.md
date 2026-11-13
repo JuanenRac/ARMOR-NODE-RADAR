@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The host check of the shared firmware also refuses a sign-in that hashes the password while the lock of the settings store is held** (synchronised from the common base, with its lock file updated).
+
 ## [0.8.1.2] - Backup broker return, station guard and shared base lock
 
 - **The way back to the first saved broker is decided in one place and tested on a computer:** a node that works on a backup broker asks, every half hour, whether the first one answers again and goes back only when it does (leaving a broker that works for one that is still down cost a minute of silence each time); the rule is `linkwatch::BackupReturn` and the node's task only counts its rounds and connects. The radar node had the old behaviour (it went back without asking) and now has the check too.

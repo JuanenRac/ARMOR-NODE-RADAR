@@ -211,6 +211,7 @@ def analyse(root: Path) -> tuple[list[tuple[str, int, str, str]], list[str]]:
     problems += http_buffer_problems(root, sources)
     problems += scan_guard_problems(sources)
     problems += adc_lock_problems(sources)
+    problems += password_hash_problems(sources)
     seen_problems: list[str] = []
     for p in problems:
         if p not in seen_problems:
@@ -223,6 +224,34 @@ def found_configs(text):
 
 
 HEADER_BUFFER_MIN = 6144               # the redirect of a GitHub download carries about 5.2 KB of headers
+
+
+def password_hash_problems(sources: dict[Path, str]) -> list[str]:
+    """The hash of a password (PBKDF2, about a third of a second) must never be computed while the lock of the store is held: a node with a screen reads the settings through that lock every
+    half second, so a sign-in that held it froze the picture and the touch for as long as it lasted (and a loop of sign-ins froze them for good). `user_verify` copies the users under the
+    lock, lets it go (the scope of the guard closes) and only then verifies. This reads the text of the function: the call to `verify(` must come after the closing brace of the block of the lock."""
+    problems: list[str] = []
+    for path, text in sources.items():
+        match = re.search(r"\bbool\s+user_verify\s*\(", text)
+        if match is None:
+            continue
+        open_brace = text.find("{", match.end())
+        if open_brace < 0:
+            continue
+        end = match_brace(text, open_brace)
+        body = text[open_brace:end]
+        call = re.search(r"\.\s*verify\s*\(|\bhash_password\s*\(", body)
+        if call is None:
+            problems.append(f"{path.name}: user_verify does not verify anything (the check cannot tell where the hash is computed)")
+            continue
+        guard = re.search(r"lock_guard<std::mutex>\s+\w+\s*\(\s*g_lock\s*\)", body)
+        if guard is None:
+            continue   # no lock at all in this function: nothing is held
+        block_open = body.rfind("{", 0, guard.start())
+        block_close = match_brace(body, block_open) if block_open >= 0 else len(body)
+        if call.start() < block_close:
+            problems.append(f"{path.name}:{line_of(text, open_brace + call.start())}: the hash of the password is computed while the lock of the store is held: copy the users under the lock and verify after it is let go")
+    return problems
 
 
 def adc_lock_problems(sources: dict[Path, str]) -> list[str]:
