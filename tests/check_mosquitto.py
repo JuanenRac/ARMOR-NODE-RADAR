@@ -228,14 +228,21 @@ def start_broker(folder: Path, accounts: dict[str, str], acl: str) -> tuple[subp
     (folder / "mosquitto.conf").write_text(
         f"listener {port} 127.0.0.1\nallow_anonymous false\npassword_file {password_file.as_posix()}\nacl_file {(folder / 'acl').as_posix()}\npersistence false\nlog_dest file {(folder / 'broker.log').as_posix()}\n",
         encoding="utf-8")
-    process = subprocess.Popen([broker, "-c", str(folder / "mosquitto.conf")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # A broker installed from a distribution package can run under a security profile (AppArmor) that lets it read only its own folders, and then it cannot open the configuration of this test
+    # ("Unable to open config file"). A copy of the program in the test folder runs without that profile.
+    if sys.platform.startswith("linux"):
+        private = folder / "mosquitto-broker"
+        shutil.copy2(broker, private)
+        broker = str(private)
+    errors = (folder / "broker.err").open("wb")
+    process = subprocess.Popen([broker, "-c", str(folder / "mosquitto.conf")], stdout=subprocess.DEVNULL, stderr=errors)
     for _ in range(100):
         try:
             socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
             return process, port
         except OSError:
             if process.poll() is not None:
-                raise AssertionError(f"mosquitto did not start: {(folder / 'broker.log').read_text(errors='replace') if (folder / 'broker.log').exists() else ''}")
+                raise AssertionError(f"mosquitto did not start (exit {process.returncode}): {(folder / 'broker.log').read_text(errors='replace') if (folder / 'broker.log').exists() else ''} {(folder / 'broker.err').read_text(errors='replace')}")
             time.sleep(0.1)
     process.kill()
     raise AssertionError("mosquitto did not open its port")
