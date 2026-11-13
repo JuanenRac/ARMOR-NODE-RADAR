@@ -18,6 +18,7 @@ extern "C" {
 #include "freertos/task.h"
 }
 #include "core/gpio_logic.hpp"
+#include "core/assisted_calibration.hpp"
 #include "core/jam_detector.hpp"
 #include "core/json.hpp"
 #include "core/offline_ring.hpp"
@@ -54,6 +55,8 @@ std::array<config::RadarLine, config::kRadarCount> g_radars{};
 int g_merge_mm = 0;
 bool g_uplink_wifi = false;
 std::unique_ptr<reflectors::Learner> g_learner;
+calibration::AlignSession g_align;       // the assisted alignment of one radar: the marks the installer stood on
+std::uint8_t g_align_sensor = 1;       // the radar the alignment is for (1 to 3)
 jam::Detector g_jam;
 bool g_jam_enabled = false;
 bool g_jammed = false;
@@ -134,6 +137,7 @@ void step(std::uint64_t now) {
   std::size_t n = 0;
   {
     std::lock_guard<std::mutex> guard(g_lock);
+    g_align.feed_tracks(tracks, count, g_align_sensor);   // the raw readings, before the radar's calibration is applied
     armor::calibration::apply_all(tracks, count, g_radars);
     count = armor::calibration::merge_overlap(tracks, count, g_merge_mm);
     if (g_learner && g_learner->active()) g_learner->feed(tracks, count, now);
@@ -353,6 +357,23 @@ void learn_stop() {
   if (g_learner) g_learner->stop();
 }
 
+bool align_begin(unsigned sensor, double ref_x_mm, double ref_y_mm) {
+  if (sensor < 1 || sensor > armor::kRadarCount) return false;
+  std::lock_guard<std::mutex> guard(g_lock);
+  if (sensor != g_align_sensor) { g_align.reset(); g_align_sensor = static_cast<std::uint8_t>(sensor); }   // the marks of one radar say nothing of another
+  return g_align.begin_point(ref_x_mm, ref_y_mm);
+}
+
+bool align_finish() {
+  std::lock_guard<std::mutex> guard(g_lock);
+  return g_align.finish_point();
+}
+
+void align_reset() {
+  std::lock_guard<std::mutex> guard(g_lock);
+  g_align.reset();
+}
+
 Summary summary() {
   Summary s;
   std::lock_guard<std::mutex> guard(g_lock);
@@ -408,6 +429,12 @@ std::string state_json() {
     for (std::size_t i = 0; i < n; ++i) w.begin_object().field("x_mm", found[i].x_mm).field("y_mm", found[i].y_mm).field("width_mm", found[i].width_mm).field("height_mm", found[i].height_mm).field("frames", static_cast<long long>(found[i].frames)).end_object();
   }
   w.end_array().end_object();
+  const calibration::Alignment fit = g_align.result();
+  w.key("align").begin_object();
+  w.field("sensor", static_cast<long long>(g_align_sensor)).field("reading", g_align.reading()).field("samples", static_cast<long long>(g_align.samples())).field("points", static_cast<long long>(g_align.points()))
+      .field("ok", fit.ok).field("in_range", fit.in_range).field("yaw_deg", static_cast<long long>(fit.yaw_setting)).field("offset_x_mm", static_cast<long long>(fit.offset_x_setting))
+      .field("offset_y_mm", static_cast<long long>(fit.offset_y_setting)).field("rms_mm", static_cast<long long>(calibration::round_to_int(fit.rms_mm)));
+  w.end_object();
   w.end_object();
   return w.str();
 }

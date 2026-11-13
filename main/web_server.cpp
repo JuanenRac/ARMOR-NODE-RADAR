@@ -1074,6 +1074,28 @@ esp_err_t post_perimeter_learn(httpd_req_t* r) {
   return send_ok(r);
 }
 
+// The assisted alignment of a radar: the installer stands on a marked point, the radar reads where it sees them, and the heading and offset to write into its settings come out.
+esp_err_t post_perimeter_align(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  json::Value in;
+  if (!read_json(r, in)) return ESP_OK;
+  const std::string action = in.string_or("action", "");
+  if (action == "begin") {
+    const long long sensor = in.integer_or("sensor", 1, 1, 3);
+    const long long x = in.integer_or("x_mm", 0, -20000, 20000), y = in.integer_or("y_mm", 0, -20000, 20000);
+    if (!perimeter_rt::align_begin(static_cast<unsigned>(sensor), static_cast<double>(x), static_cast<double>(y))) return send_error(r, 409, "align_busy");
+  } else if (action == "finish") {
+    if (!perimeter_rt::align_finish()) return send_error(r, 409, "align_few");
+  } else if (action == "reset") {
+    perimeter_rt::align_reset();
+  } else {
+    return send_error(r, 422, "invalid_op");
+  }
+  ESP_LOGI(kTag, "radar alignment \"%s\" by \"%s\"", action.c_str(), who.user.c_str());
+  return send_ok(r);
+}
+
 // ---- the transparent serial bridge ---------------------------------------------------------------------------------------------------------
 
 long long query_number(httpd_req_t* r, const char* key, long long fallback, long long lowest, long long highest) {
@@ -1243,6 +1265,7 @@ esp_err_t api_handler(httpd_req_t* r) {
     if (route == "perimeter/zone") return post_perimeter_zone(r);
     if (route == "perimeter/armed") return post_perimeter_armed(r);
     if (route == "perimeter/learn") return post_perimeter_learn(r);
+    if (route == "perimeter/align") return post_perimeter_align(r);
     if (route == "bridge/open") return post_bridge_open(r);
     if (route == "bridge/close") return post_bridge_close(r);
     if (route == "bridge/io") return post_bridge_io(r);

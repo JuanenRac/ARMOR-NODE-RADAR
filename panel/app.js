@@ -779,12 +779,18 @@ async function learnAction(action, seconds) {
   S.message = r.ok ? null : { kind: "bad", text: errorText(r.data.error) };
   await refreshPerimeter(); render();
 }
+async function alignAction(action) {
+  const r = await api("POST", "perimeter/align", { action, sensor: alignUi.sensor, x_mm: alignUi.x, y_mm: alignUi.y });
+  S.message = r.ok ? null : { kind: "bad", text: errorText(r.data.error) };
+  await refreshPerimeter(); render();
+}
 async function refreshPerimeter() {
   const r = await api("GET", "perimeter");
   if (r.ok) S.perimeter = r.data;
 }
 
 const learnUi = { seconds: 180 };
+const alignUi = { sensor: 1, x: 0, y: 2000 };
 
 // The numbers that change while the page is open: drawn into their own box again at every poll, so what is being typed is not lost.
 function perimeterLive() {
@@ -855,6 +861,25 @@ function learnerCard() {
       isAdmin() && S.cfg.perimeter.zones.some(z => !z.enabled) ? el("button", { class: "b", onclick: () => addZone(true, { x_mm: s.x_mm, y_mm: s.y_mm, width_mm: s.width_mm, height_mm: s.height_mm, name: "reflector" + (found.indexOf(s) + 1) }) }, t("learnAdd")) : null)) : el("p", { class: "muted" }, t("learnNone"))] : null);
 }
 
+// The assisted alignment of a radar: the marks the installer stood on and, once two are kept, the heading and offset to copy into the radar's settings.
+function alignCard() {
+  const align = (S.perimeter && S.perimeter.align) || {};
+  const number = (key, min, max) => el("input", { type: "number", min, max, value: alignUi[key], disabled: !isAdmin() || align.reading, oninput: e => { alignUi[key] = Number(e.target.value) || 0; } });
+  const sensor = el("select", { disabled: !isAdmin() || align.reading, onchange: e => { alignUi.sensor = Number(e.target.value); } },
+    [1, 2, 3].map(n => el("option", { value: n, selected: n === alignUi.sensor }, String(n))));
+  const result = align.points >= 2 ? (align.ok ? [note(t("alignResult", align.sensor, align.yaw_deg, align.offset_x_mm, align.offset_y_mm, align.rms_mm), "info"), align.in_range ? null : note(t("alignRange"), "bad")]
+    : [note(t("alignRefused", align.rms_mm), "bad")]) : null;
+  return card(t("alignTitle"), el("p", { class: "muted" }, t("alignIntro")),
+    el("label", { class: "field" }, el("span", {}, t("alignSensor")), sensor),
+    el("label", { class: "field" }, el("span", {}, t("alignX")), number("x", -20000, 20000)),
+    el("label", { class: "field" }, el("span", {}, t("alignY")), number("y", -20000, 20000)),
+    el("div", { class: "actions" }, el("button", { class: "b primary", disabled: !isAdmin() || align.reading, onclick: () => alignAction("begin") }, t("alignBegin")),
+      align.reading ? el("button", { class: "b", disabled: !isAdmin(), onclick: () => alignAction("finish") }, t("alignFinish")) : null,
+      el("button", { class: "b", disabled: !isAdmin(), onclick: () => alignAction("reset") }, t("alignReset"))),
+    align.reading ? el("p", { class: "muted" }, t("alignReading", align.samples)) : null,
+    el("p", { class: "muted" }, t("alignPoints", align.points || 0)), result);
+}
+
 function perimeterPage() {
   const p = S.cfg.perimeter, base = "perimeter.";
   const zones = p.zones.map((z, i) => [z, i]).filter(([z]) => z.enabled);
@@ -885,7 +910,7 @@ function perimeterPage() {
       el("div", { class: "grid wide" }, lines.map(([, i]) => lineCard(i))),
       card(t("perimPaths"), note(t("perimPathsNote"), "info"), isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b", disabled: paths.length >= 3 || detect < 2, onclick: addPath }, t("pathAdd"))) : null),
       el("div", { class: "grid wide" }, paths.map(([, i]) => pathCard(i))),
-      learnerCard()] : null);
+      learnerCard(), alignCard()] : null);
 }
 
 // ---- the transparent serial bridge ---------------------------------------------------------------------------------------------------------
