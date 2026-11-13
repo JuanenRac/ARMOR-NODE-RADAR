@@ -922,9 +922,15 @@ static void test_ble_setting() {
   config::Problems problems;
   CHECK(config::load(R"({"ble":{"mode":"always"}})", s, out, problems) && out.ble == config::BleMode::kAlways);
   problems.clear();
-  CHECK(config::load(R"({"ble":{"mode":"off"}})", s, out, problems) && out.ble == config::BleMode::kOff && config::to_json(out, true).find(R"("ble":{"mode":"off"})") != std::string::npos);
+  CHECK(config::load(R"({"ble":{"mode":"off"}})", s, out, problems) && out.ble == config::BleMode::kOff && config::to_json(out, true).find(R"("ble":{"mode":"off")") != std::string::npos);
   problems.clear();
   CHECK(!config::load(R"({"ble":{"mode":"loud"}})", s, out, problems) && has_problem(problems, "ble.mode", "invalid"));
+  // the pairing PIN comes from the setup code unless the node is told to make a random one
+  CHECK(s.ble_passkey == config::BlePasskeyMode::kDerived && std::string(config::to_text(s.ble_passkey)) == "derived");
+  problems.clear();
+  CHECK(config::load(R"({"ble":{"passkey_mode":"random_display"}})", s, out, problems) && out.ble_passkey == config::BlePasskeyMode::kRandomDisplay && config::to_json(out, true).find(R"("passkey_mode":"random_display")") != std::string::npos);
+  problems.clear();
+  CHECK(!config::load(R"({"ble":{"passkey_mode":"label"}})", s, out, problems) && has_problem(problems, "ble.passkey_mode", "invalid"));
 }
 static void test_sensor_models_in_settings() {
   const config::Settings base = valid_settings();
