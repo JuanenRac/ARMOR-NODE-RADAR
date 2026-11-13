@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared wire header gives the followed object number of a vision event a ceiling:** `track_id` is at most 9007199254740991 (copy of the shared firmware base, with its lock).
 - **The host check of the shared firmware also refuses a sign-in that hashes the password while the lock of the settings store is held** (synchronised from the common base, with its lock file updated).
 
 ## [0.8.1.2] - Backup broker return, station guard and shared base lock
