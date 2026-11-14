@@ -298,6 +298,7 @@ void apply(const config::Settings& settings) {
   rule.max_energy = settings.perimeter.pet_energy;
   radar::set_pet_rule(rule);
   radar::set_close_bluetooth(settings.sensor_bluetooth_off);
+  radar::set_capture(settings.capture_enabled, settings.capture_frames);
   g_states_due = true;
 }
 

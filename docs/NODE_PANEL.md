@@ -37,7 +37,7 @@ holding a board. On a network that is not the node's own, adopt over HTTPS: `too
 | Network | Ethernet or Wi-Fi as the connection; DHCP or a fixed address, mask, gateway, two DNS servers, host name; the time zone and the time server (or, with the server off, the browser's clock); Bluetooth; automatic restart; the configuration file (download and load) |
 | Wi-Fi | the node's own access point (name, security, password, channel, hidden, clients, power, width, country, joined to the wire or not) and, for a node without a cable, the Wi-Fi station |
 | Broker | the MQTT broker and its backups, user and password, the health and telemetry periods; the light sensor and its pins |
-| Radars | per radar: connected, label, RX and TX pin, position and heading, live state; the LD2450 commands and detection zones (kept in the settings and told to the sensor again at every start) |
+| Radars | per radar: connected, label, RX and TX pin, position and heading, live state; the LD2450 commands and detection zones (kept in the settings and told to the sensor again at every start), and the optional capture of the last radar frames (off by default) to download for `tools/frames_to_fixture.py` |
 | Map | the three radars and what they see on one live plan, with buttons to spread them over 360° or 270° |
 | Pins | pins mapped as inputs, outputs, PWM or analogue readings, with their live state and a button to switch them |
 | Users | up to four users (administrator or read-only viewer), passwords, and "my password" |

@@ -1096,6 +1096,31 @@ esp_err_t post_perimeter_align(httpd_req_t* r) {
   return send_ok(r);
 }
 
+// The capture of the radar frames (off by default, see the setting capture.enabled): what is kept, and the frames as the text tools/frames_to_fixture.py reads. Only an administrator.
+esp_err_t get_capture(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, false)) return ESP_OK;
+  return send_json(r, 200, radar::capture_json());
+}
+
+esp_err_t get_capture_frames(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, false)) return ESP_OK;
+  const std::string text = radar::capture_text();
+  security_headers(r);
+  httpd_resp_set_status(r, status_line(200));
+  httpd_resp_set_type(r, "text/plain; charset=utf-8");
+  httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"radar_frames.log\"");
+  return httpd_resp_send(r, text.c_str(), static_cast<ssize_t>(text.size()));
+}
+
+esp_err_t post_capture_clear(httpd_req_t* r) {
+  Who who;
+  if (!require(r, who, true, true)) return ESP_OK;
+  radar::capture_clear();
+  return send_ok(r);
+}
+
 // ---- the transparent serial bridge ---------------------------------------------------------------------------------------------------------
 
 long long query_number(httpd_req_t* r, const char* key, long long fallback, long long lowest, long long highest) {
@@ -1253,6 +1278,8 @@ esp_err_t api_handler(httpd_req_t* r) {
     if (route == "users") return get_users(r);
     if (route == "ble-pin") return get_ble_pin(r);
     if (route == "log") return get_log(r);
+    if (route == "capture") return get_capture(r);
+    if (route == "capture/frames") return get_capture_frames(r);
     if (route == "coredump") return get_coredump(r);
     if (route == "coredump/info") return get_coredump_info(r);
     if (route == "ota/check") return get_ota_check(r);
@@ -1266,6 +1293,7 @@ esp_err_t api_handler(httpd_req_t* r) {
     if (route == "perimeter/armed") return post_perimeter_armed(r);
     if (route == "perimeter/learn") return post_perimeter_learn(r);
     if (route == "perimeter/align") return post_perimeter_align(r);
+    if (route == "capture/clear") return post_capture_clear(r);
     if (route == "bridge/open") return post_bridge_open(r);
     if (route == "bridge/close") return post_bridge_close(r);
     if (route == "bridge/io") return post_bridge_io(r);

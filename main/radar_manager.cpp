@@ -96,6 +96,7 @@ armor::TrackSet g_tracks;
 armor::RadarHealth g_health;
 pet::Rule g_pet_rule;               // guarded by g_data_lock
 bool g_close_bluetooth = true;      // guarded by g_data_lock
+framecap::Capture g_capture;       // the last frames, off until the settings turn it on; guarded by g_data_lock
 EventSink g_event_sink;             // guarded by g_data_lock
 Publisher g_publish;
 std::string g_node_id;
@@ -195,6 +196,7 @@ void feed_ld2450(Line& line, std::uint8_t sensor_id, const std::uint8_t* buffer,
     std::lock_guard<std::mutex> guard(g_data_lock);
     if (!armor::ld2450::decode_frame(bytes, length, frame)) { g_health.frame_bad(sensor_id); return; }
     g_health.frame_ok(sensor_id, monotonic_ms());
+    g_capture.push(sensor_id, bytes, length);
 #if CONFIG_ARMOR_RADAR_HEX_DUMP
     dump_frame(sensor_id, bytes, length);
 #endif
@@ -832,6 +834,7 @@ void start(const config::Settings& settings, Publisher publisher) {
   g_publish = std::move(publisher);
   g_node_id = settings.node_id;
   g_close_bluetooth = settings.sensor_bluetooth_off;
+  g_capture.configure(settings.capture_enabled, settings.capture_frames);
   g_pet_rule.enabled = settings.perimeter.pet_immunity;
   g_pet_rule.max_distance_cm = settings.perimeter.pet_distance_cm;
   g_pet_rule.max_energy = settings.perimeter.pet_energy;
@@ -1033,6 +1036,18 @@ void set_close_bluetooth(bool close_after_setup) {
 }
 
 bool close_bluetooth_rule() { std::lock_guard<std::mutex> guard(g_data_lock); return g_close_bluetooth; }
+
+void set_capture(bool enabled, int frames) { std::lock_guard<std::mutex> guard(g_data_lock); g_capture.configure(enabled, frames); }
+std::string capture_text() { std::lock_guard<std::mutex> guard(g_data_lock); return g_capture.text(); }
+void capture_clear() { std::lock_guard<std::mutex> guard(g_data_lock); g_capture.clear(); }
+
+std::string capture_json() {
+  json::Writer w;
+  std::lock_guard<std::mutex> guard(g_data_lock);
+  w.begin_object().field("enabled", g_capture.enabled()).field("capacity", static_cast<long long>(g_capture.capacity())).field("stored", static_cast<long long>(g_capture.size()))
+      .field("dropped", static_cast<long long>(g_capture.dropped())).end_object();
+  return w.str();
+}
 
 void set_event_sink(EventSink sink) { std::lock_guard<std::mutex> guard(g_data_lock); g_event_sink = std::move(sink); }
 
