@@ -210,7 +210,25 @@ def free_port() -> int:
         return probe.getsockname()[1]
 
 
+START_ATTEMPTS = 3
+
+
 def start_broker(folder: Path, accounts: dict[str, str], acl: str) -> tuple[subprocess.Popen, int]:
+    """Start the broker, trying up to START_ATTEMPTS times (1 s, then 2 s apart, each time on a new port): a runner can lose the race for the port or start the service late. Only the start is retried, never the checks."""
+    assert find("mosquitto") and find("mosquitto_passwd")
+    last: AssertionError | None = None
+    for attempt in range(START_ATTEMPTS):
+        if attempt:
+            time.sleep(attempt)
+        try:
+            return _start_broker_once(folder, accounts, acl)
+        except AssertionError as problem:
+            last = problem
+            print(f"MOSQUITTO=RETRY start attempt {attempt + 1} of {START_ATTEMPTS} failed", file=sys.stderr)
+    raise AssertionError(f"{last} (after {START_ATTEMPTS} attempts)")
+
+
+def _start_broker_once(folder: Path, accounts: dict[str, str], acl: str) -> tuple[subprocess.Popen, int]:
     broker, passwd = find("mosquitto"), find("mosquitto_passwd")
     assert broker and passwd
     port = free_port()
