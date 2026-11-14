@@ -123,6 +123,11 @@ The decoder was written from the manual and checked against the manual's worked 
 
     python tools/frames_to_fixture.py console.log tests/fixtures/ld2450_real.hex
 
+Without a new build there is a second way: in the panel, **Radars**, *Capture of the radar frames*, turn on *Keep the last radar frames in memory* (setting `capture.enabled`, off by default; `capture.frames`, 8 to 200,
+60 by default), walk in front of each radar, press *Download the frames* and give that file to the same tool (`python tools/frames_to_fixture.py radar_frames.log tests/fixtures/ld2450_real.hex`). The node keeps the frames
+in a ring in memory (the oldest goes first, nothing is written to flash) and only a well-formed radar frame gets in: never a command, a password or a byte of the serial bridge. It applies at once, is forgotten at a restart,
+and only an administrator can read it (`GET /api/v1/capture`, `GET /api/v1/capture/frames`, `POST /api/v1/capture/clear`).
+
 Then run the host tests: they decode every captured frame and fail if one is not a well-formed LD2450 frame. Send the file, and one line
 saying where you stood relative to the radar (to the left, to the right, how far), and the sideways axis of the radar (the assumption Studio
 makes) can be confirmed or corrected with evidence.

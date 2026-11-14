@@ -89,6 +89,12 @@ void set_pet_rule(const pet::Rule& rule);
 void set_close_bluetooth(bool close_after_setup);
 bool close_bluetooth_rule();
 
+// The capture of the radar frames (core/frame_capture.hpp): turned on or off, and sized, by the settings; applies at once. The text is what tools/frames_to_fixture.py reads.
+void set_capture(bool enabled, int frames);
+std::string capture_text();
+std::string capture_json();
+void capture_clear();
+
 // Where the events of the sensors go (the Bluetooth of a sensor found open or closed): the perimeter module delivers them.
 using EventSink = std::function<void(int sensor_id, radarevent::Kind kind, const std::string& name)>;
 void set_event_sink(EventSink sink);

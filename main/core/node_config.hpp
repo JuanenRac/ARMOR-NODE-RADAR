@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "board_pins.hpp"
+#include "frame_capture.hpp"
 #include "admin_sources.hpp"
 #include "json.hpp"
 #include "mqtt_tls.hpp"
@@ -224,6 +225,9 @@ struct Settings {
   perimeter::Config perimeter;
   // The sensors that have a Bluetooth radio of their own (LD2450, LD2410, LD2412) ship with it on and open. On (the default): the node closes it a few seconds after start and keeps it closed.
   bool sensor_bluetooth_off = true;
+  // The capture of the radar frames for the bench (core/frame_capture.hpp): off, and 60 frames when it is turned on. It applies at once.
+  bool capture_enabled = false;
+  int capture_frames = framecap::kDefaultFrames;
 };
 
 struct Problem {
@@ -669,6 +673,10 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
     if (!p->is_object()) bad(problems, "perimeter", "invalid"); else read_perimeter(*p, s.perimeter, problems);
   }
   if (const json::Value* security = document.get("sensor_security"); security != nullptr && security->is_object()) read_bool(*security, "bluetooth_off", s.sensor_bluetooth_off, "sensor_security.bluetooth_off", problems);
+  if (const json::Value* capture = document.get("capture"); capture != nullptr && capture->is_object()) {
+    read_bool(*capture, "enabled", s.capture_enabled, "capture.enabled", problems);
+    read_int(*capture, "frames", s.capture_frames, framecap::kMinFrames, framecap::kMaxFrames, "capture.frames", problems);
+  }
 }
 
 // ---- checking ------------------------------------------------------------------------------------------------------------------
@@ -980,6 +988,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();
+  w.key("capture").begin_object().field("enabled", s.capture_enabled).field("frames", s.capture_frames).end_object();
   w.end_object();
   return w.str();
 }
@@ -1008,6 +1017,8 @@ inline bool needs_restart(const Settings& before, const Settings& after) {
   a->time.zone = b->time.zone = "";
   a->perimeter = b->perimeter = perimeter::Config{};   // the perimeter engine and the rule for the sensors' Bluetooth apply at once
   a->sensor_bluetooth_off = b->sensor_bluetooth_off = true;
+  a->capture_enabled = b->capture_enabled = false;   // the capture of the frames applies at once too
+  a->capture_frames = b->capture_frames = framecap::kDefaultFrames;
   return to_json(*a, true) != to_json(*b, true);
 }
 

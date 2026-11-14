@@ -688,10 +688,31 @@ function radarCard(index) {
       info.last !== undefined ? el("p", { class: "muted mono" }, t("lastAnswer") + ": " + (info.last || "—")) : null] : null);
 }
 
+// The capture of the radar frames (off by default): the switch and the size are settings; here is what is kept, the download as the text file tools/frames_to_fixture.py reads, and the button that forgets it.
+function captureCard() {
+  const result = el("p", { class: "muted", role: "status" });
+  const look = async () => {
+    const r = await api("GET", "capture");
+    if (!r.ok) { result.textContent = errorText(r.data.error); result.className = "err"; return; }
+    result.textContent = r.data.enabled ? t("captureStatus", r.data.stored, r.data.capacity, r.data.dropped) : t("captureOffNow"); result.className = "muted";
+  };
+  const clear = async () => {
+    const r = await api("POST", "capture/clear", {});
+    if (!r.ok) { result.textContent = errorText(r.data.error); result.className = "err"; return; }
+    await look();
+  };
+  return card(t("captureTitle"), field("captureEnabled", "capture.enabled", { type: "checkbox" }), field("captureFrames", "capture.frames", { type: "number", min: 8, max: 200 }),
+    el("p", { class: "muted" }, t("captureHelp")),
+    el("div", { class: "actions" }, el("button", { class: "b", disabled: !isAdmin(), onclick: look }, t("captureRefresh")),
+      el("a", { class: "b", href: "api/v1/capture/frames", download: "radar_frames.log" }, t("captureDownload")),
+      el("button", { class: "b danger", disabled: !isAdmin(), onclick: clear }, t("captureClear"))), result);
+}
+
 function radarsPage() {
   return el("div", {}, note(t("radarWarn")),
     card(t("fusionTitle"), field("mergeMm", "fusion.merge_mm", { type: "number", min: 0, max: 2000, hint: t("fusionHint") }), note(t("fusionNote"), "info")),
     card(t("sensorSecurityTitle"), field("sensorBluetoothOff", "sensor_security.bluetooth_off", { type: "checkbox" }), note(t("sensorBluetoothOffHint"), "info")),
+    captureCard(),
     el("div", { class: "grid wide" }, [0, 1, 2].map(radarCard)));
 }
 

@@ -48,6 +48,7 @@ const config = {
   security: { seal_secrets: false, ota_check_board: true, ota_require_board_mark: true },
   fusion: { merge_mm: 0 },
   sensor_security: { bluetooth_off: true },
+  capture: { enabled: false, frames: 60 },
   perimeter: {
     enabled: false, range_min_mm: 0, range_max_mm: 8000, debounce_frames: 2, count_window: 5, strict_entry: false, jam_detection: false, stream: "live",
     night: { enabled: false, from_min: 1320, to_min: 360 }, pet: { enabled: false, distance_cm: 200, energy: 30 }, masking: { minutes: 0, armed_only: true },
@@ -241,6 +242,9 @@ const server = createServer(async (request, response) => {
   if (method === "GET" && route === "config/export") { if (!needAdmin()) return; return json(response, 200, { config }); }
   if (method === "GET" && route === "coredump/info") { if (!needAdmin()) return; return json(response, 200, { present: false }); }
   if (method === "POST" && route === "coredump/erase") { if (!needAdmin()) return; return json(response, 200, { ok: true }); }
+  if (method === "GET" && route === "capture") { if (!needAdmin()) return; return json(response, 200, { enabled: config.capture.enabled, capacity: config.capture.enabled ? config.capture.frames : 0, stored: 0, dropped: 0 }); }
+  if (method === "GET" && route === "capture/frames") { if (!needAdmin()) return; response.writeHead(200, { "Content-Type": "text/plain" }); return response.end(""); }
+  if (method === "POST" && route === "capture/clear") { if (!needAdmin()) return; return json(response, 200, { ok: true }); }
   if (method === "POST" && route === "ota/copy") { if (!needAdmin()) return; return json(response, 200, { ok: true, started: true }); }
   if (method === "GET" && route === "ota/copy") { if (!needAdmin()) return; return json(response, 200, { state: "done", done: 1, total: 1, error: "", version: "0.0.3" }); }
   if (method === "POST" && route === "time") { if (!needAdmin()) return; return json(response, 200, { ok: true }); }
