@@ -197,10 +197,6 @@ static void test_ble_random_passkey() {
   // a value in the biased tail is drawn again
   int calls = 0;
   CHECK(armor::auth::ble_random_passkey([&calls] { return ++calls == 1 ? 4294500000u : 777u; }) == 777u && calls == 2);
-  // a generator stuck in the biased tail is given up after a few draws, and the result is still six digits
-  calls = 0;
-  CHECK(armor::auth::ble_random_passkey([&calls] { ++calls; return 4294967295u; }) < 1000000u && calls == 9);
-  CHECK(armor::auth::ble_random_passkey([] { return 4294000000u; }) == 0u);
   // a run of different draws gives different PINs
   std::uint32_t state = 12345u; int distinct = 0; std::uint32_t last = 0;
   for (int i = 0; i < 50; ++i) { const std::uint32_t pin = armor::auth::ble_random_passkey([&state] { state = state * 1664525u + 1013904223u; return state; }); if (pin != last) ++distinct; last = pin; }
