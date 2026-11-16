@@ -132,6 +132,19 @@ class LinkWatch {
   std::uint64_t lost_since_ms_ = 0;
 };
 
+// A command that arrives from the broker must give the same result however many times it is delivered (a message can be repeated or replayed): "toggle" would flip the output each
+// time, so it is only for the panel of the node, where a person pushes a button.
+constexpr bool broker_may_send(Action action) { return action != Action::kNone && action != Action::kToggle; }
+
+// What a paused or standby node does to an output: it goes to its safe state ("on" or "off"); "keep" leaves it where it is. Returns true when the output is to be driven, with the logical
+// state in `on`.
+inline bool pause_state(const config::MappedPin& pin, bool& on) {
+  if (pin.mode != config::PinMode::kOutput && pin.mode != config::PinMode::kPwm) return false;
+  if (pin.safe == config::SafeState::kKeep) return false;
+  on = pin.safe == config::SafeState::kOn;
+  return true;
+}
+
 // True when this output must fall back to its safe state now: a timeout is set, a safe state other than "keep" is chosen, and the link has been down that long.
 inline bool must_fall_back(const config::MappedPin& pin, std::uint64_t lost_for_ms) {
   return pin.mode == config::PinMode::kOutput && pin.link_timeout_s > 0 && pin.safe != config::SafeState::kKeep && lost_for_ms >= static_cast<std::uint64_t>(pin.link_timeout_s) * 1000ULL;

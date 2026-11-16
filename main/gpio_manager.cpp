@@ -44,6 +44,7 @@ struct Pin {
 };
 
 std::mutex g_lock;
+bool g_paused = false;   // the node is paused or in standby: its outputs sit in their safe state and orders for them are refused
 std::vector<std::unique_ptr<Pin>> g_pins;
 std::string g_node_id;
 Publisher g_publish;
@@ -229,7 +230,27 @@ void poll_task(void*) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
+// Drives every output to its safe state while the node is paused or in standby. The caller holds the lock.
+void apply_pause_locked() {
+  for (auto& owned : g_pins) {
+    Pin& pin = *owned;
+    bool on = false;
+    if (!gpio::pause_state(pin.cfg, on)) continue;
+    if (pin.pulse != nullptr) esp_timer_stop(pin.pulse);
+    pin.pulse_over = false;
+    write_output(pin, on);
+    publish(pin);
+  }
+}
+
 }  // namespace
+
+void set_paused(bool paused) {
+  std::lock_guard<std::mutex> guard(g_lock);
+  const bool changed = g_paused != paused;
+  g_paused = paused;
+  if (paused && changed) apply_pause_locked();
+}
 
 void start(const config::Settings& settings, Publisher publisher, LinkProbe link) {
   g_node_id = settings.node_id;
@@ -252,15 +273,21 @@ void start(const config::Settings& settings, Publisher publisher, LinkProbe link
     ESP_LOGI(kTag, "pin \"%s\": GPIO %d as %s", mapped.name.c_str(), mapped.gpio, config::to_text(mapped.mode));
     g_pins.push_back(std::move(pin));
   }
+  {
+    std::lock_guard<std::mutex> guard(g_lock);
+    if (g_paused) apply_pause_locked();   // a node kept in standby boots into it: its outputs start in their safe state
+  }
   if (!g_pins.empty()) xTaskCreate(poll_task, "pins", 4096, nullptr, 4, nullptr);
 }
 
-Outcome command(const std::string& pin_name, std::string_view payload) {
+Outcome command(const std::string& pin_name, std::string_view payload, bool from_broker) {
   std::lock_guard<std::mutex> guard(g_lock);
   Pin* pin = find(pin_name);
   if (pin == nullptr) return Outcome::kUnknownPin;
+  if (g_paused) return Outcome::kPaused;   // a paused node's outputs stay in their safe state
   const gpio::Command parsed = gpio::parse_command(payload, pin->cfg.mode);
   if (parsed.action == gpio::Action::kNone) return Outcome::kRefused;
+  if (from_broker && !gpio::broker_may_send(parsed.action)) return Outcome::kRefused;
   if (pin->pulse != nullptr) esp_timer_stop(pin->pulse);  // any new command cancels a pulse in progress
   pin->pulse_over = false;   // ... including one that ended a moment ago and was not applied yet
   pin->fell_back = false;
