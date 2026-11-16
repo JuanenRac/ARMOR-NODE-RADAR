@@ -28,6 +28,10 @@ struct Options {
   std::function<void(control::Diagnostics&)> diagnostics_extra;
   // The firmware versions of the sensors the node reads (name and version, at most eight), for the diagnostic package. Optional.
   std::function<std::vector<diag::Sensor>()> sensor_versions;
+  // Decides whether an order that arrived may be looked at at all (its signature, with the node's own key). Gets the payload as it arrived and, when it says yes, hands back in `plain` the payload
+  // the order gate is to read (the signature and nonce taken off). It runs in the broker client's task and must not wait. FAIL CLOSED: when it says no, the order is dropped before it can arm
+  // anything, pause or put the node in standby. Optional: without it every order of the contract is looked at, as before.
+  std::function<bool(const std::string& payload, std::string& plain)> authorize;
 };
 
 // Loads the standby kept in flash (a node that was put in standby boots straight into it: the state is known BEFORE the node's work starts, so call this right after the store is open and

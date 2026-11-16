@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The order channel of the node can check a signature before it reads anything:** `node_control::Options` has an optional `authorize` hook that sees each order that arrives on `armor/control/...` and drops it, before it can arm anything, when the node says no. A node that does not set it behaves as before.
+
 ## [0.8.1.3] - Frame capture, assisted alignment, random Bluetooth PIN and guarded firmware upload
 
 - **The test against a real broker retries the start of the broker:** `tests/check_mosquitto.py` (from the shared firmware base) makes up to three attempts to start Mosquitto, 1 s and 2 s apart and each on a new port, before it reports `mosquitto did not start`. Only the start is retried, never the checks that follow.

@@ -130,6 +130,12 @@ void act_on(const control::Change& change) {
 void on_command(const std::string& topic, const std::string& payload) {
   const bool broadcast = topic == control::broadcast_topic();
   if (!broadcast && topic != control::command_topic(g_options.node_id)) return;
+  std::string plain;
+  if (g_options.authorize) {
+    if (!g_options.authorize(payload, plain)) { ESP_LOGW(kTag, "an order was dropped: it does not carry a good signature"); return; }
+  } else {
+    plain = payload;
+  }
   control::Env env;
   env.now_ms = now_ms();
   env.wall_ms = wall_ms();
@@ -144,7 +150,7 @@ void on_command(const std::string& topic, const std::string& payload) {
   control::Reply reply;
   {
     const std::lock_guard<std::mutex> guard(g_lock);
-    reply = g_controller.handle(g_options.node_id, broadcast, payload, env);
+    reply = g_controller.handle(g_options.node_id, broadcast, plain, env);
     // The acknowledgement leaves first (it is queued for the broker now and the restart is a few seconds away).
     answer(reply.json);
   }
