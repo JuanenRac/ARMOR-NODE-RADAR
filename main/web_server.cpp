@@ -505,6 +505,7 @@ esp_err_t post_pin_command(httpd_req_t* r) {
   if (!read_json(r, in)) return ESP_OK;
   const pins::Outcome outcome = pins::command(in.string_or("name", ""), in.string_or("command", ""));
   if (outcome == pins::Outcome::kUnknownPin) return send_error(r, 404, "unknown_pin");
+  if (outcome == pins::Outcome::kPaused) return send_error(r, 409, "node_paused");
   if (outcome == pins::Outcome::kRefused) return send_error(r, 422, "invalid_command");
   return send_ok(r);
 }

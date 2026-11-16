@@ -169,9 +169,10 @@ void on_mqtt(void*, esp_event_base_t, int32_t event_id, void* data) {
       }
       const std::string name = gpio::pin_of_command_topic(g_settings.node_id, topic_text);
       if (name.empty()) break;
-      const pins::Outcome outcome = pins::command(name, payload_text);
-      if (outcome == pins::Outcome::kUnknownPin && perimeter_rt::zone_order(name, zonecontrol::parse(payload_text))) break;   // a zone of the perimeter engine is a device too
-      if (outcome != pins::Outcome::kOk) ESP_LOGW(kTag, "command for \"%s\" ignored (%s)", name.c_str(), outcome == pins::Outcome::kUnknownPin ? "no such pin" : "not understood");
+      const pins::Outcome outcome = pins::command(name, payload_text, true);
+      const zonecontrol::Order zone_word = zonecontrol::parse(payload_text);
+      if (outcome == pins::Outcome::kUnknownPin && zone_word != zonecontrol::Order::kToggle && perimeter_rt::zone_order(name, zone_word)) break;   // a zone of the perimeter engine is a device too
+      if (outcome != pins::Outcome::kOk) ESP_LOGW(kTag, "command for \"%s\" ignored (%s)", name.c_str(), outcome == pins::Outcome::kUnknownPin ? "no such pin" : (outcome == pins::Outcome::kPaused ? "the node is paused" : "not understood"));
       break;
     }
     default: break;

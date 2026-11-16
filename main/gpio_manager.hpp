@@ -17,9 +17,13 @@ using LinkProbe = std::function<bool()>;
 
 void start(const config::Settings& settings, Publisher publisher, LinkProbe link);
 
-enum class Outcome { kOk, kUnknownPin, kRefused };
-// A command for a mapped output or PWM pin, in the words the server uses (see core/gpio_logic.hpp parse_command).
-Outcome command(const std::string& pin_name, std::string_view payload);
+enum class Outcome { kOk, kUnknownPin, kRefused, kPaused };
+// A command for a mapped output or PWM pin, in the words the server uses (see core/gpio_logic.hpp parse_command). `from_broker` is true for a message from the broker: "toggle" is not
+// accepted from there. While the node is paused or in standby every command is refused (kPaused).
+Outcome command(const std::string& pin_name, std::string_view payload, bool from_broker = false);
+
+// The node's work stopped (paused or standby) or started again: on stopping, every output goes to its safe state; commands are refused until the work starts again. Safe to call before start().
+void set_paused(bool paused);
 
 // Reports every pin's state now (after the broker connection came up).
 void publish_all();

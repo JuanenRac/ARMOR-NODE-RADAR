@@ -144,6 +144,8 @@ extern "C" void app_main() {
   if (!setup && settings.mqtt.enabled) {
     armor::node_control::Options control;
     control.node_id = settings.node_id;
+    // A paused node or one in standby drives every output to its safe state and ignores orders for them until it works again.
+    control.on_state = [](armor::control::State state) { armor::pins::set_paused(state != armor::control::State::kRunning); };
     control.publish = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); };
     control.publish_retained = [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish_retained(topic, payload); };
     // The firmware of each sensor goes into the diagnostic package (name and version only, from the identity the node read from the sensor).

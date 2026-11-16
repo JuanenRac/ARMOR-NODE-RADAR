@@ -382,6 +382,24 @@ static void test_gpio_commands() {
   CHECK(gpio::parse_command("ON", PinMode::kOutput).action == Action::kOn);
   CHECK(gpio::parse_command("  off\n", PinMode::kOutput).action == Action::kOff);
   CHECK(gpio::parse_command("Toggle", PinMode::kOutput).action == Action::kToggle);
+  // From the broker a repeated message must not flip an output: toggle is for the panel only.
+  CHECK(!gpio::broker_may_send(Action::kToggle) && !gpio::broker_may_send(Action::kNone));
+  CHECK(gpio::broker_may_send(Action::kOn) && gpio::broker_may_send(Action::kOff) && gpio::broker_may_send(Action::kPulse) && gpio::broker_may_send(Action::kLevel));
+  {
+    // A paused node takes every output to its safe state; "keep" and inputs are left alone.
+    config::MappedPin out;
+    bool on = true;
+    out.mode = PinMode::kOutput; out.safe = config::SafeState::kOff;
+    CHECK(gpio::pause_state(out, on) && !on);
+    out.safe = config::SafeState::kOn;
+    CHECK(gpio::pause_state(out, on) && on);
+    out.mode = PinMode::kPwm; out.safe = config::SafeState::kOff;
+    CHECK(gpio::pause_state(out, on) && !on);
+    out.safe = config::SafeState::kKeep;
+    CHECK(!gpio::pause_state(out, on));
+    out.mode = PinMode::kInput; out.safe = config::SafeState::kOff;
+    CHECK(!gpio::pause_state(out, on));
+  }
   CHECK(gpio::parse_command("1", PinMode::kOutput).action == Action::kOn && gpio::parse_command("0", PinMode::kOutput).action == Action::kOff);
   CHECK(gpio::parse_command("true", PinMode::kOutput).action == Action::kOn);
   CHECK(gpio::parse_command("pulse", PinMode::kOutput).action == Action::kPulse && gpio::parse_command("pulse", PinMode::kOutput).milliseconds == 0);
