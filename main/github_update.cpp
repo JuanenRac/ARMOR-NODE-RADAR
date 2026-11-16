@@ -442,6 +442,7 @@ void finish_copy(const char* error, const std::string& version) {
   g_copy.error = error == nullptr ? "" : error;
   g_copy.version = version;
   g_running = false;
+  g_installing = false;   // the copy holds the install slot, as install() and a manual write do
   node_control::announce_maintenance_done("update");   // the copy is over and the node did not restart
 }
 
@@ -483,6 +484,7 @@ bool start_copy() {
   {
     std::lock_guard<std::mutex> guard(g_lock);
     if (g_running) return false;
+    if (g_installing.exchange(true)) return false;   // an install or a manual write is writing the other slot
     g_running = true;
     g_copy = CopyProgress{};
     g_copy.state = "copying";
