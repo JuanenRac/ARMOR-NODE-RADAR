@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The copy of the running firmware to the other slot waits for an install or a manual write that is on:** `start_copy()` takes the same lock as `install()` and the manual writes (not only the flag of its own job) and gives it back when it ends, so two writers can no longer open the same slot.
 - **The order channel of the node can check a signature before it reads anything:** `node_control::Options` has an optional `authorize` hook that sees each order that arrives on `armor/control/...` and drops it, before it can arm anything, when the node says no. A node that does not set it behaves as before.
 
 ## [0.8.1.3] - Frame capture, assisted alignment, random Bluetooth PIN and guarded firmware upload
