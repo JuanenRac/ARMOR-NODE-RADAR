@@ -199,6 +199,7 @@ struct Settings {
   // The waits before a retry. The defaults are the waits the firmware has always used (1 s growing to 30 s for the Wi-Fi, to 60 s for the broker, 20 % scatter).
   int retry_wifi_first_ms = 1000, retry_wifi_max_ms = 30000, retry_mqtt_first_ms = 1000, retry_mqtt_max_ms = 60000, retry_scatter_percent = 20;
   WebMode web = WebMode::kBoth;
+  bool metrics_basic_over_http = true;   // true (as always): /metrics also takes HTTP Basic over the plain port; false: only over HTTPS (and the cookie of a session)
   std::string admin_sources;   // the networks that may use the panel; empty = the private ranges of a house (see admin_sources.hpp)
   std::string language = "en";
   // A periodic, unconditional restart (disconnect_before_restart() then esp_restart()), independent of any fault: 0 means never. One of
@@ -652,6 +653,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
       read_text(*web, "admin_sources", sources, adminsrc::kMaxText, "web.admin_sources", problems);
       if (!adminsrc::valid_list(sources)) bad(problems, "web.admin_sources", "invalid"); else s.admin_sources = sources;
     }
+    read_bool(*web, "metrics_basic_over_http", s.metrics_basic_over_http, "web.metrics_basic_over_http", problems);
   }
   if (const json::Value* ui = document.get("ui"); ui != nullptr && ui->is_object()) read_text(*ui, "language", s.language, 4, "ui.language", problems);
   if (const json::Value* system = document.get("system"); system != nullptr && system->is_object()) {
@@ -980,7 +982,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("ble").begin_object().field("mode", to_text(s.ble)).field("passkey_mode", to_text(s.ble_passkey)).end_object();
   w.key("improv").begin_object().field("mode", to_text(s.improv)).end_object();
   w.key("retry").begin_object().field("wifi_first_ms", s.retry_wifi_first_ms).field("wifi_max_ms", s.retry_wifi_max_ms).field("mqtt_first_ms", s.retry_mqtt_first_ms).field("mqtt_max_ms", s.retry_mqtt_max_ms).field("scatter_percent", s.retry_scatter_percent).end_object();
-  w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).end_object();
+  w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).field("metrics_basic_over_http", s.metrics_basic_over_http).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();

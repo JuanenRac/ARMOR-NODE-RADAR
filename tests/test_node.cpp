@@ -1046,6 +1046,12 @@ static void test_web_policy() {
   problems.clear();
   CHECK(config::load("{}", base, out, problems) && out.admin_sources.empty());
   problems.clear();
+  CHECK(base.metrics_basic_over_http && config::load("{}", base, out, problems) && out.metrics_basic_over_http);   // as always unless it is turned off
+  problems.clear();
+  CHECK(config::load(R"({"web":{"metrics_basic_over_http":false}})", base, out, problems) && !out.metrics_basic_over_http && config::to_json(out, true).find(R"("metrics_basic_over_http":false)") != std::string::npos);
+  problems.clear();
+  CHECK(!config::load(R"({"web":{"metrics_basic_over_http":"no"}})", base, out, problems) && has_problem(problems, "web.metrics_basic_over_http", "invalid"));
+  problems.clear();
   CHECK(config::load(R"({"web":{"mode":"http"}})", base, out, problems) && out.web == config::WebMode::kHttp);
   problems.clear();
   CHECK(!config::load(R"({"web":{"mode":"ftp"}})", base, out, problems) && has_problem(problems, "web.mode", "invalid"));

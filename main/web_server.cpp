@@ -1225,15 +1225,16 @@ bool basic_administrator(httpd_req_t* r) {
   const std::size_t colon = pair.find(':');
   if (colon == std::string::npos) return false;
   const std::uint32_t source = source_of(r);
+  const std::string person = pair.substr(0, colon);
   {
     std::lock_guard<std::mutex> guard(g_lock);
     g_throttle.set_minute_limit(login_limit());
-    if (!g_throttle.allowed(source, now_ms()) || !g_throttle.minute_allowed(now_ms())) return false;
+    if (!g_throttle.allowed(source, now_ms()) || !g_throttle.minute_allowed(now_ms()) || !g_user_throttle.allowed(person, now_ms())) return false;
   }
   auth::Role role = auth::Role::kViewer;
-  const bool ok = store::user_verify(pair.substr(0, colon), pair.substr(colon + 1), role) && role == auth::Role::kAdmin;
+  const bool ok = store::user_verify(person, pair.substr(colon + 1), role) && role == auth::Role::kAdmin;
   std::lock_guard<std::mutex> guard(g_lock);
-  if (ok) g_throttle.success(source); else { g_throttle.failure(source, now_ms()); g_throttle.minute_failure(now_ms()); }
+  if (ok) { g_throttle.success(source); g_user_throttle.success(person); } else { g_throttle.failure(source, now_ms()); g_throttle.minute_failure(now_ms()); g_user_throttle.failure(person, now_ms()); }
   return ok;
 }
 
@@ -1241,7 +1242,9 @@ esp_err_t get_metrics(httpd_req_t* r) {
   if (store::users_empty()) return send_error(r, 403, "setup_required");
   if (!adminsrc::allowed(source_of(r), store::settings().admin_sources)) return send_error(r, 403, "outside_network");
   const Who who = authenticate(r);
-  if (!(who.ok && who.role == auth::Role::kAdmin) && !basic_administrator(r)) {
+  // With web.metrics_basic_over_http off, a name and password are taken only on the HTTPS port (the cookie of a session works on both)
+  const bool basic_allowed = is_tls(r) || store::settings().metrics_basic_over_http;
+  if (!(who.ok && who.role == auth::Role::kAdmin) && !(basic_allowed && basic_administrator(r))) {
     httpd_resp_set_hdr(r, "WWW-Authenticate", "Basic realm=\"armor\"");
     return send_error(r, 401, "unauthorized");
   }

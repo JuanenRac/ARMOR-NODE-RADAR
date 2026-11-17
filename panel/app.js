@@ -363,6 +363,7 @@ function networkPage() {
       note(t("netRestartNote"), "info")),
     card(t("webTitle"), field("webMode", "web.mode", { type: "select", options: [["both", t("webBoth")], ["https", t("webHttps")], ["http", t("webHttp")]] }),
       field("adminSources", "web.admin_sources", { hint: t("adminSourcesHint") }),
+      field("metricsBasicOverHttp", "web.metrics_basic_over_http", { type: "checkbox", hint: t("metricsBasicOverHttpHint") }),
       S.status && S.status.web ? el("p", { class: "muted" }, t(S.status.web.https ? "webRunning" : "webNotRunning")) : null,
       S.status && S.status.web && S.status.web.cert_sha256 ? el("p", { class: "muted mono" }, t("webFingerprint") + ": " + S.status.web.cert_sha256) : null, note(t("webNote"), "info")),
     card(t("clockTitle"),
