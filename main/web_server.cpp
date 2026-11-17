@@ -1226,15 +1226,16 @@ bool basic_administrator(httpd_req_t* r) {
   if (colon == std::string::npos) return false;
   const std::uint32_t source = source_of(r);
   const std::string person = pair.substr(0, colon);
+  const std::uint32_t person_key = auth::user_key(person);
   {
     std::lock_guard<std::mutex> guard(g_lock);
     g_throttle.set_minute_limit(login_limit());
-    if (!g_throttle.allowed(source, now_ms()) || !g_throttle.minute_allowed(now_ms()) || !g_user_throttle.allowed(person, now_ms())) return false;
+    if (!g_throttle.allowed(source, now_ms()) || !g_throttle.minute_allowed(now_ms()) || !g_user_throttle.allowed(person_key, now_ms())) return false;
   }
   auth::Role role = auth::Role::kViewer;
   const bool ok = store::user_verify(person, pair.substr(colon + 1), role) && role == auth::Role::kAdmin;
   std::lock_guard<std::mutex> guard(g_lock);
-  if (ok) { g_throttle.success(source); g_user_throttle.success(person); } else { g_throttle.failure(source, now_ms()); g_throttle.minute_failure(now_ms()); g_user_throttle.failure(person, now_ms()); }
+  if (ok) { g_throttle.success(source); g_user_throttle.success(person_key); } else { g_throttle.failure(source, now_ms()); g_throttle.minute_failure(now_ms()); g_user_throttle.failure(person_key, now_ms()); }
   return ok;
 }
 
