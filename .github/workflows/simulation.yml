@@ -41,4 +41,22 @@ jobs:
       - name: Play the bus, spoiled on purpose, into the driver
         env:
           PYTHONPATH: ../ARMOR-SIMULATOR/src
-        run: python -m armor_simulator.node_bench --bus ld2450 --driver ./sim_bench
+        run: python -m armor_simulator.node_bench --bus ld2450 --driver ./sim_bench --report bench-report.json
+
+      - name: Write the matrix of faults (bus by fault) into the summary
+        if: ${{ !cancelled() && hashFiles('bench-report.json') != '' }}
+        env:
+          PYTHONPATH: ../ARMOR-SIMULATOR/src
+        run: |
+          python -m armor_simulator.node_bench --merge bench-report.json | tee bench-matrix.txt
+          { echo '```'; cat bench-matrix.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the report and the matrix
+        if: ${{ !cancelled() && hashFiles('bench-report.json') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-matrix
+          path: |
+            bench-report.json
+            bench-matrix.txt
+          retention-days: 14

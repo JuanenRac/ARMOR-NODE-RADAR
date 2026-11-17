@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The simulation bench keeps a matrix of the faults it played:** the run writes a report of which fault of the bus passed, failed or was not run, prints it as one line of a bus-by-fault matrix in the summary of the run, and keeps both files as an artifact for two weeks. The matrix says what the simulated bus covered; it says nothing about the real equipment.
+
 - **A scraper of the metrics can be made to use HTTPS, and a wrong password on the metrics counts against the person:** the new setting `web.metrics_basic_over_http` (on by default, as before; in the panel next to the networks that may use it) turns the name and password of `/metrics` off on the plain port, where only the cookie of a session then works; a wrong password sent with Basic is now also counted in the limit of that person, like a wrong sign-in.
 
 - **A paused node, or one in standby, takes its outputs to their safe state and ignores orders for them:** the safe state of each output (`off`, `on` or `keep`) is applied when the node is paused or put in standby (also when it boots into standby), orders from the broker and from the panel are refused until it works again (the panel answers `node_paused`), and `toggle` is no longer accepted from the broker, because a repeated or replayed message would flip the output each time (the panel still has its Toggle button).
