@@ -186,6 +186,7 @@ ARMOR-NODE-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存
 | `system.login_limit_per_minute` | 30 (0-120) | 面板对所有人锁定登录前每分钟允许的错误密码次数（0 = 无全局限制）；可在 Studio（每个节点上的按钮）或通过 `POST /api/v1/admin/nodes/settings` 读取和修改，面板登录信息只使用一次，绝不保存 |
 | `security.ota_check_board` | on | 拒绝为另一种电路板（Wi-Fi 或以太网）构建的上传固件；镜像带有所属电路板的标记，节点在接收时读取 |
 | `security.ota_require_board_mark` | on | 同时拒绝不带电路板标记的镜像（较旧的固件）；要退回到标记出现之前的版本时请关闭 |
+| `web.metrics_basic_over_http` | on | `/metrics` 是否也在未加密端口上接受用户名和密码（HTTP Basic）；关闭后仅限 HTTPS（会话 Cookie 在两个端口都有效） |
 
 现场调节的设置在面板中并保存在闪存里（例如 `system.reader_idle_ms`、`security.seal_secrets`、每分钟登录失败上限（30，范围 0 到 120）以及周界引擎的区域）；固件默认值在 `sdkconfig.defaults` 和 `sdkconfig.board.*` 中。16 MB 闪存包含 `nvs`（64 KB）、`otadata`、`phy_init`、两个 3 MB 槽位 `ota_0` 和 `ota_1`、`coredump`（128 KB）和 `nvs_keys`（4 KB）（`partitions.csv`）。
 
