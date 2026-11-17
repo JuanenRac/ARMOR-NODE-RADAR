@@ -186,6 +186,7 @@ ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダ
 | `system.login_limit_per_minute` | 30 (0-120) | パネルが全員のログインをロックするまでの 1 分あたりの誤パスワード数（0 = 全体の上限なし）。Studio（各ノードのボタン）または `POST /api/v1/admin/nodes/settings` で読み取り・変更でき、パネルのログイン情報は 1 回だけ使われ保存されません |
 | `security.ota_check_board` | on | もう一方の基板（Wi-Fi または Ethernet）用に作られたファームウェアのアップロードを拒否します。イメージには基板の印が入っており、ノードは到着中にそれを読み取ります |
 | `security.ota_require_board_mark` | on | 基板の印のないイメージ（古いファームウェア）も拒否します。印ができる前の版に戻すときはオフにします |
+| `web.metrics_basic_over_http` | on | `/metrics` が暗号化なしのポートでも名前とパスワード（HTTP Basic）を受け付けるか。無効にすると HTTPS のみ（セッションの Cookie は両方で有効） |
 
 ライブで調整する設定はパネルにあり、フラッシュに保存されます（例：`system.reader_idle_ms`、`security.seal_secrets`、1 分あたりのログイン失敗上限（30、0〜120）、境界エンジンのゾーン）。ファームウェアの既定値は `sdkconfig.defaults` と `sdkconfig.board.*` にあります。16 MB のフラッシュには `nvs`（64 KB）、`otadata`、`phy_init`、3 MB のスロット `ota_0` と `ota_1`、`coredump`（128 KB）、`nvs_keys`（4 KB）があります（`partitions.csv`）。
 
