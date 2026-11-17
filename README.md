@@ -232,6 +232,11 @@ python -I tools/armor_ci_validate.py
 
 The web panel is also exercised in a real browser against a stand-in node (`tools/panel_mock.mjs`). The LD2461 and presence-sensor decoders match only the worked examples of their manuals.
 
+### Operation and tools
+
+* **Simulation bench:** the workflow `simulation.yml` builds `tests/sim_bench.cpp` from the core files of the firmware and plays the serial stream of the HLK-LD2450 radar modules, spoiled on purpose by ARMOR-SIMULATOR (`python -m armor_simulator.node_bench --bus ld2450`), into it; no board and no ESP-IDF are involved.
+* **Matrix of faults:** the run writes the matrix of bus by fault into its summary and keeps `bench-report.json` and `bench-matrix.txt` for 14 days as the artifact `bench-matrix`. A green run says the code copes with the simulated bus; it says nothing about the real equipment.
+
 ## 🏗️ Build & Release
 
 `tools/build_node.sh generic` builds ONE image for every Waveshare board in the ESP-IDF 5.5.5 container, and `tools/flash.bat` writes it by USB-C; the same firmware is built for the Wi-Fi-only board with `s3-wifi`. Releases carry the image, its SHA-256 and its Ed25519 signature, one per board.

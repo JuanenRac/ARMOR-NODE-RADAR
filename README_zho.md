@@ -232,6 +232,11 @@ python -I tools/armor_ci_validate.py
 
 网页面板还会在真实浏览器中对着模拟节点（`tools/panel_mock.mjs`）进行验证。LD2461 和存在传感器的解码器只与其手册中的示例相符。
 
+### 运维与工具
+
+* **仿真台架：** 工作流 `simulation.yml` 用固件核心文件构建 `tests/sim_bench.cpp`，并向其输入由 ARMOR-SIMULATOR 故意破坏的HLK-LD2450 雷达模块的串口数据流（`python -m armor_simulator.node_bench --bus ld2450`）；不涉及任何开发板，也不使用 ESP-IDF。
+* **故障矩阵：** 运行会把“总线 × 故障”矩阵写入摘要，并将 `bench-report.json` 和 `bench-matrix.txt` 作为工件 `bench-matrix` 保留 14 天。绿色的运行只说明代码能应对模拟总线，并不说明真实设备的情况。
+
 ## 🏗️ 构建与发布
 
 `tools/build_node.sh generic` 在 ESP-IDF 5.5.5 容器中为所有 Waveshare 电路板构建同一个镜像，`tools/flash.bat` 通过 USB-C 写入；仅 Wi-Fi 的电路板用 `s3-wifi` 构建同一固件。每个发布版都带有镜像、其 SHA-256 和 Ed25519 签名，每块电路板一份。
