@@ -44,7 +44,7 @@ enum class SafeState { kOff, kOn, kKeep };
 // When the node accepts configuration over Bluetooth: never, only while it has no user (set-up), or always.
 enum class BleMode { kOff, kSetup, kAlways };
 // Where the Bluetooth pairing PIN comes from: derived from the setup code on the label (the default) or a random one made for each pairing and shown only on the node's own console.
-enum class BlePasskeyMode { kDerived, kRandomDisplay };
+enum class BlePasskeyMode { kDerived, kRandomDisplay, kFixed };
 // When the node listens on its USB serial line for an Improv Wi-Fi packet (ESP Web Tools): never, only while no Wi-Fi network is stored (the default), or always.
 enum class ImprovMode { kOff, kSetup, kAlways };
 // The panel over plain HTTP only, over HTTP and HTTPS (a certificate the node made for itself), or over HTTPS only (port 80 sends the browser to HTTPS).
@@ -68,6 +68,9 @@ struct AccessPoint {
   int bandwidth_mhz = 20;
   std::string country = "ES";  // two capital letters: sets which channels and how much power the radio may use
   bool bridge = true;  // the access point joins the wired network (one network, one address range); false: its own network
+  // The Wi-Fi password of the set-up access point (the one a node without users opens). Empty, as it always was: the setup code of the label is the password. With a key of its own
+  // (8 to 63 characters) the label's code no longer opens that Wi-Fi, and a node already installed keeps working: nothing changes until this is set.
+  std::string setup_password;
 };
 
 struct Network { std::string ssid, password; };
@@ -192,7 +195,8 @@ struct Settings {
   std::array<RadarLine, kRadarCount> radars;
   Sensors sensors;
   std::vector<MappedPin> pins;
-  BlePasskeyMode ble_passkey = BlePasskeyMode::kDerived;   // "derived" (default) or "random_display"
+  BlePasskeyMode ble_passkey = BlePasskeyMode::kDerived;   // "derived" (default), "random_display" or "fixed"
+  std::string ble_passkey_pin;   // the six digits of the mode "fixed" (a secret like the passwords); empty or not six digits: the PIN derived from the setup code
   BleMode ble = BleMode::kSetup;
   // Improv Wi-Fi over the USB cable: "setup" (only while the node has no Wi-Fi network stored), "always" or "off". See core/improv.hpp (should_listen).
   ImprovMode improv = ImprovMode::kSetup;
@@ -216,6 +220,9 @@ struct Settings {
   // also refuses an image that carries no mark at all (an old image); turn it off to go back to a version that predates the marks.
   bool ota_check_board = true;
   bool ota_require_board_mark = true;
+  // After a firmware the node downloaded was refused (wrong project, wrong version, not newer, bad signature, no way to boot it) the slot it was written to is erased at its first sector, so the
+  // refused image cannot be started by a later fault. Off, as the node always was: the slot keeps what was written. The running slot is never touched.
+  bool ota_invalidate_rejected = false;
   // How the task that reads the sensors waits for them (core/uart_wake.hpp): 0 looks at the serial lines every 10 ms, as the first versions did; 10 to 500 sleeps until a sensor sends
   // something and, when none does, at most this many milliseconds before it does its periodic work. 100 by default.
   int reader_idle_ms = uartwake::kIdleMsDefault;
@@ -249,7 +256,7 @@ inline const char* to_text(PinMode v) {
 inline const char* to_text(Pull v) { return v == Pull::kUp ? "up" : v == Pull::kDown ? "down" : "none"; }
 inline const char* to_text(WebMode v) { return v == WebMode::kHttps ? "https" : v == WebMode::kHttp ? "http" : "both"; }
 inline const char* to_text(ImprovMode v) { return v == ImprovMode::kAlways ? "always" : v == ImprovMode::kOff ? "off" : "setup"; }
-inline const char* to_text(BlePasskeyMode v) { return v == BlePasskeyMode::kRandomDisplay ? "random_display" : "derived"; }
+inline const char* to_text(BlePasskeyMode v) { return v == BlePasskeyMode::kRandomDisplay ? "random_display" : v == BlePasskeyMode::kFixed ? "fixed" : "derived"; }
 inline const char* to_text(BleMode v) { return v == BleMode::kAlways ? "always" : v == BleMode::kOff ? "off" : "setup"; }
 inline const char* to_text(SafeState v) { return v == SafeState::kOn ? "on" : v == SafeState::kOff ? "off" : "keep"; }
 
@@ -468,6 +475,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
     read_text(*ap, "ssid", s.ap.ssid, 32, "ap.ssid", problems);
     if (!read_choice<WifiSecurity>(*ap, "security", {{"open", WifiSecurity::kOpen}, {"wpa2", WifiSecurity::kWpa2}, {"wpa3", WifiSecurity::kWpa3}, {"wpa2wpa3", WifiSecurity::kWpa2Wpa3}}, s.ap.security)) bad(problems, "ap.security", "invalid");
     read_secret(*ap, "password", s.ap.password, "ap.password", problems);
+    read_secret(*ap, "setup_password", s.ap.setup_password, "ap.setup_password", problems);
     read_int(*ap, "channel", s.ap.channel, 0, 13, "ap.channel", problems);
     read_bool(*ap, "hidden", s.ap.hidden, "ap.hidden", problems);
     read_int(*ap, "max_clients", s.ap.max_clients, 1, 10, "ap.max_clients", problems);
@@ -644,7 +652,8 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
   }
   if (const json::Value* ble = document.get("ble"); ble != nullptr && ble->is_object()) {
     if (!read_choice<BleMode>(*ble, "mode", {{"off", BleMode::kOff}, {"setup", BleMode::kSetup}, {"always", BleMode::kAlways}}, s.ble)) bad(problems, "ble.mode", "invalid");
-    if (!read_choice<BlePasskeyMode>(*ble, "passkey_mode", {{"derived", BlePasskeyMode::kDerived}, {"random_display", BlePasskeyMode::kRandomDisplay}}, s.ble_passkey)) bad(problems, "ble.passkey_mode", "invalid");
+    if (!read_choice<BlePasskeyMode>(*ble, "passkey_mode", {{"derived", BlePasskeyMode::kDerived}, {"random_display", BlePasskeyMode::kRandomDisplay}, {"fixed", BlePasskeyMode::kFixed}}, s.ble_passkey)) bad(problems, "ble.passkey_mode", "invalid");
+    read_secret(*ble, "passkey_pin", s.ble_passkey_pin, "ble.passkey_pin", problems);
   }
   if (const json::Value* web = document.get("web"); web != nullptr && web->is_object()) {
     if (!read_choice<WebMode>(*web, "mode", {{"http", WebMode::kHttp}, {"both", WebMode::kBoth}, {"https", WebMode::kHttps}}, s.web)) bad(problems, "web.mode", "invalid");
@@ -669,6 +678,7 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
     read_bool(*security, "seal_secrets", s.seal_secrets, "security.seal_secrets", problems);
     read_bool(*security, "ota_check_board", s.ota_check_board, "security.ota_check_board", problems);
     read_bool(*security, "ota_require_board_mark", s.ota_require_board_mark, "security.ota_require_board_mark", problems);
+    read_bool(*security, "ota_invalidate_rejected", s.ota_invalidate_rejected, "security.ota_invalidate_rejected", problems);
   }
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
@@ -816,6 +826,12 @@ inline Problems validate(const Settings& s) {
     if (!net::valid_ssid(s.ap.ssid)) bad(problems, "ap.ssid", s.ap.ssid.empty() ? "required" : "invalid");
     if (s.ap.security != WifiSecurity::kOpen && !net::valid_wpa_passphrase(s.ap.password)) bad(problems, "ap.password", s.ap.password.empty() ? "required" : "invalid_key");
   }
+  if (!s.ap.setup_password.empty() && !net::valid_wpa_passphrase(s.ap.setup_password)) bad(problems, "ap.setup_password", "invalid_key");
+  {   // the fixed PIN of the Bluetooth pairing: six digits when it is given, and given when the mode asks for it
+    const auto six_digits = [](const std::string& text) { return text.size() == 6 && std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; }); };
+    if (!s.ble_passkey_pin.empty() && !six_digits(s.ble_passkey_pin)) bad(problems, "ble.passkey_pin", "invalid");
+    else if (s.ble_passkey == BlePasskeyMode::kFixed && s.ble_passkey_pin.empty()) bad(problems, "ble.passkey_pin", "required");
+  }
   if (s.ap.country.size() != 2 || !(s.ap.country[0] >= 'A' && s.ap.country[0] <= 'Z' && s.ap.country[1] >= 'A' && s.ap.country[1] <= 'Z')) bad(problems, "ap.country", "invalid");
   if (s.sta.enabled) {
     if (!net::valid_ssid(s.sta.ssid)) bad(problems, "sta.ssid", s.sta.ssid.empty() ? "required" : "invalid");
@@ -937,6 +953,7 @@ inline std::string to_json(const Settings& s, bool secrets) {
       .field("dns1", s.ip.dns1).field("dns2", s.ip.dns2).field("hostname", s.ip.hostname).end_object();
   w.key("ap").begin_object().field("enabled", s.ap.enabled).field("ssid", s.ap.ssid).field("security", to_text(s.ap.security));
   if (secrets) w.field("password", s.ap.password); else w.field("password_set", !s.ap.password.empty());
+  if (secrets) w.field("setup_password", s.ap.setup_password); else w.field("setup_password_set", !s.ap.setup_password.empty());
   w.field("channel", s.ap.channel).field("hidden", s.ap.hidden).field("max_clients", s.ap.max_clients).field("tx_power_dbm", s.ap.tx_power_dbm)
       .field("bandwidth_mhz", s.ap.bandwidth_mhz).field("country", s.ap.country).field("bridge", s.ap.bridge).end_object();
   w.key("sta").begin_object().field("enabled", s.sta.enabled).field("ssid", s.sta.ssid);
@@ -979,14 +996,16 @@ inline std::string to_json(const Settings& s, bool secrets) {
         .field("offset", pin.offset).end_object();
   }
   w.end_array();
-  w.key("ble").begin_object().field("mode", to_text(s.ble)).field("passkey_mode", to_text(s.ble_passkey)).end_object();
+  w.key("ble").begin_object().field("mode", to_text(s.ble)).field("passkey_mode", to_text(s.ble_passkey));
+  if (secrets) w.field("passkey_pin", s.ble_passkey_pin); else w.field("passkey_pin_set", !s.ble_passkey_pin.empty());
+  w.end_object();
   w.key("improv").begin_object().field("mode", to_text(s.improv)).end_object();
   w.key("retry").begin_object().field("wifi_first_ms", s.retry_wifi_first_ms).field("wifi_max_ms", s.retry_wifi_max_ms).field("mqtt_first_ms", s.retry_mqtt_first_ms).field("mqtt_max_ms", s.retry_mqtt_max_ms).field("scatter_percent", s.retry_scatter_percent).end_object();
   w.key("web").begin_object().field("mode", to_text(s.web)).field("admin_sources", s.admin_sources).field("metrics_basic_over_http", s.metrics_basic_over_http).end_object();
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();
-  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).field("ota_check_board", s.ota_check_board).field("ota_require_board_mark", s.ota_require_board_mark).end_object();
+  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).field("ota_check_board", s.ota_check_board).field("ota_require_board_mark", s.ota_require_board_mark).field("ota_invalidate_rejected", s.ota_invalidate_rejected).end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

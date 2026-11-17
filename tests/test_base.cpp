@@ -190,6 +190,25 @@ static void test_ble_passkey() {
   CHECK(different >= 23);                                     // spread, not a pattern
 }
 
+static void test_ble_fixed_passkey() {
+  std::uint32_t pin = 7;
+  CHECK(armor::auth::ble_fixed_passkey("123456", pin) && pin == 123456u);
+  CHECK(armor::auth::ble_fixed_passkey("000042", pin) && pin == 42u);       // leading zeros are digits
+  for (const char* bad : {"", "12345", "1234567", "12a456", " 23456", "-12345", "12 456"}) { pin = 7; CHECK(!armor::auth::ble_fixed_passkey(bad, pin) && pin == 7u); }
+  CHECK(armor::auth::ble_effective_passkey("654321", "ABCDEFGH23") == 654321u);                                   // a good fixed PIN wins over the setup code
+  CHECK(armor::auth::ble_effective_passkey("", "ABCDEFGH23") == armor::auth::ble_passkey_from("ABCDEFGH23"));    // none: the PIN derived from the label, as it always was
+  CHECK(armor::auth::ble_effective_passkey("12345", "ABCDEFGH23") == armor::auth::ble_passkey_from("ABCDEFGH23"));   // not six digits: ignored
+}
+
+static void test_refused_slot_erase_rule() {
+  using armor::fw_trust::refused_slot_may_be_erased;
+  CHECK(!refused_slot_may_be_erased(false, true, 0x110000, true, 0x10000));   // the option is off: nothing is erased
+  CHECK(refused_slot_may_be_erased(true, true, 0x110000, true, 0x10000));     // on: the other slot is
+  CHECK(!refused_slot_may_be_erased(true, true, 0x10000, true, 0x10000));     // never the slot that runs
+  CHECK(!refused_slot_may_be_erased(true, false, 0, true, 0x10000));          // no slot
+  CHECK(!refused_slot_may_be_erased(true, true, 0x110000, false, 0));         // the running slot is not known: nothing is touched
+}
+
 static void test_ble_random_passkey() {
   // always six digits, whatever the generator gives, and the label (the setup code) plays no part
   for (std::uint32_t raw : {0u, 1u, 999999u, 1000000u, 4293999999u, 4294000000u, 4294967295u}) CHECK(armor::auth::ble_random_passkey([raw] { return raw; }) < 1000000u);
@@ -1093,6 +1112,8 @@ int main() {
   test_ed25519();
   test_fw_trust();
   test_ble_passkey();
+  test_ble_fixed_passkey();
+  test_refused_slot_erase_rule();
   test_ble_random_passkey();
   test_remembered_session_is_not_taken_after_half_an_hour();
   test_backoff();

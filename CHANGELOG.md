@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A refused firmware can be erased from its slot:** the setting `security.ota_invalidate_rejected` (off by default, shown in the web panel in eight languages) erases the first sector of the slot a downloaded image was written to when that image is refused after it was complete (another project, another version than the release, not newer, a bad signature, or no way to boot it) and when a copy of the running slot does not end well, so a later fault cannot start it. The slot that runs is never touched.
+
+- **The Bluetooth pairing PIN can be a fixed one:** `ble.passkey_mode` now also takes `fixed`, with the six digits in `ble.passkey_pin` (kept and sealed like the node's passwords, never shown by the panel; the mode needs the PIN). The default is as before: the PIN derived from the setup code.
+
+- **The set-up access point can have a Wi-Fi password of its own:** the new setting `ap.setup_password` (8 to 63 characters, a secret, shown in the web panel) replaces the setup code of the label as the password of the access point a node without users opens. Empty by default, so nodes already installed keep their password; with it set, the code of the label no longer opens that Wi-Fi.
+
 - **The signature code is the shared one:** `core/command_sig.hpp` and `core/hmac_sha256.hpp` come from the shared firmware base, ready for signed orders.
 
 - **The simulation bench keeps a matrix of the faults it played:** the run writes a report of which fault of the bus passed, failed or was not run, prints it as one line of a bus-by-fault matrix in the summary of the run, and keeps both files as an artifact for two weeks. The matrix says what the simulated bus covered; it says nothing about the real equipment.

@@ -31,6 +31,7 @@ extern "C" {
 }
 #include "api_shared.hpp"
 #include "ble_provision.hpp"
+#include "github_update.hpp"
 #include "clock_sync.hpp"
 #include "improv_serial.hpp"
 #include "core/image_board.hpp"
@@ -60,9 +61,10 @@ void setup_reminder_task(void*) {
     const armor::network::Status n = armor::network::status();
     bool random_pin = false;
     random_pin = armor::store::settings().ble_passkey == armor::config::BlePasskeyMode::kRandomDisplay;
+    const std::string fixed_pin = armor::store::settings().ble_passkey == armor::config::BlePasskeyMode::kFixed ? armor::store::settings().ble_passkey_pin : std::string();
     char pin_text[40];
     if (random_pin) std::snprintf(pin_text, sizeof pin_text, "random, shown here when a phone pairs");
-    else std::snprintf(pin_text, sizeof pin_text, "%06u", static_cast<unsigned>(armor::auth::ble_passkey_from(armor::store::setup_code())));
+    else std::snprintf(pin_text, sizeof pin_text, "%06u", static_cast<unsigned>(armor::auth::ble_effective_passkey(fixed_pin, armor::store::setup_code())));
     ESP_LOGW(kTag, "SETUP: this node has no user yet. Open http://%s/ (or join the Wi-Fi \"%s\" and open http://192.168.4.1/) and enter the setup code %s (to pair over Bluetooth the phone asks for the PIN %s)",
              n.has_ip ? n.ip.c_str() : "<its address>", n.ap_ssid.empty() ? "ARMOR-SETUP-..." : n.ap_ssid.c_str(), armor::store::setup_code().c_str(), pin_text);
     vTaskDelay(pdMS_TO_TICKS(15000));
@@ -165,6 +167,7 @@ extern "C" void app_main() {
       settings, [](const std::string& topic, const std::string& payload) { armor::mqtt_link::publish(topic, payload); },
       []() { return !armor::mqtt_link::status().enabled || armor::mqtt_link::connected(); });
 
+  armor::github_update::set_invalidate_rejected(settings.ota_invalidate_rejected);   // security.ota_invalidate_rejected
   const armor::netplan::Plan plan = armor::netplan::plan_network(settings, setup, armor::store::setup_code(), armor::store::mac_tail(), armor::store::mac_sum());
   const bool network_ok = armor::network::start(settings, plan);
   if (!network_ok) ESP_LOGE(kTag, "the network could not be started: the node stays local");

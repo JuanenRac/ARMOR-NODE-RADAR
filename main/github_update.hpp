@@ -71,6 +71,10 @@ CopyProgress copy_progress();
 // Changes every time a slot is written: whoever caches what a slot holds starts again when it changes.
 unsigned slot_generation();
 
+// security.ota_invalidate_rejected: with it on, the slot an image was written to is erased at its first sector when that image is refused after it was complete (and after a copy of the running
+// slot that did not end well). Off by default; set once from app_main.
+void set_invalidate_rejected(bool on);
+
 // The manual upload of the panel writes the same slot as an installation from GitHub and a copy of the slot: only one of them at a time. `begin_manual_write` is false while another is running;
 // the caller calls `end_manual_write` when it is done (and the sizes known of the slot are forgotten, as it has been written).
 bool begin_manual_write();
