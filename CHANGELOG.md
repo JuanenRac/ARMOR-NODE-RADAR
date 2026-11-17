@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A scraper of the metrics can be made to use HTTPS, and a wrong password on the metrics counts against the person:** the new setting `web.metrics_basic_over_http` (on by default, as before; in the panel next to the networks that may use it) turns the name and password of `/metrics` off on the plain port, where only the cookie of a session then works; a wrong password sent with Basic is now also counted in the limit of that person, like a wrong sign-in.
+
 - **A paused node, or one in standby, takes its outputs to their safe state and ignores orders for them:** the safe state of each output (`off`, `on` or `keep`) is applied when the node is paused or put in standby (also when it boots into standby), orders from the broker and from the panel are refused until it works again (the panel answers `node_paused`), and `toggle` is no longer accepted from the broker, because a repeated or replayed message would flip the output each time (the panel still has its Toggle button).
 - **The copy of the running firmware to the other slot waits for an install or a manual write that is on:** `start_copy()` takes the same lock as `install()` and the manual writes (not only the flag of its own job) and gives it back when it ends, so two writers can no longer open the same slot.
 - **The order channel of the node can check a signature before it reads anything:** `node_control::Options` has an optional `authorize` hook that sees each order that arrives on `armor/control/...` and drops it, before it can arm anything, when the node says no. A node that does not set it behaves as before.
