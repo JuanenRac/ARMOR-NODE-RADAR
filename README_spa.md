@@ -232,6 +232,11 @@ python -I tools/armor_ci_validate.py
 
 El panel web también se ejercita en un navegador real contra un nodo de pruebas (`tools/panel_mock.mjs`). Los decodificadores LD2461 y de presencia solo coinciden con los ejemplos de sus manuales.
 
+### Operación y herramientas
+
+* **Banco de simulación:** el workflow `simulation.yml` compila `tests/sim_bench.cpp` con los ficheros del núcleo del firmware y le reproduce el flujo serie de los módulos de radar HLK-LD2450, estropeada a propósito por ARMOR-SIMULATOR (`python -m armor_simulator.node_bench --bus ld2450`); no interviene ninguna placa ni ESP-IDF.
+* **Matriz de fallos:** la ejecución escribe en su resumen la matriz de bus por fallo y guarda `bench-report.json` y `bench-matrix.txt` durante 14 días como el artefacto `bench-matrix`. Una ejecución en verde dice que el código aguanta el bus simulado; no dice nada del equipo real.
+
 ## 🏗️ Compilación y publicación
 
 `tools/build_node.sh generic` construye UNA imagen para cada placa Waveshare en el contenedor ESP-IDF 5.5.5 y `tools/flash.bat` la graba por USB-C; el mismo firmware se compila para la placa solo Wi-Fi con `s3-wifi`. Las versiones llevan la imagen, su SHA-256 y su firma Ed25519, una por placa.

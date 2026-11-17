@@ -232,6 +232,11 @@ python -I tools/armor_ci_validate.py
 
 Das Web-Panel wird außerdem in einem echten Browser gegen einen Ersatzknoten (`tools/panel_mock.mjs`) geprüft. Die Decoder für LD2461 und Präsenz stimmen nur mit den Beispielen ihrer Handbücher überein.
 
+### Betrieb und Werkzeuge
+
+* **Simulationsbank:** der Workflow `simulation.yml` baut `tests/sim_bench.cpp` aus den Kerndateien der Firmware und spielt ihr den seriellen Datenstrom der HLK-LD2450-Radarmodule vor, von ARMOR-SIMULATOR absichtlich gestört (`python -m armor_simulator.node_bench --bus ld2450`); weder eine Platine noch ESP-IDF sind beteiligt.
+* **Fehlermatrix:** der Lauf schreibt die Matrix Bus mal Fehler in seine Zusammenfassung und behält `bench-report.json` und `bench-matrix.txt` 14 Tage lang als Artefakt `bench-matrix`. Ein grüner Lauf sagt, dass der Code mit dem simulierten Bus zurechtkommt; über das echte Gerät sagt er nichts.
+
 ## 🏗️ Build und Veröffentlichung
 
 `tools/build_node.sh generic` baut EIN Image für jede Waveshare-Platine im ESP-IDF-5.5.5-Container, und `tools/flash.bat` schreibt es per USB-C; dieselbe Firmware wird mit `s3-wifi` für die reine WLAN-Platine gebaut. Releases tragen das Image, sein SHA-256 und seine Ed25519-Signatur, je eines pro Platine.

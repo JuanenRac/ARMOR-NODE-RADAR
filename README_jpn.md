@@ -232,6 +232,11 @@ python -I tools/armor_ci_validate.py
 
 Web パネルは、代役ノード（`tools/panel_mock.mjs`）を相手に実際のブラウザでも検証します。LD2461 と人感センサーのデコーダーはマニュアルの例とだけ一致しています。
 
+### 運用とツール
+
+* **シミュレーションベンチ：** ワークフロー `simulation.yml` が、ファームウェアのコアファイルから `tests/sim_bench.cpp` をビルドし、ARMOR-SIMULATOR がわざと劣化させたHLK-LD2450 レーダーモジュールのシリアルストリームを流し込みます（`python -m armor_simulator.node_bench --bus ld2450`）。ボードも ESP-IDF も使いません。
+* **故障マトリクス：** 実行はバスごと・故障ごとのマトリクスをサマリーに書き、`bench-report.json` と `bench-matrix.txt` をアーティファクト `bench-matrix` として 14 日間保存します。緑の実行は、コードが模擬バスに耐えることを示すだけで、実機については何も示しません。
+
 ## 🏗️ ビルドとリリース
 
 `tools/build_node.sh generic` は ESP-IDF 5.5.5 コンテナで全 Waveshare 基板共通の 1 つのイメージをビルドし、`tools/flash.bat` が USB-C で書き込みます。Wi-Fi のみの基板向けには `s3-wifi` で同じファームウェアをビルドします。リリースにはイメージ、その SHA-256 と Ed25519 署名が基板ごとに付きます。
