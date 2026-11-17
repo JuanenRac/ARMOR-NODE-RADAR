@@ -12,9 +12,11 @@
 #include <vector>
 
 #if __has_include("../core/control_gate.hpp")
+#include "../core/command_sig.hpp"
 #include "../core/control_gate.hpp"
 #include "../core/node_health.hpp"
 #else
+#include "../main/core/command_sig.hpp"
 #include "../main/core/control_gate.hpp"
 #include "../main/core/node_health.hpp"
 #endif
@@ -1111,8 +1113,49 @@ static void test_an_update_or_an_upload_announces_and_clears() {
   CHECK(said.by.empty());
 }
 
+// The signature of the orders to the node itself (core/command_sig.hpp, control_authorized), the same for the five nodes.
+static const char* kSigKey = "156a3ba893545ebfde6009ac5393395fcb033e467f7ee6fb1839548da19a66b3";
+static const char* kSigOtherKey = "9d2bf6e333a39afd9ff219bdda4df1833697f37f9c0d7577be589d592f702652";
+
+static std::string plain_order(const char* operation) {
+  return std::string("{\"kind\":\"node_control_command\",\"node_id\":\"radar-1\",\"timestamp_ms\":1000000,\"command_id\":\"c000000000000001\",\"action\":\"arm\",\"operation\":\"") + operation +
+         "\",\"mode\":\"now\",\"requested_by\":\"admin\"}";
+}
+
+static std::string signed_order(const char* operation, const char* nonce, const char* key) {
+  const std::string body = plain_order(operation).substr(0, plain_order(operation).size() - 1) + ",\"nonce\":\"" + nonce + "\"}";
+  return body.substr(0, body.size() - 1) + ",\"sig\":\"" + command_sig::signature_of(key, body) + "\"}";
+}
+
+static void test_the_orders_to_the_node_take_the_signature_when_asked() {
+  std::string plain;
+  control::Command parsed;
+  {   // required: unsigned, wrongly signed, replayed and keyless orders are refused; a good one comes out as the plain order the gate reads
+    command_sig::NonceCache cache;
+    CHECK(!command_sig::control_authorized(true, kSigKey, plain_order("standby"), cache, 0, plain));
+    CHECK(!command_sig::control_authorized(true, kSigKey, signed_order("standby", "0123456789abcdef", kSigOtherKey), cache, 0, plain));
+    CHECK(!command_sig::control_authorized(true, "", signed_order("standby", "0123456789abcdef", kSigKey), cache, 0, plain));
+    const std::string good = signed_order("standby", "0123456789abcdef", kSigKey);
+    CHECK(command_sig::control_authorized(true, kSigKey, good, cache, 0, plain));
+    CHECK(plain == plain_order("standby") && control::parse_command(plain, parsed) && parsed.operation == Operation::kStandby);
+    CHECK(!command_sig::control_authorized(true, kSigKey, good, cache, 0, plain));   // the same order again is a replay
+  }
+  {   // not required: an unsigned order passes unchanged, a signed one is still checked
+    command_sig::NonceCache cache;
+    CHECK(command_sig::control_authorized(false, kSigKey, plain_order("pause"), cache, 0, plain) && plain == plain_order("pause"));
+    CHECK(!command_sig::control_authorized(false, kSigKey, signed_order("pause", "0123456789abcdef", kSigOtherKey), cache, 0, plain));
+    CHECK(command_sig::control_authorized(false, kSigKey, signed_order("pause", "0123456789abcdef", kSigKey), cache, 0, plain) && control::parse_command(plain, parsed));
+  }
+  {   // a node that holds a clock refuses an order far from its time
+    command_sig::NonceCache cache;
+    CHECK(!command_sig::control_authorized(true, kSigKey, signed_order("standby", "0123456789abcdef", kSigKey), cache, 5000000, plain));
+    CHECK(command_sig::control_authorized(true, kSigKey, signed_order("standby", "fedcba9876543210", kSigKey), cache, 1000500, plain));
+  }
+}
+
 int main(int argc, char** argv) {
   const std::string dir = argc > 1 ? argv[1] : "";
+  test_the_orders_to_the_node_take_the_signature_when_asked();
   test_the_order_is_read_strictly();
   test_rolling_delay_slot_and_duration_rules();
   test_there_is_no_way_to_say_factory_reset();
