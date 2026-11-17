@@ -106,7 +106,7 @@ function field(labelKey, path, options = {}) {
   } else if (options.type === "textarea") {
     input = el("textarea", { rows: options.rows || 6, maxLength: options.max, spellcheck: false, disabled, placeholder: options.placeholder || "", oninput: e => setValue(path, e.target.value) }, current === undefined ? "" : String(current));
   } else if (options.type === "password") {
-    const stored = getValue(path.replace(/password$/, "password_set"));
+    const stored = getValue(path.replace(/(password|pin|key)$/, "$1_set"));
     input = el("input", { type: "password", value: "", autocomplete: "new-password", disabled, placeholder: stored ? "••••••••" : "", oninput: e => setValue(path, e.target.value) });
   } else {
     input = el("input", { type: "text", value: current === undefined ? "" : current, disabled, maxLength: options.max, placeholder: options.placeholder || "", oninput: e => setValue(path, e.target.value) });
@@ -373,6 +373,8 @@ function networkPage() {
       S.status && S.status.time ? el("p", { class: "muted" }, t("localTime") + ": " + (S.status.time.set ? S.status.time.local : t("clockNotSet"))) : null,
       note(t("clockNote"), "info")),
     card(t("bleTitle"), field("bleMode", "ble.mode", { type: "select", options: [["setup", t("bleSetup")], ["always", t("bleAlways")], ["off", t("bleOff")]] }), note(t("bleNote"), "info"),
+      field("blePasskeyMode", "ble.passkey_mode", { type: "select", rerender: true, options: [["derived", t("blePkDerived")], ["random_display", t("blePkRandom")], ["fixed", t("blePkFixed")]] }),
+      (S.cfg.ble || {}).passkey_mode === "fixed" ? field("blePasskeyPin", "ble.passkey_pin", { type: "password" }) : null,
       isAdmin() ? el("div", { class: "actions" }, el("button", { class: "b", onclick: toggleBlePin }, S.blePin === undefined || S.blePin === null ? t("blePinShow") : t("blePinHide"))) : null,
       isAdmin() && S.blePin !== undefined && S.blePin !== null ? (S.blePin === "" ? note(t("blePinNone"), "info") : el("p", { class: "note info" }, t("blePinIs") + ": ", el("b", { class: "mono" }, S.blePin))) : null),
     card(t("systemTitle"), field("autoRestart", "system.auto_restart_hours", { type: "select", number: true,
@@ -382,6 +384,7 @@ function networkPage() {
       field("sealSecrets", "security.seal_secrets", { type: "checkbox" }), note(t("sealSecretsNote"), "info"),
       field("otaCheckBoard", "security.ota_check_board", { type: "checkbox" }),
       field("otaRequireMark", "security.ota_require_board_mark", { type: "checkbox" }), note(t("otaBoardNote"), "info"),
+      field("otaInvalidate", "security.ota_invalidate_rejected", { type: "checkbox" }),
       field("readerIdle", "system.reader_idle_ms", { type: "number", min: 0, max: 500 }), note(t("readerIdleNote"), "info")),
     isAdmin() ? card(t("configBackupTitle"),
       el("div", { class: "row" },
@@ -415,6 +418,7 @@ function wifiPage() {
     card(t("wifiAp"),
       field("apEnable", "ap.enabled", { type: "checkbox", rerender: true }),
       S.cfg.ap.enabled && S.cfg.sta.enabled ? note(t("apStaWarning")) : null,
+      field("setupApPassword", "ap.setup_password", { type: "password" }),
       ap.enabled ? [
         el("div", { class: "row" }, field("ssid", "ap.ssid", { max: 32 }),
           field("security", "ap.security", { type: "select", rerender: true, options: [["wpa2", t("secWpa2")], ["wpa3", t("secWpa3")], ["wpa2wpa3", t("secWpa2Wpa3")], ["open", t("secOpen")]] })),

@@ -68,4 +68,10 @@ inline bool manifest_signature_ok(const std::string& project, const std::string&
   return ed25519::verify(signature, reinterpret_cast<const std::uint8_t*>(message.data()), message.size(), kPublicKey);
 }
 
+// Whether the slot an image was written to may be erased after the image was refused (security.ota_invalidate_rejected): only with the option on, only a slot that exists, and never the one
+// that runs (its address is the running one's). Without the address of the running slot (0 and not known) nothing is erased.
+inline bool refused_slot_may_be_erased(bool option_on, bool have_target, std::uint32_t target_address, bool have_running, std::uint32_t running_address) {
+  return option_on && have_target && have_running && target_address != running_address;
+}
+
 }  // namespace armor::fw_trust

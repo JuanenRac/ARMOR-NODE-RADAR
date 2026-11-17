@@ -40,6 +40,8 @@ namespace armor::ble_provision {
 namespace {
 // Set at start from the setting ble.passkey_mode: true makes a new random PIN for every pairing and shows it only on the console (never on the label, never over the air).
 std::atomic<bool> g_random_passkey{false};
+// Set at start from ble.passkey_mode "fixed" and ble.passkey_pin: the PIN the operator chose, or -1 (the PIN derived from the setup code).
+std::atomic<std::int64_t> g_fixed_passkey{-1};
 constexpr char kTag[] = "armor-ble";
 constexpr std::size_t kQueueLength = 4;
 
@@ -247,6 +249,11 @@ int on_gap(struct ble_gap_event* event, void*) {
         io.passkey = auth::ble_random_passkey([] { return esp_random(); });
         ESP_LOGW(kTag, "Bluetooth pairing PIN: %06u (random, valid for this pairing only)", static_cast<unsigned>(io.passkey));
         ble_sm_inject_io(event->passkey.conn_handle, &io);
+      } else if (event->passkey.params.action == BLE_SM_IOACT_DISP && g_fixed_passkey.load() >= 0) {
+        struct ble_sm_io io{};
+        io.action = BLE_SM_IOACT_DISP;
+        io.passkey = static_cast<std::uint32_t>(g_fixed_passkey.load());
+        ble_sm_inject_io(event->passkey.conn_handle, &io);
       } else if (event->passkey.params.action == BLE_SM_IOACT_DISP && !store::setup_code().empty()) {
         struct ble_sm_io io{};
         io.action = BLE_SM_IOACT_DISP;
@@ -357,6 +364,10 @@ bool start(const config::Settings& settings, bool setup_mode) {
   // In `setup` mode the node listens at every start: until it has an address it cannot be reached any other way (a board with a cable that is not plugged in, a Wi-Fi
   // network that was not joined), and the window task closes it again (core/ble_window.hpp).
   g_random_passkey.store(settings.ble_passkey == config::BlePasskeyMode::kRandomDisplay);
+  {
+    std::uint32_t fixed = 0;
+    g_fixed_passkey.store(settings.ble_passkey == config::BlePasskeyMode::kFixed && auth::ble_fixed_passkey(settings.ble_passkey_pin, fixed) ? static_cast<std::int64_t>(fixed) : -1);
+  }
   const bool wanted = settings.ble == config::BleMode::kAlways || settings.ble == config::BleMode::kSetup;
   if (!wanted) return false;
   // After a restart the node asked for itself because it was short of memory, Bluetooth stays off: the radio is what takes it, and the node must come back up without it.

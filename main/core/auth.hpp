@@ -123,6 +123,26 @@ inline std::uint32_t ble_passkey_from(const std::string& setup_code) {
   return static_cast<std::uint32_t>(h % 1000000ULL);
 }
 
+// The PIN of a pairing in the mode `fixed`: the operator chose it (ble.passkey_pin), exactly six digits. True and the number when the text is one; any other text is not a PIN and the
+// node goes on with the PIN derived from its setup code.
+inline bool ble_fixed_passkey(const std::string& text, std::uint32_t& out) {
+  if (text.size() != 6) return false;
+  std::uint32_t value = 0;
+  for (const char c : text) {
+    if (c < '0' || c > '9') return false;
+    value = value * 10u + static_cast<std::uint32_t>(c - '0');
+  }
+  out = value;
+  return true;
+}
+
+// The PIN a node with the mode `fixed` expects: the one the operator chose when the text is a good one, and otherwise (or in any other mode, where the caller passes an empty text) the one
+// derived from the setup code.
+inline std::uint32_t ble_effective_passkey(const std::string& fixed_text, const std::string& setup_code) {
+  std::uint32_t fixed = 0;
+  return ble_fixed_passkey(fixed_text, fixed) ? fixed : ble_passkey_from(setup_code);
+}
+
 // The PIN of a pairing in the mode `random_display`: six digits made from a random number of the radio's generator, never from the setup code, so the label does not give it away.
 // Rejection sampling keeps every digit equally likely.
 template <typename Random32>

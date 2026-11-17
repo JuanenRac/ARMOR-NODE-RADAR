@@ -66,6 +66,18 @@ struct Job { const char* board = nullptr; };
 std::atomic<bool> g_installing{false};   // install() runs once at a time, whoever calls it (it has one download buffer and one slot)
 CheckProgress g_check;
 bool g_checking = false;
+std::atomic<bool> g_invalidate_rejected{false};   // security.ota_invalidate_rejected
+
+// A firmware that was written to the other slot and then refused (it is not this project, not the release's version, not newer, not signed, or could not be set to boot) is not left there:
+// the first sector of the slot is erased, so the image cannot be started by a later fault or a stray boot setting. Only with the option on, and never the slot that runs.
+void invalidate_slot(const esp_partition_t* target) {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  if (!fw_trust::refused_slot_may_be_erased(g_invalidate_rejected.load(), target != nullptr, target != nullptr ? target->address : 0, running != nullptr, running != nullptr ? running->address : 0)) return;
+  if (target == running) return;
+  if (esp_partition_erase_range(target, 0, 4096) == ESP_OK) ESP_LOGW(kTag, "the refused image was erased from %s", target->label);
+  else ESP_LOGE(kTag, "the refused image could not be erased from %s", target->label);
+  ++g_generation;
+}
 
 // A GET with no body, read fully into a bounded buffer. False on any network, HTTP or size problem.
 bool get_bounded_once(const std::string& url, const char* accept, std::string& out, std::string& error) {
@@ -280,29 +292,26 @@ InstallResult install(const CheckResult& offer) {
     result.error = release::fetch_error(problem, "signature");
     return result;
   }
-  if (esp_ota_end(handle) != ESP_OK) { result.error = "image_invalid"; return result; }
+  const auto refuse = [&](const char* code) { invalidate_slot(target); result.error = code; return result; };   // a refusal after the image was complete
+  if (esp_ota_end(handle) != ESP_OK) return refuse("image_invalid");
   esp_app_desc_t description{};
   if (esp_ota_get_partition_description(target, &description) != ESP_OK || std::strcmp(description.project_name, esp_app_get_description()->project_name) != 0) {
-    result.error = "wrong_firmware";
-    return result;
+    return refuse("wrong_firmware");
   }
   const std::string image_version = description.version;
   if (!offer.latest_version.empty() && image_version != offer.latest_version) {
     ESP_LOGE(kTag, "the image says it is %s and the release says %s: refused", image_version.c_str(), offer.latest_version.c_str());
-    result.error = "version_mismatch";
-    return result;
+    return refuse("version_mismatch");
   }
   if (!semver::is_newer(image_version, esp_app_get_description()->version)) {
     ESP_LOGE(kTag, "the image is %s and the node runs %s: an image that is not newer is refused", image_version.c_str(), esp_app_get_description()->version);
-    result.error = "not_newer";
-    return result;
+    return refuse("not_newer");
   }
   if (!fw_trust::manifest_signature_ok(description.project_name, offer.board, image_version, expected_sha256, signature_text)) {
     ESP_LOGE(kTag, "the signature of the release does not match this image (project, board, version and hash): refused");
-    result.error = "bad_signature";
-    return result;
+    return refuse("bad_signature");
   }
-  if (esp_ota_set_boot_partition(target) != ESP_OK) { result.error = "ota_boot"; return result; }
+  if (esp_ota_set_boot_partition(target) != ESP_OK) return refuse("ota_boot");
   ESP_LOGW(kTag, "firmware %s (%u bytes) installed from GitHub in %s", description.version, static_cast<unsigned>(total), target->label);
   result.ok = true;
   result.version = description.version;
@@ -428,6 +437,8 @@ Progress progress() {
 
 unsigned slot_generation() { return g_generation.load(); }
 
+void set_invalidate_rejected(bool on) { g_invalidate_rejected.store(on); }
+
 bool begin_manual_write() {
   if (g_installing.exchange(true)) return false;
   ++g_generation;
@@ -470,7 +481,7 @@ void copy_task(void*) {
     { std::lock_guard<std::mutex> guard(g_lock); g_copy.done = offset; }
     if ((offset / kChunk) % 16 == 0) vTaskDelay(1);   // the other tasks of the node go on while the flash is written
   }
-  if (esp_ota_end(handle) != ESP_OK) { finish_copy("image_invalid", ""); vTaskDelete(nullptr); return; }
+  if (esp_ota_end(handle) != ESP_OK) { invalidate_slot(to); finish_copy("image_invalid", ""); vTaskDelete(nullptr); return; }
   ++g_generation;
   esp_app_desc_t description{};
   const bool known = esp_ota_get_partition_description(to, &description) == ESP_OK;

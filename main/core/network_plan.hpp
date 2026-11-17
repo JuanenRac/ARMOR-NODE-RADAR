@@ -76,7 +76,7 @@ inline Plan plan_network(const config::Settings& s, bool setup_mode, std::string
     ap.setup = true;
     ap.bridged = false;
     ap.ssid = "ARMOR-SETUP-" + upper(mac_tail);
-    ap.password = std::string(setup_code);
+    ap.password = s.ap.setup_password.empty() ? std::string(setup_code) : s.ap.setup_password;   // the label's code unless the operator gave the access point a password of its own
     ap.security = config::WifiSecurity::kWpa2;
     ap.max_clients = 4;
   } else if (s.ap.enabled) {

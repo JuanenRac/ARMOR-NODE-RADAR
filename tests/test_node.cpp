@@ -949,6 +949,17 @@ static void test_ble_setting() {
   CHECK(config::load(R"({"ble":{"passkey_mode":"random_display"}})", s, out, problems) && out.ble_passkey == config::BlePasskeyMode::kRandomDisplay && config::to_json(out, true).find(R"("passkey_mode":"random_display")") != std::string::npos);
   problems.clear();
   CHECK(!config::load(R"({"ble":{"passkey_mode":"label"}})", s, out, problems) && has_problem(problems, "ble.passkey_mode", "invalid"));
+  // a PIN of the operator's own, a key of its own for the set-up access point and the erase of a refused firmware slot: all off until they are set, and the secrets are never shown
+  CHECK(s.ble_passkey_pin.empty() && s.ap.setup_password.empty() && !s.ota_invalidate_rejected);
+  problems.clear();
+  CHECK(config::load(R"({"ble":{"passkey_mode":"fixed","passkey_pin":"042042"},"ap":{"setup_password":"a-good-setup-key"},"security":{"ota_invalidate_rejected":true}})", s, out, problems));
+  CHECK(out.ble_passkey == config::BlePasskeyMode::kFixed && out.ble_passkey_pin == "042042" && out.ap.setup_password == "a-good-setup-key" && out.ota_invalidate_rejected);
+  CHECK(config::to_json(out, false).find("042042") == std::string::npos && config::to_json(out, false).find("a-good-setup-key") == std::string::npos);
+  CHECK(config::to_json(out, true).find(R"("passkey_pin":"042042")") != std::string::npos && config::to_json(out, false).find(R"("ota_invalidate_rejected":true)") != std::string::npos);
+  problems.clear();
+  CHECK(!config::load(R"({"ble":{"passkey_mode":"fixed"}})", s, out, problems) && has_problem(problems, "ble.passkey_pin", "required"));
+  problems.clear();
+  CHECK(!config::load(R"({"ap":{"setup_password":"short"}})", s, out, problems) && has_problem(problems, "ap.setup_password", "invalid_key"));
 }
 static void test_sensor_models_in_settings() {
   const config::Settings base = valid_settings();

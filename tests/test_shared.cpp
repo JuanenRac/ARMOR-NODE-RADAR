@@ -522,6 +522,12 @@ static void test_netplan() {
   Plan setup = plan_network(s, true, "CODE1234", "a1b2c3", 7);
   CHECK(setup.layout == Layout::kSetupAp && setup.ap.enabled && setup.ap.setup && setup.ap.ssid == "ARMOR-SETUP-A1B2C3" && setup.ap.password == "CODE1234" && setup.ap.security == config::WifiSecurity::kWpa2 &&
         setup.ap.max_clients == 4 && !setup.station && setup.hostname == "armor-n1");
+  s.ap.setup_password = "own-wifi-key";   // an access point with a password of its own: the label's code no longer opens it
+  setup = plan_network(s, true, "CODE1234", "a1b2c3", 7);
+  CHECK(setup.ap.setup && setup.ap.password == "own-wifi-key" && setup.ap.ssid == "ARMOR-SETUP-A1B2C3");
+  s.ap.setup_password.clear();   // empty again: as it always was
+  setup = plan_network(s, true, "CODE1234", "a1b2c3", 7);
+  CHECK(setup.ap.password == "CODE1234");
   // the normal modes (the cable decides on the s3-eth board; the host build of the other board has none)
   s.uplink = config::Uplink::kWifi;
   Plan station = plan_network(s, false, "", "a1b2c3", 7);
