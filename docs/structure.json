@@ -376,6 +376,19 @@
           }
         },
         {
+          "name": "firmware_base.lock",
+          "desc": {
+            "en": "the version of the shared base this copy was synced from",
+            "es": "la versión de la base compartida de la que se sincronizó esta copia",
+            "de": "die Version der gemeinsamen Basis, mit der diese Kopie abgeglichen wurde",
+            "fr": "la version de la base partagée dont cette copie a été synchronisée",
+            "it": "la versione della base condivisa da cui è stata sincronizzata questa copia",
+            "ja": "この複製が同期された共有ベースのバージョン",
+            "zh": "此副本所同步的共享基础版本",
+            "pt": "a versão da base partilhada de que esta cópia foi sincronizada"
+          }
+        },
+        {
           "name": "partitions.csv",
           "desc": {
             "en": "the flash table",

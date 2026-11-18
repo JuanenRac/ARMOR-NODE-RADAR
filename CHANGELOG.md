@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The repository structure picture lists `firmware_base.lock`:** the file that records the version of the shared base this copy was synced from now appears in the picture, in the eight languages.
 - **The shared tools of the manifest and the status lights gain an opt-in strict check of the evidence:** `sync_manifests.py` and `status_lights.py` take `--strict-evidence` (off by default; `ARMOR_STRICT_EVIDENCE=1` switches it on for `armor_ci_validate.py`).
 - **The manifest says simulator evidence until the record of a test on real hardware is kept:** it said bench with no record, so the Hardware and Integration lights go down to orange in the eight READMEs (a person raises them again with the record).
 - **The README lists the settings that sign the orders to the node:** `security.control_require_sig` and `security.command_key` in the configuration table, in the eight languages.
