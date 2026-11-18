@@ -61,10 +61,10 @@ Cada línea es una parte de este repositorio y la luz dice hasta dónde llega ho
 | Pruebas | 🟢 | Pasan 15.256 comprobaciones en 24 programas de host (`ctest`): los decodificadores, los ajustes, la tabla de pines, los usuarios, el plan de red, el serializador de mensajes y las comprobaciones de versión. |
 | Protocolos y datos | 🟡 | El LD2450 funciona con un radar real; los decodificadores del LD2461 y de los cuatro sensores de presencia solo coinciden con los ejemplos de sus manuales, y el canal de órdenes del radar no se ha comprobado con un módulo. |
 | Interfaz | 🟡 | El panel web se usa en la placa y se ejercita en un navegador real contra un nodo simulado; su certificado HTTPS, creado por el propio nodo, no se ha probado en todos los navegadores. |
-| Hardware | 🟡 | Es el único nodo que existe como hardware: una placa Waveshare ESP32-S3-ETH real con un radar informa al banco de pruebas CM5; no hay ningún otro módulo de sensor conectado. |
+| Hardware | 🟠 | Es el único nodo que existe como hardware: una placa Waveshare ESP32-S3-ETH real con un radar informa al banco de pruebas CM5; no hay ningún otro módulo de sensor conectado. |
 | Seguridad | 🟡 | El emparejamiento con PIN Bluetooth y la comprobación de la firma de las actualizaciones están probados en un ordenador con firmas reales, pero aún no en la placa; no ha habido una revisión independiente. |
 | Actualizaciones | 🟡 | Las actualizaciones por aire se usan en la placa; la comprobación de actualizaciones firmadas aún no se ha ejecutado allí. |
-| Integración | 🟡 | Los mensajes de la placa llegan al servidor del banco de pruebas CM5, y esos mismos mensajes los aceptan los esquemas compartidos y los vectores de conformidad de ARMOR-COMMON. Solo se ha visto en el banco, no en una instalación. |
+| Integración | 🟠 | Los mensajes de la placa llegan al servidor del banco de pruebas CM5, y esos mismos mensajes los aceptan los esquemas compartidos y los vectores de conformidad de ARMOR-COMMON. Solo se ha visto en el banco, no en una instalación. |
 | Documentación | 🟢 | Ocho idiomas y el historial de cambios están al día. |
 
 ## 🎯 Resumen
@@ -186,6 +186,8 @@ Lee [SECURITY.md](SECURITY.md) para informar de una vulnerabilidad. No ha habido
 | `system.login_limit_per_minute` | 30 (0-120) | Contraseñas erróneas por minuto antes de que el panel bloquee el acceso a todos (0 = sin límite global); se lee y se cambia desde Studio (un botón en cada nodo) o con `POST /api/v1/admin/nodes/settings`, donde el acceso al panel se usa una vez y nunca se guarda |
 | `security.ota_check_board` | on | Rechazar un firmware subido hecho para la otra placa (Wi-Fi o Ethernet); la imagen lleva una marca de su placa que el nodo lee mientras llega |
 | `security.ota_require_board_mark` | on | Rechazar también una imagen sin marca de placa (un firmware antiguo); desactívelo para volver a una versión hecha antes de las marcas |
+| `security.control_require_sig` | off | Activada, el nodo solo obedece las órdenes dirigidas a él (reinicio, pausa, espera...) si el servidor las firmó con la clave del nodo; sin una clave válida se rechazan todas |
+| `security.command_key` | `""` | La clave del nodo, 64 dígitos hexadecimales (el `command_key` de `GET /api/v1/admin/nodes/<id>/token` del servidor); es un secreto: puede sellarse y no se vuelve a mostrar |
 | `web.metrics_basic_over_http` | on | Si `/metrics` acepta también nombre y contraseña (HTTP Basic) por el puerto sin cifrar; apagado, solo se aceptan por HTTPS (la cookie de una sesión vale en ambos) |
 
 Los ajustes que se afinan en vivo están en el panel y se guardan en flash (por ejemplo `system.reader_idle_ms`, `security.seal_secrets`, el límite de fallos de acceso por minuto (30, de 0 a 120) y las zonas del motor de perímetro); los valores por defecto del firmware están en `sdkconfig.defaults` y `sdkconfig.board.*`. La flash de 16 MB contiene `nvs` (64 KB), `otadata`, `phy_init`, dos ranuras de 3 MB `ota_0` y `ota_1`, `coredump` (128 KB) y `nvs_keys` (4 KB) (`partitions.csv`).

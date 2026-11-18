@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared tools of the manifest and the status lights gain an opt-in strict check of the evidence:** `sync_manifests.py` and `status_lights.py` take `--strict-evidence` (off by default; `ARMOR_STRICT_EVIDENCE=1` switches it on for `armor_ci_validate.py`).
+- **The manifest says simulator evidence until the record of a test on real hardware is kept:** it said bench with no record, so the Hardware and Integration lights go down to orange in the eight READMEs (a person raises them again with the record).
+- **The README lists the settings that sign the orders to the node:** `security.control_require_sig` and `security.command_key` in the configuration table, in the eight languages.
 - **The orders to the node can be required signed:** the new settings `security.control_require_sig` (off by default) and `security.command_key` (the 64 hexadecimal digits of the node key of the server, a secret kept and sealed like the passwords and never shown by the panel) make the node read an order of the server to itself (restart, pause, standby...) only when it carries a good signature made with that key; with the option on and no valid key every such order is refused. Both are in the web panel in eight languages. Off, the node behaves as it always did.
 
 - **A refused firmware can be erased from its slot:** the setting `security.ota_invalidate_rejected` (off by default, shown in the web panel in eight languages) erases the first sector of the slot a downloaded image was written to when that image is refused after it was complete (another project, another version than the release, not newer, a bad signature, or no way to boot it) and when a copy of the running slot does not end well, so a later fault cannot start it. The slot that runs is never touched.

@@ -61,10 +61,10 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Tests | 🟢 | 15.256 Prüfungen in 24 Host-Programmen bestehen (`ctest`): die Dekoder, die Einstellungen, die Pin-Tabelle, die Benutzer, der Netzplan, der Nachrichten-Serialisierer und die Versionsprüfungen. |
 | Protokolle und Daten | 🟡 | Der LD2450 läuft an einem echten Radar; die Dekoder des LD2461 und der vier Anwesenheitssensoren stimmen nur mit den Beispielen ihrer Handbücher überein, und der Befehlskanal des Radars ist nicht an einem Modul geprüft. |
 | Oberfläche | 🟡 | Das Web-Panel wird auf der Platine genutzt und in einem echten Browser gegen einen nachgebildeten Knoten erprobt; sein vom Knoten selbst erzeugtes HTTPS-Zertifikat ist nicht in jedem Browser erprobt. |
-| Hardware | 🟡 | Es ist der einzige Knoten, den es als Hardware gibt: eine echte Waveshare-ESP32-S3-ETH-Platine mit einem Radar meldet an den CM5-Prüfstand; kein anderes Sensormodul ist angeschlossen. |
+| Hardware | 🟠 | Es ist der einzige Knoten, den es als Hardware gibt: eine echte Waveshare-ESP32-S3-ETH-Platine mit einem Radar meldet an den CM5-Prüfstand; kein anderes Sensormodul ist angeschlossen. |
 | Sicherheit | 🟡 | Die Kopplung per Bluetooth-PIN und die Prüfung der Update-Signatur sind auf einem Rechner mit echten Signaturen belegt, aber noch nicht auf der Platine; es gab keine unabhängige Prüfung. |
 | Aktualisierungen | 🟡 | Aktualisierungen über die Luft werden auf der Platine genutzt; die Prüfung signierter Aktualisierungen lief dort noch nicht. |
-| Integration | 🟡 | Die Nachrichten der Platine erreichen den Server des CM5-Prüfstands, und dieselben Nachrichten werden von den gemeinsamen Schemas und Konformitätsvektoren von ARMOR-COMMON akzeptiert. Nur auf dem Prüfstand gesehen, nicht in einer Installation. |
+| Integration | 🟠 | Die Nachrichten der Platine erreichen den Server des CM5-Prüfstands, und dieselben Nachrichten werden von den gemeinsamen Schemas und Konformitätsvektoren von ARMOR-COMMON akzeptiert. Nur auf dem Prüfstand gesehen, nicht in einer Installation. |
 | Dokumentation | 🟢 | Acht Sprachen und das Änderungsprotokoll sind aktuell. |
 
 ## 🎯 Überblick
@@ -186,6 +186,8 @@ Lies [SECURITY.md](SECURITY.md), um eine Schwachstelle zu melden. Es gab keine u
 | `system.login_limit_per_minute` | 30 (0-120) | Falsche Passwörter pro Minute, bevor das Panel die Anmeldung für alle sperrt (0 = kein globales Limit); in Studio (eine Schaltfläche an jedem Knoten) oder mit `POST /api/v1/admin/nodes/settings` lesen und ändern, wobei die Panel-Anmeldung einmal benutzt und nie gespeichert wird |
 | `security.ota_check_board` | on | Eine hochgeladene Firmware für die andere Platine (WLAN oder Ethernet) abweisen; das Image trägt ein Kennzeichen seiner Platine, das der Knoten beim Empfang liest |
 | `security.ota_require_board_mark` | on | Auch ein Image ohne Platinenkennzeichen (eine ältere Firmware) abweisen; zum Zurückgehen auf eine Version aus der Zeit vor den Kennzeichen ausschalten |
+| `security.control_require_sig` | off | Eingeschaltet führt der Knoten die an ihn gerichteten Befehle (Neustart, Pause, Warten ...) nur aus, wenn der Server sie mit dem Schlüssel des Knotens signiert hat; ohne gültigen Schlüssel werden alle abgewiesen |
+| `security.command_key` | `""` | Der Schlüssel des Knotens, 64 Hexadezimalziffern (der `command_key` von `GET /api/v1/admin/nodes/<id>/token` des Servers); ein Geheimnis: es kann versiegelt werden und wird nie wieder angezeigt |
 | `web.metrics_basic_over_http` | on | Ob `/metrics` auch Name und Passwort (HTTP Basic) über den unverschlüsselten Port annimmt; aus, nur über HTTPS (das Cookie einer Sitzung gilt auf beiden) |
 
 Die live abgestimmten Einstellungen stehen im Panel und liegen im Flash (zum Beispiel `system.reader_idle_ms`, `security.seal_secrets`, das Limit fehlgeschlagener Anmeldungen pro Minute (30, 0 bis 120) und die Zonen der Perimeter-Engine); die Standardwerte der Firmware stehen in `sdkconfig.defaults` und `sdkconfig.board.*`. Der 16-MB-Flash enthält `nvs` (64 KB), `otadata`, `phy_init`, zwei 3-MB-Slots `ota_0` und `ota_1`, `coredump` (128 KB) und `nvs_keys` (4 KB) (`partitions.csv`).

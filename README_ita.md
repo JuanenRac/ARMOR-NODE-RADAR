@@ -61,10 +61,10 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Test | 🟢 | Superano 15.256 controlli in 24 programmi host (`ctest`): i decodificatori, le impostazioni, la tabella dei pin, gli utenti, il piano di rete, il serializzatore dei messaggi e i controlli di versione. |
 | Protocolli e dati | 🟡 | L'LD2450 funziona con un radar reale; i decodificatori dell'LD2461 e dei quattro sensori di presenza corrispondono solo agli esempi dei loro manuali e il canale di comando del radar non è stato verificato con un modulo. |
 | Interfaccia | 🟡 | Il pannello web è in uso sulla scheda e provato in un browser reale contro un nodo simulato; il suo certificato HTTPS, creato dal nodo stesso, non è stato provato in tutti i browser. |
-| Hardware | 🟡 | È l'unico nodo che esiste come hardware: una scheda Waveshare ESP32-S3-ETH reale con un radar riferisce al banco di prova CM5; nessun altro modulo sensore è collegato. |
+| Hardware | 🟠 | È l'unico nodo che esiste come hardware: una scheda Waveshare ESP32-S3-ETH reale con un radar riferisce al banco di prova CM5; nessun altro modulo sensore è collegato. |
 | Sicurezza | 🟡 | L'abbinamento con PIN Bluetooth e il controllo della firma degli aggiornamenti sono provati su un computer con firme reali ma non ancora sulla scheda; non c'è stata una revisione indipendente. |
 | Aggiornamenti | 🟡 | Gli aggiornamenti via etere sono in uso sulla scheda; il controllo degli aggiornamenti firmati non vi è ancora stato eseguito. |
-| Integrazione | 🟡 | I messaggi della scheda arrivano al server del banco di prova CM5 e gli stessi messaggi sono accettati dagli schemi condivisi e dai vettori di conformità di ARMOR-COMMON. Visto solo sul banco di prova, non in un'installazione. |
+| Integrazione | 🟠 | I messaggi della scheda arrivano al server del banco di prova CM5 e gli stessi messaggi sono accettati dagli schemi condivisi e dai vettori di conformità di ARMOR-COMMON. Visto solo sul banco di prova, non in un'installazione. |
 | Documentazione | 🟢 | Otto lingue e il registro delle modifiche sono aggiornati. |
 
 ## 🎯 Panoramica
@@ -186,6 +186,8 @@ Leggi [SECURITY.md](SECURITY.md) per segnalare una vulnerabilità. Non c'è stat
 | `system.login_limit_per_minute` | 30 (0-120) | Password errate al minuto prima che il pannello blocchi l'accesso a tutti (0 = nessun limite globale); si legge e si cambia da Studio (un pulsante su ogni nodo) o con `POST /api/v1/admin/nodes/settings`, dove l'accesso al pannello è usato una volta e mai conservato |
 | `security.ota_check_board` | on | Rifiutare un firmware caricato costruito per l'altra scheda (Wi-Fi o Ethernet); l'immagine porta una marca della sua scheda che il nodo legge mentre arriva |
 | `security.ota_require_board_mark` | on | Rifiutare anche un'immagine senza marca della scheda (un firmware vecchio); disattivare per tornare a una versione fatta prima delle marche |
+| `security.control_require_sig` | off | Attiva, il nodo esegue gli ordini a lui destinati (riavvio, pausa, attesa...) solo se il server li ha firmati con la chiave del nodo; senza una chiave valida li rifiuta tutti |
+| `security.command_key` | `""` | La chiave del nodo, 64 cifre esadecimali (il `command_key` di `GET /api/v1/admin/nodes/<id>/token` del server); un segreto: può essere sigillata e non viene più mostrata |
 | `web.metrics_basic_over_http` | on | Se `/metrics` accetta anche nome e password (HTTP Basic) sulla porta non cifrata; spento, solo via HTTPS (il cookie di una sessione vale su entrambe) |
 
 Le impostazioni regolate dal vivo sono nel pannello e salvate in flash (ad esempio `system.reader_idle_ms`, `security.seal_secrets`, il limite di accessi falliti al minuto (30, da 0 a 120) e le zone del motore di perimetro); i valori predefiniti del firmware sono in `sdkconfig.defaults` e `sdkconfig.board.*`. La flash da 16 MB contiene `nvs` (64 KB), `otadata`, `phy_init`, due slot da 3 MB `ota_0` e `ota_1`, `coredump` (128 KB) e `nvs_keys` (4 KB) (`partitions.csv`).
