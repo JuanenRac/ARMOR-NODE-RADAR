@@ -278,6 +278,7 @@ ARMOR-NODE-RADAR/
 ├── SECURITY.md SUPPORT.md LICENSE       política de segurança, apoio e licença
 ├── CONTRIBUTING.md CODE_OF_CONDUCT.md   como contribuir e o código de conduta
 ├── CMakeLists.txt                       o projeto ESP-IDF
+├── firmware_base.lock                   a versão da base partilhada de que esta cópia foi sincronizada
 ├── partitions.csv                       a tabela da flash
 ├── sdkconfig.defaults                   as definições do firmware
 ├── sdkconfig.board.s3-eth               a placa Ethernet
