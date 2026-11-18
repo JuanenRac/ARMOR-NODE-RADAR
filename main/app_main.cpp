@@ -43,6 +43,7 @@ extern "C" {
 #include "psram_mem.hpp"
 #include "mqtt_link.hpp"
 #include "node_health.hpp"
+#include "core/command_sig.hpp"
 #include "node_control.hpp"
 #include "network.hpp"
 #include "node_store.hpp"
@@ -157,6 +158,12 @@ extern "C" void app_main() {
         if (sensor.firmware_known && !sensor.firmware.empty()) out.push_back({sensor.model + "-" + std::to_string(sensor.sensor_id), sensor.firmware});
       }
       return out;
+    };
+    // The orders to the node itself may need the signature of the server (security.control_require_sig, off by default); the nonces of the last ones are kept for the replay check.
+    control.authorize = [require = settings.control_require_sig, key = settings.command_key](const std::string& payload, std::string& plain) {
+      static armor::command_sig::NonceCache nonces;
+      const std::int64_t wall = armor::mqtt_link::clock_is_set() ? static_cast<std::int64_t>(armor::mqtt_link::wall_clock_ms()) : 0;
+      return armor::command_sig::control_authorized(require, key, payload, nonces, wall, plain);
     };
     armor::node_control::start(control);
   }
