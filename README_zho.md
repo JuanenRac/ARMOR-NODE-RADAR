@@ -278,6 +278,7 @@ ARMOR-NODE-RADAR/
 ├── SECURITY.md SUPPORT.md LICENSE       安全策略、支持和许可证
 ├── CONTRIBUTING.md CODE_OF_CONDUCT.md   如何贡献与行为准则
 ├── CMakeLists.txt                       ESP-IDF 项目
+├── firmware_base.lock                   此副本所同步的共享基础版本
 ├── partitions.csv                       闪存分区表
 ├── sdkconfig.defaults                   固件设置
 ├── sdkconfig.board.s3-eth               以太网电路板
