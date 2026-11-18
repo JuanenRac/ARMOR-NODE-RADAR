@@ -269,7 +269,7 @@ ARMOR-NODE-RADAR/
 ├── docs/                                7 guias da bancada e do painel
 ├── tools/                               ferramentas de compilação, gravação, adoção, frota e verificação
 ├── .github/                             fluxo de CI e modelos de issues e pull requests
-├── images/                              faixa, ícone e as duas imagens deste README
+├── images/                              faixa, ícone, imagens do README, capturas de ecrã
 ├── build.sh build.bat                   compilar pelo fluxo de projeto partilhado
 ├── test.sh test.bat                     executar os testes pelo fluxo partilhado
 ├── run.sh run.bat                       arrancar pelo fluxo de projeto partilhado

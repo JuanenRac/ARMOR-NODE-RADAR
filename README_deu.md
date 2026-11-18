@@ -269,7 +269,7 @@ ARMOR-NODE-RADAR/
 ├── docs/                                7 Anleitungen für Prüfstand und Panel
 ├── tools/                               Werkzeuge für Build, Flashen, Adoption, Flotte und Prüfung
 ├── .github/                             CI-Workflow sowie Vorlagen für Issues und Pull Requests
-├── images/                              Banner, Symbol und die zwei Bilder dieses READMEs
+├── images/                              Banner, Symbol, README-Bilder, Screenshots
 ├── build.sh build.bat                   Build über den gemeinsamen Projekt-Workflow
 ├── test.sh test.bat                     Tests über den gemeinsamen Workflow ausführen
 ├── run.sh run.bat                       Start über den gemeinsamen Projekt-Workflow
