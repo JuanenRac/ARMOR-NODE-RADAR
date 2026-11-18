@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "board_pins.hpp"
+#include "command_sig.hpp"
 #include "frame_capture.hpp"
 #include "admin_sources.hpp"
 #include "json.hpp"
@@ -223,6 +224,10 @@ struct Settings {
   // After a firmware the node downloaded was refused (wrong project, wrong version, not newer, bad signature, no way to boot it) the slot it was written to is erased at its first sector, so the
   // refused image cannot be started by a later fault. Off, as the node always was: the slot keeps what was written. The running slot is never touched.
   bool ota_invalidate_rejected = false;
+  // The orders the server sends to this node itself (restart, pause, standby...) may need the signature of the server (command_sig.hpp). Off, as the node always was: any order of the broker is read.
+  // On, only an order signed with command_key is read, and with no valid key every order is refused. command_key is the 64 hexadecimal digits of the node's `command_key` of the server (a secret like the passwords).
+  bool control_require_sig = false;
+  std::string command_key;
   // How the task that reads the sensors waits for them (core/uart_wake.hpp): 0 looks at the serial lines every 10 ms, as the first versions did; 10 to 500 sleeps until a sensor sends
   // something and, when none does, at most this many milliseconds before it does its periodic work. 100 by default.
   int reader_idle_ms = uartwake::kIdleMsDefault;
@@ -679,6 +684,8 @@ inline void read_settings(const json::Value& document, Settings& s, Problems& pr
     read_bool(*security, "ota_check_board", s.ota_check_board, "security.ota_check_board", problems);
     read_bool(*security, "ota_require_board_mark", s.ota_require_board_mark, "security.ota_require_board_mark", problems);
     read_bool(*security, "ota_invalidate_rejected", s.ota_invalidate_rejected, "security.ota_invalidate_rejected", problems);
+    read_bool(*security, "control_require_sig", s.control_require_sig, "security.control_require_sig", problems);
+    read_secret(*security, "command_key", s.command_key, "security.command_key", problems);
   }
   if (const json::Value* fusion = document.get("fusion"); fusion != nullptr && fusion->is_object()) read_int(*fusion, "merge_mm", s.fusion_merge_mm, 0, 2000, "fusion.merge_mm", problems);
   if (const json::Value* p = document.get("perimeter"); p != nullptr) {
@@ -827,6 +834,7 @@ inline Problems validate(const Settings& s) {
     if (s.ap.security != WifiSecurity::kOpen && !net::valid_wpa_passphrase(s.ap.password)) bad(problems, "ap.password", s.ap.password.empty() ? "required" : "invalid_key");
   }
   if (!s.ap.setup_password.empty() && !net::valid_wpa_passphrase(s.ap.setup_password)) bad(problems, "ap.setup_password", "invalid_key");
+  if (!s.command_key.empty() && !command_sig::key_is_valid(s.command_key)) bad(problems, "security.command_key", "invalid");
   {   // the fixed PIN of the Bluetooth pairing: six digits when it is given, and given when the mode asks for it
     const auto six_digits = [](const std::string& text) { return text.size() == 6 && std::all_of(text.begin(), text.end(), [](char c) { return c >= '0' && c <= '9'; }); };
     if (!s.ble_passkey_pin.empty() && !six_digits(s.ble_passkey_pin)) bad(problems, "ble.passkey_pin", "invalid");
@@ -1005,7 +1013,9 @@ inline std::string to_json(const Settings& s, bool secrets) {
   w.key("ui").begin_object().field("language", s.language).end_object();
   w.key("time").begin_object().field("ntp_enabled", s.time.ntp_enabled).field("ntp", s.time.ntp).field("zone", s.time.zone).end_object();
   w.key("system").begin_object().field("auto_restart_hours", s.auto_restart_hours).field("login_limit_per_minute", s.login_limit_per_minute).field("reader_idle_ms", s.reader_idle_ms).end_object();
-  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).field("ota_check_board", s.ota_check_board).field("ota_require_board_mark", s.ota_require_board_mark).field("ota_invalidate_rejected", s.ota_invalidate_rejected).end_object();
+  w.key("security").begin_object().field("seal_secrets", s.seal_secrets).field("ota_check_board", s.ota_check_board).field("ota_require_board_mark", s.ota_require_board_mark).field("ota_invalidate_rejected", s.ota_invalidate_rejected).field("control_require_sig", s.control_require_sig);
+  if (secrets) w.field("command_key", s.command_key); else w.field("command_key_set", !s.command_key.empty());
+  w.end_object();
   w.key("fusion").begin_object().field("merge_mm", s.fusion_merge_mm).end_object();
   write_perimeter(w, s.perimeter);
   w.key("sensor_security").begin_object().field("bluetooth_off", s.sensor_bluetooth_off).end_object();

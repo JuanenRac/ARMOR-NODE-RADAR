@@ -960,6 +960,21 @@ static void test_ble_setting() {
   CHECK(!config::load(R"({"ble":{"passkey_mode":"fixed"}})", s, out, problems) && has_problem(problems, "ble.passkey_pin", "required"));
   problems.clear();
   CHECK(!config::load(R"({"ap":{"setup_password":"short"}})", s, out, problems) && has_problem(problems, "ap.setup_password", "invalid_key"));
+  // the signature of the orders to the node itself: off until asked for, the key is a secret that is never shown, and only a key of 64 hexadecimal digits is taken
+  const std::string order_key = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  CHECK(!s.control_require_sig && s.command_key.empty() && config::to_json(s, false).find(R"("control_require_sig":false)") != std::string::npos);
+  problems.clear();
+  config::Settings signed_in;
+  CHECK(config::load(std::string(R"({"security":{"control_require_sig":true,"command_key":")") + order_key + R"("}})", s, signed_in, problems) && signed_in.control_require_sig && signed_in.command_key == order_key);
+  CHECK(config::to_json(signed_in, false).find(order_key) == std::string::npos && config::to_json(signed_in, false).find(R"("command_key_set":true)") != std::string::npos);
+  CHECK(config::to_json(signed_in, true).find(std::string(R"("command_key":")") + order_key) != std::string::npos);
+  problems.clear();
+  config::Settings cleared;
+  CHECK(config::load(R"({"security":{"command_key_clear":true}})", signed_in, cleared, problems) && cleared.command_key.empty() && cleared.control_require_sig);
+  problems.clear();
+  CHECK(!config::load(R"({"security":{"command_key":"abc"}})", s, out, problems) && has_problem(problems, "security.command_key", "invalid"));
+  problems.clear();
+  CHECK(!config::load(R"({"security":{"control_require_sig":"yes"}})", s, out, problems) && has_problem(problems, "security.control_require_sig", "invalid"));
 }
 static void test_sensor_models_in_settings() {
   const config::Settings base = valid_settings();
