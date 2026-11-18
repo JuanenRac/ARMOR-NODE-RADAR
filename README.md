@@ -269,7 +269,7 @@ ARMOR-NODE-RADAR/
 ├── docs/                                7 guides for the bench and the panel
 ├── tools/                               build, flash, adopt, fleet and check tools
 ├── .github/                             CI workflow, issue and pull-request templates
-├── images/                              banner, icon and the two pictures of this README
+├── images/                              banner, icon, README pictures, screenshots
 ├── build.sh build.bat                   build through the shared project workflow
 ├── test.sh test.bat                     run the tests through the shared workflow
 ├── run.sh run.bat                       start through the shared project workflow

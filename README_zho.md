@@ -259,7 +259,7 @@ python -I tools/armor_ci_validate.py
 </p>
 
 <details>
-<summary>目录树的文本版</summary>
+<summary>目录树的文本版本</summary>
 
 ```text
 ARMOR-NODE-RADAR/
@@ -269,7 +269,7 @@ ARMOR-NODE-RADAR/
 ├── docs/                                7 份台架与面板指南
 ├── tools/                               构建、刷写、接入、机群和检查工具
 ├── .github/                             CI 工作流以及 Issue 和 Pull Request 模板
-├── images/                              横幅、图标和本 README 的两幅图
+├── images/                              横幅、图标、README 图片、屏幕截图
 ├── build.sh build.bat                   通过共享的项目工作流构建
 ├── test.sh test.bat                     通过共享工作流运行测试
 ├── run.sh run.bat                       通过共享的项目工作流启动
