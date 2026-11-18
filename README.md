@@ -61,10 +61,10 @@ Each line is one part of this repository and the light says how far it is today.
 | Tests | 🟢 | 15,256 checks in 24 host programs pass (`ctest`): the decoders, the settings, the pin table, the users, the network plan, the message serialiser and the release checks. |
 | Protocols and data | 🟡 | The LD2450 runs on a real radar; the LD2461 and the four presence-sensor decoders only match the worked examples of their manuals, and the radar command channel is unchecked against a module. |
 | Interface | 🟡 | The web panel is in use on the board and is exercised in a real browser against a stand-in node; its HTTPS certificate, made by the node itself, is untried in every browser. |
-| Hardware | 🟡 | It is the one node that exists as hardware: a real Waveshare ESP32-S3-ETH board with a radar reports to the CM5 test bench; no other sensor module is connected. |
+| Hardware | 🟠 | It is the one node that exists as hardware: a real Waveshare ESP32-S3-ETH board with a radar reports to the CM5 test bench; no other sensor module is connected. |
 | Security | 🟡 | The Bluetooth PIN pairing and the update signature check are proven on a computer with real signatures but not yet on the board; there has been no independent review. |
 | Updates | 🟡 | Over-the-air updates are in use on the board; the signed-update check has not run there yet. |
-| Integration | 🟡 | The messages of the board reach the CM5 test bench server, and the same messages are accepted by the shared schemas and conformance vectors of ARMOR-COMMON. It has been seen on the bench only, not in an installation. |
+| Integration | 🟠 | The messages of the board reach the CM5 test bench server, and the same messages are accepted by the shared schemas and conformance vectors of ARMOR-COMMON. It has been seen on the bench only, not in an installation. |
 | Documentation | 🟢 | Eight languages and the changelog are up to date. |
 
 ## 🎯 Overview
@@ -186,6 +186,8 @@ Read [SECURITY.md](SECURITY.md) to report a vulnerability. There has been no ind
 | `system.login_limit_per_minute` | 30 (0-120) | Wrong passwords per minute before the panel locks sign-in for everyone (0 = no global limit); read and change it from Studio (a button on every node) or with `POST /api/v1/admin/nodes/settings`, where the panel login is used once and never kept |
 | `security.ota_check_board` | on | Refuse an uploaded firmware that was built for the other board (Wi-Fi or Ethernet); the image carries a mark of its board that the node reads while it arrives |
 | `security.ota_require_board_mark` | on | Also refuse an image that carries no board mark (an older firmware); turn it off to go back to a version made before the marks |
+| `security.control_require_sig` | off | When on, the node acts on the orders addressed to itself (restart, pause, wait...) only if the server signed them with the key of the node; with no valid key every order is refused |
+| `security.command_key` | `""` | The key of the node, 64 hexadecimal digits (the `command_key` of `GET /api/v1/admin/nodes/<id>/token` of the server); a secret: it can be sealed and is never shown again |
 | `web.metrics_basic_over_http` | on | Whether `/metrics` also takes a name and password (HTTP Basic) over the plain port; off, they are taken only over HTTPS (the cookie of a session works on both) |
 
 The settings that are tuned live in the panel and are kept in flash (for example `system.reader_idle_ms`, `security.seal_secrets`, the failed-login limit per minute (30, 0 to 120) and the zones of the perimeter engine); the defaults of the firmware are in `sdkconfig.defaults` and `sdkconfig.board.*`. The flash of 16 MB holds `nvs` (64 KB), `otadata`, `phy_init`, two 3 MB slots `ota_0` and `ota_1`, `coredump` (128 KB) and `nvs_keys` (4 KB) (`partitions.csv`).

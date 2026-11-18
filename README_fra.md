@@ -61,10 +61,10 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Tests | 🟢 | 15 256 vérifications dans 24 programmes d'hôte réussissent (`ctest`) : les décodeurs, les réglages, la table des broches, les utilisateurs, le plan réseau, le sérialiseur de messages et les contrôles de version. |
 | Protocoles et données | 🟡 | Le LD2450 tourne avec un vrai radar ; les décodeurs du LD2461 et des quatre capteurs de présence ne correspondent qu'aux exemples de leurs notices, et le canal de commandes du radar n'a pas été vérifié avec un module. |
 | Interface | 🟡 | Le panneau web est utilisé sur la carte et essayé dans un vrai navigateur contre un nœud simulé ; son certificat HTTPS, créé par le nœud lui-même, n'a pas été essayé dans tous les navigateurs. |
-| Matériel | 🟡 | C'est le seul nœud qui existe en matériel : une vraie carte Waveshare ESP32-S3-ETH avec un radar rend compte au banc d'essai CM5 ; aucun autre module de capteur n'est branché. |
+| Matériel | 🟠 | C'est le seul nœud qui existe en matériel : une vraie carte Waveshare ESP32-S3-ETH avec un radar rend compte au banc d'essai CM5 ; aucun autre module de capteur n'est branché. |
 | Sécurité | 🟡 | L'appairage par PIN Bluetooth et la vérification de la signature des mises à jour sont prouvés sur un ordinateur avec de vraies signatures mais pas encore sur la carte ; il n'y a pas eu de revue indépendante. |
 | Mises à jour | 🟡 | Les mises à jour par voie hertzienne sont utilisées sur la carte ; la vérification des mises à jour signées n'y a pas encore tourné. |
-| Intégration | 🟡 | Les messages de la carte arrivent au serveur du banc d'essai CM5, et ces mêmes messages sont acceptés par les schémas partagés et les vecteurs de conformité d'ARMOR-COMMON. Vu uniquement sur le banc d'essai, pas dans une installation. |
+| Intégration | 🟠 | Les messages de la carte arrivent au serveur du banc d'essai CM5, et ces mêmes messages sont acceptés par les schémas partagés et les vecteurs de conformité d'ARMOR-COMMON. Vu uniquement sur le banc d'essai, pas dans une installation. |
 | Documentation | 🟢 | Huit langues et le journal des modifications sont à jour. |
 
 ## 🎯 Présentation
@@ -186,6 +186,8 @@ Lisez [SECURITY.md](SECURITY.md) pour signaler une vulnérabilité. Il n'y a pas
 | `system.login_limit_per_minute` | 30 (0-120) | Mots de passe erronés par minute avant que le panneau verrouille la connexion pour tous (0 = pas de limite globale) ; on le lit et le change depuis Studio (un bouton sur chaque nœud) ou avec `POST /api/v1/admin/nodes/settings`, l'identifiant du panneau étant utilisé une fois et jamais conservé |
 | `security.ota_check_board` | on | Refuser un firmware envoyé construit pour l'autre carte (Wi-Fi ou Ethernet) ; l'image porte une marque de sa carte que le nœud lit à l'arrivée |
 | `security.ota_require_board_mark` | on | Refuser aussi une image sans marque de carte (un ancien firmware) ; à désactiver pour revenir à une version faite avant les marques |
+| `security.control_require_sig` | off | Activée, le nœud n'exécute les ordres qui lui sont adressés (redémarrage, pause, attente...) que si le serveur les a signés avec la clé du nœud ; sans clé valide, tous sont refusés |
+| `security.command_key` | `""` | La clé du nœud, 64 chiffres hexadécimaux (le `command_key` de `GET /api/v1/admin/nodes/<id>/token` du serveur) ; un secret : il peut être scellé et n'est plus jamais affiché |
 | `web.metrics_basic_over_http` | on | Si `/metrics` accepte aussi un nom et un mot de passe (HTTP Basic) sur le port non chiffré ; désactivé, seulement en HTTPS (le cookie d'une session vaut sur les deux) |
 
 Les réglages ajustés en direct sont dans le panneau et gardés en flash (par exemple `system.reader_idle_ms`, `security.seal_secrets`, la limite d'échecs de connexion par minute (30, de 0 à 120) et les zones du moteur de périmètre) ; les valeurs par défaut du firmware sont dans `sdkconfig.defaults` et `sdkconfig.board.*`. La flash de 16 Mo contient `nvs` (64 Ko), `otadata`, `phy_init`, deux emplacements de 3 Mo `ota_0` et `ota_1`, `coredump` (128 Ko) et `nvs_keys` (4 Ko) (`partitions.csv`).
