@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 oder neuer">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Sprache">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-24%20host%20programs-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.3-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Reifegrad">
 </p>
@@ -40,7 +40,7 @@
 | Reifegrad | Etabliert |
 | Rolle | Radar-Feldknoten für ESP32-S3 (Familie: Field Nodes, übergeordnet: ARMOR-COMMON) |
 | Technik | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 17321 Prüfungen in 24 Host-Programmen und 8 Python-Prüfungen (`ctest`) |
+| Tests | 24 Host-Programmen und 8 Python-Prüfungen (`ctest`) |
 | Platinen | Waveshare ESP32-S3-ETH (Ethernet) und ESP32-S3-WROOM-1 N16R8 (nur WLAN) |
 | Sensoren | Bis zu 3 Radare (LD2450, LD2461) oder Präsenzsensoren je Knoten, Lichtsensor VEML7700 |
 | Läuft auf | Waveshare ESP32-S3-ETH oder ESP32-S3-WROOM-1 N16R8; Host-Tests auf jedem Computer |
@@ -62,8 +62,8 @@ Jede Zeile ist ein Teil dieses Repositorys, und die Ampel sagt, wie weit er heut
 | Protokolle und Daten | 🟡 | Der LD2450 läuft an einem echten Radar; die Dekoder des LD2461 und der vier Anwesenheitssensoren stimmen nur mit den Beispielen ihrer Handbücher überein, und der Befehlskanal des Radars ist nicht an einem Modul geprüft. |
 | Oberfläche | 🟡 | Das Web-Panel wird auf der Platine genutzt und in einem echten Browser gegen einen nachgebildeten Knoten erprobt; sein vom Knoten selbst erzeugtes HTTPS-Zertifikat ist nicht in jedem Browser erprobt. |
 | Hardware | 🟠 | Es ist der einzige Knoten, den es als Hardware gibt: eine echte Waveshare-ESP32-S3-ETH-Platine mit einem Radar meldet an den CM5-Prüfstand; kein anderes Sensormodul ist angeschlossen. |
-| Sicherheit | 🟡 | Die Kopplung per Bluetooth-PIN und die Prüfung der Update-Signatur sind auf einem Rechner mit echten Signaturen belegt, aber noch nicht auf der Platine; es gab keine unabhängige Prüfung. |
-| Aktualisierungen | 🟡 | Aktualisierungen über die Luft werden auf der Platine genutzt; die Prüfung signierter Aktualisierungen lief dort noch nicht. |
+| Sicherheit | 🟠 | Die Kopplung per Bluetooth-PIN und die Prüfung der Update-Signatur sind auf einem Rechner mit echten Signaturen belegt, aber noch nicht auf der Platine; es gab keine unabhängige Prüfung. |
+| Aktualisierungen | 🟠 | Aktualisierungen über die Luft werden auf der Platine genutzt; die Prüfung signierter Aktualisierungen lief dort noch nicht. |
 | Integration | 🟠 | Die Nachrichten der Platine erreichen den Server des CM5-Prüfstands, und dieselben Nachrichten werden von den gemeinsamen Schemas und Konformitätsvektoren von ARMOR-COMMON akzeptiert. Nur auf dem Prüfstand gesehen, nicht in einer Installation. |
 | Dokumentation | 🟢 | Acht Sprachen und das Änderungsprotokoll sind aktuell. |
 
@@ -222,7 +222,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-24 Host-Testprogramme und 8 Python-Prüfungen laufen unter `ctest`; 17321 Prüfungen, gezählt von den Host-Programmen, mit `-Werror` gebaut.
+24 Host-Testprogramme und 8 Python-Prüfungen laufen unter `ctest`, mit `-Werror` gebaut.
 
 | Teil | Was sie abdeckt |
 |---|---|

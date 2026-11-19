@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-24%20host%20programs-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.3-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
@@ -40,7 +40,7 @@
 | 成熟度 | 成熟 |
 | 角色 | ESP32-S3 雷达现场节点（家族：Field Nodes，上级：ARMOR-COMMON） |
 | 技术栈 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| 测试 | 17321 项检查（24 个主机程序和 8 项 Python 检查，`ctest`） |
+| 测试 | 24 个主机程序和 8 项 Python 检查（`ctest`） |
 | 电路板 | Waveshare ESP32-S3-ETH（以太网）和 ESP32-S3-WROOM-1 N16R8（仅 Wi-Fi） |
 | 传感器 | 每个节点最多 3 台雷达（LD2450、LD2461）或存在传感器，以及 VEML7700 光传感器 |
 | 运行位置 | Waveshare ESP32-S3-ETH 或 ESP32-S3-WROOM-1 N16R8；主机测试可在任何计算机上运行 |
@@ -62,8 +62,8 @@
 | 协议与数据 | 🟡 | LD2450 已在真实雷达上运行；LD2461 和四种人体存在传感器的解码器只与其手册中的示例一致，雷达命令通道尚未对照模块检查。 |
 | 界面 | 🟡 | 网页面板已在板子上使用，并在真实浏览器中对模拟节点做过测试；由节点自己生成的 HTTPS 证书尚未在所有浏览器中试过。 |
 | 硬件 | 🟠 | 这是唯一实际存在的硬件节点：一块真实的 Waveshare ESP32-S3-ETH 板带着雷达向 CM5 测试台上报；没有连接其他传感器模块。 |
-| 安全 | 🟡 | 蓝牙 PIN 配对和更新签名检查已在电脑上用真实签名证明，但尚未在板子上验证；没有经过独立审查。 |
-| 更新 | 🟡 | 空中更新已在板子上使用；签名更新的检查尚未在板子上运行过。 |
+| 安全 | 🟠 | 蓝牙 PIN 配对和更新签名检查已在电脑上用真实签名证明，但尚未在板子上验证；没有经过独立审查。 |
+| 更新 | 🟠 | 空中更新已在板子上使用；签名更新的检查尚未在板子上运行过。 |
 | 集成 | 🟠 | 板子的消息送达 CM5 测试台上的服务器，同样的消息也被 ARMOR-COMMON 的共享模式和一致性向量接受。仅在测试台上见过，尚未在实际安装中使用。 |
 | 文档 | 🟢 | 八种语言和更新日志均为最新。 |
 
@@ -222,7 +222,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-`ctest` 运行 24 个主机测试程序和 8 个 Python 检查；主机程序统计的检查共 17321 项，使用 `-Werror` 构建。
+`ctest` 运行 24 个主机测试程序和 8 个 Python 检查；主机程序使用 `-Werror` 构建。
 
 | 部分 | 覆盖内容 |
 |---|---|

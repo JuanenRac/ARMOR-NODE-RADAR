@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The structure generator can write a figure read from the code:** `tools/make_structure.py` resolves `{{fact:NAME|LAST}}` in the descriptions of `docs/structure.json` where the documentation tools are next to the repository, and writes LAST (the figure it had when last written) everywhere else, so a repository still builds on its own.
+- **The README no longer types the number of checks the host programs count:** the Tests row of At a glance, the Tests badge and the build sentence give the host test programs and the Python checks that `ctest` registers, read from the code; the total of checks changes with every test and was only ever a typed number.
 - **The file tree of the README is drawn from the structure source:** the text tree in the eight READMEs is generated from `docs/structure.json`, the file that also draws the picture, so the two cannot disagree.
 - **The README trees list `firmware_base.lock` and the architecture picture is redrawn with rounded coordinates:** the file that records the version of the shared base this copy was synced from appears in the text tree of the eight READMEs, and the legend positions of the picture carry no floating-point noise.
 - **The repository structure picture lists `firmware_base.lock`:** the file that records the version of the shared base this copy was synced from now appears in the picture, in the eight languages.

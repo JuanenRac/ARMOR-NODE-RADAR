@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 or later">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-24%20host%20programs-2ea44f.svg" alt="Tests">
   <img src="https://img.shields.io/badge/Version-0.8.1.3-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
@@ -40,7 +40,7 @@
 | Maturity | Established |
 | Role | Radar field node for ESP32-S3 (family: Field Nodes, parent: ARMOR-COMMON) |
 | Stack | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Tests | 17321 checks in 24 host programs and 8 Python checks (`ctest`) |
+| Tests | 24 host programs and 8 Python checks (`ctest`) |
 | Boards | Waveshare ESP32-S3-ETH (Ethernet) and ESP32-S3-WROOM-1 N16R8 (Wi-Fi only) |
 | Sensors | Up to 3 radars (LD2450, LD2461) or presence sensors per node, VEML7700 light sensor |
 | Runs on | Waveshare ESP32-S3-ETH or ESP32-S3-WROOM-1 N16R8; host tests on any computer |
@@ -62,8 +62,8 @@ Each line is one part of this repository and the light says how far it is today.
 | Protocols and data | 🟡 | The LD2450 runs on a real radar; the LD2461 and the four presence-sensor decoders only match the worked examples of their manuals, and the radar command channel is unchecked against a module. |
 | Interface | 🟡 | The web panel is in use on the board and is exercised in a real browser against a stand-in node; its HTTPS certificate, made by the node itself, is untried in every browser. |
 | Hardware | 🟠 | It is the one node that exists as hardware: a real Waveshare ESP32-S3-ETH board with a radar reports to the CM5 test bench; no other sensor module is connected. |
-| Security | 🟡 | The Bluetooth PIN pairing and the update signature check are proven on a computer with real signatures but not yet on the board; there has been no independent review. |
-| Updates | 🟡 | Over-the-air updates are in use on the board; the signed-update check has not run there yet. |
+| Security | 🟠 | The Bluetooth PIN pairing and the update signature check are proven on a computer with real signatures but not yet on the board; there has been no independent review. |
+| Updates | 🟠 | Over-the-air updates are in use on the board; the signed-update check has not run there yet. |
 | Integration | 🟠 | The messages of the board reach the CM5 test bench server, and the same messages are accepted by the shared schemas and conformance vectors of ARMOR-COMMON. It has been seen on the bench only, not in an installation. |
 | Documentation | 🟢 | Eight languages and the changelog are up to date. |
 
@@ -222,7 +222,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-24 host test programs and 8 Python checks run under `ctest`; 17321 checks counted by the host programs, built with `-Werror`.
+24 host test programs and 8 Python checks run under `ctest`, built with `-Werror`.
 
 | Part | What it covers |
 |---|---|

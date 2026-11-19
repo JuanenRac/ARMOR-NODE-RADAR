@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/License-GPL%203.0--or--later-blue.svg" alt="GPL 3.0 o posterior">
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Lenguaje">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
-  <img src="https://img.shields.io/badge/Tests-17321%20checks-2ea44f.svg" alt="Pruebas">
+  <img src="https://img.shields.io/badge/Tests-24%20host%20programs-2ea44f.svg" alt="Pruebas">
   <img src="https://img.shields.io/badge/Version-0.8.1.3-0f6cbd.svg" alt="Versión">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Madurez">
 </p>
@@ -40,7 +40,7 @@
 | Madurez | Establecido |
 | Función | Nodo de campo radar para ESP32-S3 (familia: Field Nodes, padre: ARMOR-COMMON) |
 | Tecnología | C++17, ESP-IDF 5.5.5, ESP32-S3 |
-| Pruebas | 17321 comprobaciones en 24 programas de host y 8 de Python (`ctest`) |
+| Pruebas | 24 programas de host y 8 de Python (`ctest`) |
 | Placas | Waveshare ESP32-S3-ETH (Ethernet) y ESP32-S3-WROOM-1 N16R8 (solo Wi-Fi) |
 | Sensores | Hasta 3 radares (LD2450, LD2461) o sensores de presencia por nodo, sensor de luz VEML7700 |
 | Funciona en | Waveshare ESP32-S3-ETH o ESP32-S3-WROOM-1 N16R8; pruebas de host en cualquier ordenador |
@@ -62,8 +62,8 @@ Cada línea es una parte de este repositorio y la luz dice hasta dónde llega ho
 | Protocolos y datos | 🟡 | El LD2450 funciona con un radar real; los decodificadores del LD2461 y de los cuatro sensores de presencia solo coinciden con los ejemplos de sus manuales, y el canal de órdenes del radar no se ha comprobado con un módulo. |
 | Interfaz | 🟡 | El panel web se usa en la placa y se ejercita en un navegador real contra un nodo simulado; su certificado HTTPS, creado por el propio nodo, no se ha probado en todos los navegadores. |
 | Hardware | 🟠 | Es el único nodo que existe como hardware: una placa Waveshare ESP32-S3-ETH real con un radar informa al banco de pruebas CM5; no hay ningún otro módulo de sensor conectado. |
-| Seguridad | 🟡 | El emparejamiento con PIN Bluetooth y la comprobación de la firma de las actualizaciones están probados en un ordenador con firmas reales, pero aún no en la placa; no ha habido una revisión independiente. |
-| Actualizaciones | 🟡 | Las actualizaciones por aire se usan en la placa; la comprobación de actualizaciones firmadas aún no se ha ejecutado allí. |
+| Seguridad | 🟠 | El emparejamiento con PIN Bluetooth y la comprobación de la firma de las actualizaciones están probados en un ordenador con firmas reales, pero aún no en la placa; no ha habido una revisión independiente. |
+| Actualizaciones | 🟠 | Las actualizaciones por aire se usan en la placa; la comprobación de actualizaciones firmadas aún no se ha ejecutado allí. |
 | Integración | 🟠 | Los mensajes de la placa llegan al servidor del banco de pruebas CM5, y esos mismos mensajes los aceptan los esquemas compartidos y los vectores de conformidad de ARMOR-COMMON. Solo se ha visto en el banco, no en una instalación. |
 | Documentación | 🟢 | Ocho idiomas y el historial de cambios están al día. |
 
@@ -222,7 +222,7 @@ build/host/emit_samples | python tests/check_contract.py
 python -I tools/armor_ci_validate.py
 ```
 
-24 programas de prueba de host y 8 comprobaciones en Python se ejecutan con `ctest`; 17321 comprobaciones contadas por los programas de host, compilados con `-Werror`.
+24 programas de prueba de host y 8 comprobaciones en Python se ejecutan con `ctest`, compilados con `-Werror`.
 
 | Parte | Qué cubre |
 |---|---|
