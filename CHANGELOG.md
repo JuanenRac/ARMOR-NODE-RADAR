@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The screenshots of the README can be taken on a GitHub runner:** the manual workflow `screenshots.yml` (started by hand only, read-only token, no secrets) starts the stand-in of the node, takes the pages of the web panel with the Chromium of Playwright and keeps the pictures as an artifact; `ARMOR_SHOTS_CHANNEL=chromium` makes the script take that Chromium; `docs/SCREENSHOTS.md` says how to start it and use them.
+
 ## [0.8.1.4] - Signed node orders, safe outputs while paused, HTTPS metrics, fixed pairing PIN and a fault matrix
 
 - **The web panel of the node loads again:** a comma missing in the texts of the panel (`panel/text.js`) after the explanation of the erase of a refused firmware stopped the whole page script, so the panel showed nothing; the line is fixed.

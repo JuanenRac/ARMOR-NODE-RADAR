@@ -48,7 +48,9 @@ try {
   for (let tries = 0; tries < 40; tries += 1) { try { await fetch(base + "/"); break; } catch { await sleep(250); } }
   const login = await fetch(base + "/api/v1/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user: "admin", password: "adminpass123" }) });
   const pair = login.headers.getSetCookie()[0].split(";")[0];
-  browser = await chromium.launch({ channel: "msedge", headless: true });
+  // Edge on Windows by default; ARMOR_SHOTS_CHANNEL=chromium takes the Chromium that Playwright installs (a runner without Edge)
+  const channel = process.env.ARMOR_SHOTS_CHANNEL ?? "msedge";
+  browser = await chromium.launch(channel === "chromium" ? { headless: true } : { channel, headless: true });
   const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
   await context.addCookies([{ name: pair.slice(0, pair.indexOf("=")), value: pair.slice(pair.indexOf("=") + 1), url: base + "/" }]);
   // the stand-in answers with the addresses of a real bench (the server and the node): the pictures show other, made-up ones
