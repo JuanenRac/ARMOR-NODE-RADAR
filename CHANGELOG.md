@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ## [0.8.1.4] - Signed node orders, safe outputs while paused, HTTPS metrics, fixed pairing PIN and a fault matrix
 
+- **The web panel of the node loads again:** a comma missing in the texts of the panel (`panel/text.js`) after the explanation of the erase of a refused firmware stopped the whole page script, so the panel showed nothing; the line is fixed.
 - **The structure generator can write a figure read from the code:** `tools/make_structure.py` resolves `{{fact:NAME|LAST}}` in the descriptions of `docs/structure.json` where the documentation tools are next to the repository, and writes LAST (the figure it had when last written) everywhere else, so a repository still builds on its own.
 - **The README no longer types the number of checks the host programs count:** the Tests row of At a glance, the Tests badge and the build sentence give the host test programs and the Python checks that `ctest` registers, read from the code; the total of checks changes with every test and was only ever a typed number.
 - **The Security and Updates lights of the Project status table follow the evidence ceiling:** they cannot be above what the Hardware row may show for the evidence of the manifest, and Security is never green; the rows that were higher are now orange in the eight READMEs, and `tools/status_lights.py` is the new shared copy.
