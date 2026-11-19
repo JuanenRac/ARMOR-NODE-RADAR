@@ -4,10 +4,12 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.8.1.4] - Signed node orders, safe outputs while paused, HTTPS metrics, fixed pairing PIN and a fault matrix
+
+- **The web panel of the node loads again:** a comma missing in the texts of the panel (`panel/text.js`) after the explanation of the erase of a refused firmware stopped the whole page script, so the panel showed nothing; the line is fixed.
 - **The structure generator can write a figure read from the code:** `tools/make_structure.py` resolves `{{fact:NAME|LAST}}` in the descriptions of `docs/structure.json` where the documentation tools are next to the repository, and writes LAST (the figure it had when last written) everywhere else, so a repository still builds on its own.
 - **The README no longer types the number of checks the host programs count:** the Tests row of At a glance, the Tests badge and the build sentence give the host test programs and the Python checks that `ctest` registers, read from the code; the total of checks changes with every test and was only ever a typed number.
 - **The Security and Updates lights of the Project status table follow the evidence ceiling:** they cannot be above what the Hardware row may show for the evidence of the manifest, and Security is never green; the rows that were higher are now orange in the eight READMEs, and `tools/status_lights.py` is the new shared copy.
-
 - **The file tree of the README is drawn from the structure source:** the text tree in the eight READMEs is generated from `docs/structure.json`, the file that also draws the picture, so the two cannot disagree.
 - **The README trees list `firmware_base.lock` and the architecture picture is redrawn with rounded coordinates:** the file that records the version of the shared base this copy was synced from appears in the text tree of the eight READMEs, and the legend positions of the picture carry no floating-point noise.
 - **The repository structure picture lists `firmware_base.lock`:** the file that records the version of the shared base this copy was synced from now appears in the picture, in the eight languages.
@@ -15,19 +17,12 @@ All notable changes to this project are documented here.
 - **The manifest says simulator evidence until the record of a test on real hardware is kept:** it said bench with no record, so the Hardware and Integration lights go down to orange in the eight READMEs (a person raises them again with the record).
 - **The README lists the settings that sign the orders to the node:** `security.control_require_sig` and `security.command_key` in the configuration table, in the eight languages.
 - **The orders to the node can be required signed:** the new settings `security.control_require_sig` (off by default) and `security.command_key` (the 64 hexadecimal digits of the node key of the server, a secret kept and sealed like the passwords and never shown by the panel) make the node read an order of the server to itself (restart, pause, standby...) only when it carries a good signature made with that key; with the option on and no valid key every such order is refused. Both are in the web panel in eight languages. Off, the node behaves as it always did.
-
 - **A refused firmware can be erased from its slot:** the setting `security.ota_invalidate_rejected` (off by default, shown in the web panel in eight languages) erases the first sector of the slot a downloaded image was written to when that image is refused after it was complete (another project, another version than the release, not newer, a bad signature, or no way to boot it) and when a copy of the running slot does not end well, so a later fault cannot start it. The slot that runs is never touched.
-
 - **The Bluetooth pairing PIN can be a fixed one:** `ble.passkey_mode` now also takes `fixed`, with the six digits in `ble.passkey_pin` (kept and sealed like the node's passwords, never shown by the panel; the mode needs the PIN). The default is as before: the PIN derived from the setup code.
-
 - **The set-up access point can have a Wi-Fi password of its own:** the new setting `ap.setup_password` (8 to 63 characters, a secret, shown in the web panel) replaces the setup code of the label as the password of the access point a node without users opens. Empty by default, so nodes already installed keep their password; with it set, the code of the label no longer opens that Wi-Fi.
-
 - **The signature code is the shared one:** `core/command_sig.hpp` and `core/hmac_sha256.hpp` come from the shared firmware base, ready for signed orders.
-
 - **The simulation bench keeps a matrix of the faults it played:** the run writes a report of which fault of the bus passed, failed or was not run, prints it as one line of a bus-by-fault matrix in the summary of the run, and keeps both files as an artifact for two weeks. The matrix says what the simulated bus covered; it says nothing about the real equipment.
-
 - **A scraper of the metrics can be made to use HTTPS, and a wrong password on the metrics counts against the person:** the new setting `web.metrics_basic_over_http` (on by default, as before; in the panel next to the networks that may use it) turns the name and password of `/metrics` off on the plain port, where only the cookie of a session then works; a wrong password sent with Basic is now also counted in the limit of that person, like a wrong sign-in.
-
 - **A paused node, or one in standby, takes its outputs to their safe state and ignores orders for them:** the safe state of each output (`off`, `on` or `keep`) is applied when the node is paused or put in standby (also when it boots into standby), orders from the broker and from the panel are refused until it works again (the panel answers `node_paused`), and `toggle` is no longer accepted from the broker, because a repeated or replayed message would flip the output each time (the panel still has its Toggle button).
 - **The copy of the running firmware to the other slot waits for an install or a manual write that is on:** `start_copy()` takes the same lock as `install()` and the manual writes (not only the flag of its own job) and gives it back when it ends, so two writers can no longer open the same slot.
 - **The order channel of the node can check a signature before it reads anything:** `node_control::Options` has an optional `authorize` hook that sees each order that arrives on `armor/control/...` and drops it, before it can arm anything, when the node says no. A node that does not set it behaves as before.
