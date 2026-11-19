@@ -62,8 +62,8 @@ Cada linha é uma parte deste repositório e a luz diz até onde chega hoje. É 
 | Protocolos e dados | 🟡 | O LD2450 funciona com um radar real; os descodificadores do LD2461 e dos quatro sensores de presença só coincidem com os exemplos dos seus manuais, e o canal de comandos do radar não foi verificado com um módulo. |
 | Interface | 🟡 | O painel web está em uso na placa e foi exercitado num navegador real contra um nó simulado; o seu certificado HTTPS, criado pelo próprio nó, não foi experimentado em todos os navegadores. |
 | Hardware | 🟠 | É o único nó que existe como hardware: uma placa Waveshare ESP32-S3-ETH real com um radar reporta à bancada de testes CM5; não há mais nenhum módulo de sensor ligado. |
-| Segurança | 🟡 | O emparelhamento por PIN Bluetooth e a verificação da assinatura das atualizações estão provados num computador com assinaturas reais, mas ainda não na placa; não houve revisão independente. |
-| Atualizações | 🟡 | As atualizações pelo ar estão em uso na placa; a verificação das atualizações assinadas ainda não foi executada lá. |
+| Segurança | 🟠 | O emparelhamento por PIN Bluetooth e a verificação da assinatura das atualizações estão provados num computador com assinaturas reais, mas ainda não na placa; não houve revisão independente. |
+| Atualizações | 🟠 | As atualizações pelo ar estão em uso na placa; a verificação das atualizações assinadas ainda não foi executada lá. |
 | Integração | 🟠 | As mensagens da placa chegam ao servidor da bancada de testes CM5, e essas mesmas mensagens são aceites pelos esquemas partilhados e pelos vetores de conformidade do ARMOR-COMMON. Só foi visto na bancada, não numa instalação. |
 | Documentação | 🟢 | Oito idiomas e o registo de alterações estão atualizados. |
 

@@ -62,8 +62,8 @@ Ogni riga è una parte di questo repository e il semaforo dice a che punto è og
 | Protocolli e dati | 🟡 | L'LD2450 funziona con un radar reale; i decodificatori dell'LD2461 e dei quattro sensori di presenza corrispondono solo agli esempi dei loro manuali e il canale di comando del radar non è stato verificato con un modulo. |
 | Interfaccia | 🟡 | Il pannello web è in uso sulla scheda e provato in un browser reale contro un nodo simulato; il suo certificato HTTPS, creato dal nodo stesso, non è stato provato in tutti i browser. |
 | Hardware | 🟠 | È l'unico nodo che esiste come hardware: una scheda Waveshare ESP32-S3-ETH reale con un radar riferisce al banco di prova CM5; nessun altro modulo sensore è collegato. |
-| Sicurezza | 🟡 | L'abbinamento con PIN Bluetooth e il controllo della firma degli aggiornamenti sono provati su un computer con firme reali ma non ancora sulla scheda; non c'è stata una revisione indipendente. |
-| Aggiornamenti | 🟡 | Gli aggiornamenti via etere sono in uso sulla scheda; il controllo degli aggiornamenti firmati non vi è ancora stato eseguito. |
+| Sicurezza | 🟠 | L'abbinamento con PIN Bluetooth e il controllo della firma degli aggiornamenti sono provati su un computer con firme reali ma non ancora sulla scheda; non c'è stata una revisione indipendente. |
+| Aggiornamenti | 🟠 | Gli aggiornamenti via etere sono in uso sulla scheda; il controllo degli aggiornamenti firmati non vi è ancora stato eseguito. |
 | Integrazione | 🟠 | I messaggi della scheda arrivano al server del banco di prova CM5 e gli stessi messaggi sono accettati dagli schemi condivisi e dai vettori di conformità di ARMOR-COMMON. Visto solo sul banco di prova, non in un'installazione. |
 | Documentazione | 🟢 | Otto lingue e il registro delle modifiche sono aggiornati. |
 

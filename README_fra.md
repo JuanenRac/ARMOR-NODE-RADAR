@@ -62,8 +62,8 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Protocoles et données | 🟡 | Le LD2450 tourne avec un vrai radar ; les décodeurs du LD2461 et des quatre capteurs de présence ne correspondent qu'aux exemples de leurs notices, et le canal de commandes du radar n'a pas été vérifié avec un module. |
 | Interface | 🟡 | Le panneau web est utilisé sur la carte et essayé dans un vrai navigateur contre un nœud simulé ; son certificat HTTPS, créé par le nœud lui-même, n'a pas été essayé dans tous les navigateurs. |
 | Matériel | 🟠 | C'est le seul nœud qui existe en matériel : une vraie carte Waveshare ESP32-S3-ETH avec un radar rend compte au banc d'essai CM5 ; aucun autre module de capteur n'est branché. |
-| Sécurité | 🟡 | L'appairage par PIN Bluetooth et la vérification de la signature des mises à jour sont prouvés sur un ordinateur avec de vraies signatures mais pas encore sur la carte ; il n'y a pas eu de revue indépendante. |
-| Mises à jour | 🟡 | Les mises à jour par voie hertzienne sont utilisées sur la carte ; la vérification des mises à jour signées n'y a pas encore tourné. |
+| Sécurité | 🟠 | L'appairage par PIN Bluetooth et la vérification de la signature des mises à jour sont prouvés sur un ordinateur avec de vraies signatures mais pas encore sur la carte ; il n'y a pas eu de revue indépendante. |
+| Mises à jour | 🟠 | Les mises à jour par voie hertzienne sont utilisées sur la carte ; la vérification des mises à jour signées n'y a pas encore tourné. |
 | Intégration | 🟠 | Les messages de la carte arrivent au serveur du banc d'essai CM5, et ces mêmes messages sont acceptés par les schémas partagés et les vecteurs de conformité d'ARMOR-COMMON. Vu uniquement sur le banc d'essai, pas dans une installation. |
 | Documentation | 🟢 | Huit langues et le journal des modifications sont à jour. |
 
