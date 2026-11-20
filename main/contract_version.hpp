@@ -5,6 +5,6 @@
 
 namespace armor {
 
-inline constexpr const char* kContractVersion = "0.8.0.7";
+inline constexpr const char* kContractVersion = "0.8.1.5";
 
 }  // namespace armor
