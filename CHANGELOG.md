@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The contracts it says it was checked against are 0.8.1.5:** the information message of the node carries the version of the contracts that the reverse-dependency run of ARMOR-COMMON last checked it against.
+
 ## [0.8.1.4] - Signed node orders, safe outputs while paused, HTTPS metrics, fixed pairing PIN and a fault matrix
 
 - **The web panel of the node loads again:** a comma missing in the texts of the panel (`panel/text.js`) after the explanation of the erase of a refused firmware stopped the whole page script, so the panel showed nothing; the line is fixed.
