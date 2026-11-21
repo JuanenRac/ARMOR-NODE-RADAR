@@ -1,0 +1,81 @@
+# =============================================================================
+# A.R.M.O.R. - the screenshots of the README, taken on a GitHub runner
+# Copyright (C) 2026 JuanenRac (Electro Hobby 3D)
+# GPL-3.0-or-later - see LICENSE
+# =============================================================================
+# Started by hand only (workflow_dispatch): it never runs on a push or on a pull request. It starts the stand-in of the node (tools/panel_mock.mjs, made-up data) and takes the
+# pages of the web panel that the README shows with the Chromium of Playwright (tools/capture_screenshots.py, which runs tools/make_screenshots.mjs) and keeps the pictures as the
+# artifact "screenshots" for two weeks. It has no secrets, publishes nothing and changes nothing in the repository: download the artifact, look at the pictures and copy the
+# ones you want into images/screenshots.
+#
+#   gh workflow run screenshots.yml --repo JuanenRac/ARMOR-NODE-RADAR --ref main
+
+name: Screenshots (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    name: Take the screenshots of the README
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # the script takes Playwright from the Studio checkout next to this one (ARMOR-STUDIO/e2e/node_modules)
+      - name: Fetch Studio, which holds Playwright
+        run: git clone --depth 1 https://github.com/JuanenRac/ARMOR-STUDIO.git ../ARMOR-STUDIO
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+
+      - name: Install the browser
+        working-directory: ../ARMOR-STUDIO/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Take the screenshots
+        env:
+          ARMOR_SHOTS_CHANNEL: chromium
+        run: |
+          python -m pip install --quiet pillow
+          python tools/capture_screenshots.py --out "$RUNNER_TEMP/screenshots"
+
+      - name: List the pictures
+        run: |
+          {
+            echo "### Screenshots"
+            echo
+            echo "| file | bytes |"
+            echo "| --- | --- |"
+            for picture in "$RUNNER_TEMP"/screenshots/*.png; do
+              echo "| $(basename "$picture") | $(stat -c %s "$picture") |"
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the pictures
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
+          path: ${{ runner.temp }}/screenshots
+          retention-days: 14
+          if-no-files-found: error
