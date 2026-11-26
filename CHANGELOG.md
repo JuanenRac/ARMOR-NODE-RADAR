@@ -4,6 +4,8 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared project tool is the current one:** the copy follows the shared repository, which now knows the new solar panel node.
+
 - **The Bluetooth PIN derived from the setup code is made with HMAC-SHA256:** the first four bytes of HMAC-SHA256 (setup code as key, `armor-ble-passkey` as message), modulo one million. **The PIN of this node changes** with this firmware (the setup code does not): read it again on the USB console or in the panel. A fixed or random PIN is as before. See `docs/SETUP_CODE.md`.
 - **The contracts it says it was checked against are 0.8.1.6:** the version that the node reports as the one of the contracts follows the pin of the shared repository after its latest green run of the reverse dependencies.
 
