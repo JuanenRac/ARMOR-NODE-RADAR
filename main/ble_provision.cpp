@@ -13,6 +13,7 @@
 #include <mutex>
 #include <string>
 extern "C" {
+#include "esp_bt.h"
 #include "esp_log.h"
 #include "esp_random.h"
 #include "esp_timer.h"
@@ -316,6 +317,19 @@ void on_sync() {
 
 void on_reset(int reason) { ESP_LOGW(kTag, "the Bluetooth stack reset (%d)", reason); }
 
+// The memory Bluetooth keeps from the start even when it is not used (its data and code in internal memory) goes to the heap. Only with the radio never started, or already stopped
+// and freed, and only once: after it Bluetooth cannot be started again until the node restarts, which is already the rule (nothing here starts it a second time).
+void give_back_radio_memory() {
+  static bool given = false;
+  if (given) return;
+  given = true;
+  const membudget::Snapshot before = memory::snapshot();
+  const esp_err_t released = esp_bt_mem_release(ESP_BT_MODE_BLE);
+  const membudget::Snapshot after = memory::snapshot();
+  if (released != ESP_OK) ESP_LOGW(kTag, "the memory of Bluetooth could not be released (%s)", esp_err_to_name(released));
+  else ESP_LOGI(kTag, "Bluetooth is not used until the next restart: its memory is released, %u KB of internal memory free before, %u KB after", static_cast<unsigned>(before.internal_free / 1024u), static_cast<unsigned>(after.internal_free / 1024u));
+}
+
 // Switches Bluetooth off and gives its memory back: the advertising stops, the host and the controller are stopped and freed, and the worker that waited for requests goes. Nothing starts
 // it again until the node is restarted. Called by the watch task only (the stack cannot be stopped from its own host task).
 void close_stack() {
@@ -323,13 +337,18 @@ void close_stack() {
   ble_gap_adv_stop();
   const membudget::Snapshot before = memory::snapshot();
   const int stopped = nimble_port_stop();
-  if (stopped == 0) nimble_port_deinit();
+  bool freed = false;
+  if (stopped == 0) freed = nimble_port_deinit() == ESP_OK;
   else ESP_LOGE(kTag, "the Bluetooth stack did not stop (%d): it stays as it is, without advertising", stopped);
   drain_queue();
   if (g_worker != nullptr) { vTaskDelete(g_worker); g_worker = nullptr; }
   g_running = false;
   const membudget::Snapshot after = memory::snapshot();
   ESP_LOGI(kTag, "Bluetooth is off: %u KB of internal memory free before, %u KB after", static_cast<unsigned>(before.internal_free / 1024u), static_cast<unsigned>(after.internal_free / 1024u));
+  if (freed) {
+    vTaskDelay(pdMS_TO_TICKS(200));   // the host's own task has returned from the stack and gone
+    give_back_radio_memory();
+  }
 }
 
 // In mode "setup" the window closes by itself (core/ble_window.hpp): after the configured minutes with nobody connected, or two minutes after a set-up node has an address (a node that is set up but
@@ -369,12 +388,13 @@ bool start(const config::Settings& settings, bool setup_mode) {
     g_fixed_passkey.store(settings.ble_passkey == config::BlePasskeyMode::kFixed && auth::ble_fixed_passkey(settings.ble_passkey_pin, fixed) ? static_cast<std::int64_t>(fixed) : -1);
   }
   const bool wanted = settings.ble == config::BleMode::kAlways || settings.ble == config::BleMode::kSetup;
-  if (!wanted) return false;
+  if (!wanted) { give_back_radio_memory(); return false; }
   // After a restart the node asked for itself because it was short of memory, Bluetooth stays off: the radio is what takes it, and the node must come back up without it.
-  if (!nodeguard::bluetooth_may_start(nodeguard::boot_info())) { ESP_LOGW(kTag, "Bluetooth stays off at this start (the node restarted itself to recover its memory); switch the node off and on to open it again"); return false; }
+  if (!nodeguard::bluetooth_may_start(nodeguard::boot_info())) { ESP_LOGW(kTag, "Bluetooth stays off at this start (the node restarted itself to recover its memory); switch the node off and on to open it again"); give_back_radio_memory(); return false; }
   const membudget::Snapshot room = memory::snapshot();
   if (room.internal_free != 0 && room.internal_free < nodeguard::kBluetoothNeedsBytes) {
     ESP_LOGW(kTag, "Bluetooth is not started: %u KB of internal memory are free and it needs about %u KB", static_cast<unsigned>(room.internal_free / 1024u), static_cast<unsigned>(nodeguard::kBluetoothNeedsBytes / 1024u));
+    give_back_radio_memory();
     return false;
   }
   ESP_LOGI(kTag, "starting Bluetooth with %u KB of internal memory free", static_cast<unsigned>(room.internal_free / 1024u));

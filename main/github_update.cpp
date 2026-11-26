@@ -35,7 +35,7 @@ extern "C" {
 namespace armor::github_update {
 namespace {
 constexpr const char* kTag = "github_update";
-constexpr std::size_t kMaxApiResponse = 24 * 1024;   // the release's own JSON, a changelog included; anything bigger is not trusted
+constexpr std::size_t kMaxSmallFile = 4 * 1024;      // the checksum or the signature file of a release; the release's own JSON is read piece by piece (release::ReleaseFilter)
 constexpr std::size_t kMinFirmware = 100 * 1024;
 constexpr std::size_t kMaxFirmware = 0x300000;   // the size of an application slot in partitions.csv: a bigger image fits nowhere
 // GitHub answers a download with a redirect to a storage server whose address is long and signed (the headers of that answer add up to more than 5 KB): the header buffer must hold
@@ -79,8 +79,9 @@ void invalidate_slot(const esp_partition_t* target) {
   ++g_generation;
 }
 
-// A GET with no body, read fully into a bounded buffer. False on any network, HTTP or size problem.
-bool get_bounded_once(const std::string& url, const char* accept, std::string& out, std::string& error) {
+// A GET with no body, handed to `take` piece by piece (it answers false to give the answer up, and says why in `error`). False on any network, HTTP or size problem.
+template <typename Take>
+bool get_once(const std::string& url, const char* accept, std::size_t limit, Take& take, std::string& error) {
   esp_http_client_config_t config{};
   config.url = url.c_str();
   config.crt_bundle_attach = esp_crt_bundle_attach;
@@ -97,16 +98,18 @@ bool get_bounded_once(const std::string& url, const char* accept, std::string& o
   int length = 0, status = 0;
   if (open_following_redirects(client, length, status)) {
     if (status != 200) { error = "http_" + std::to_string(status); }
-    else if (length > 0 && static_cast<std::size_t>(length) > kMaxApiResponse) { error = "too_large"; }
+    else if (length > 0 && static_cast<std::size_t>(length) > limit) { error = "too_large"; }
     else {
       char chunk[512];
       ok = true;
+      std::size_t got = 0;
       for (;;) {
         const int n = esp_http_client_read(client, chunk, sizeof chunk);
         if (n < 0) { ok = false; error = "read_error"; break; }
         if (n == 0) break;
-        if (out.size() + static_cast<std::size_t>(n) > kMaxApiResponse) { ok = false; error = "too_large"; break; }
-        out.append(chunk, static_cast<std::size_t>(n));
+        got += static_cast<std::size_t>(n);
+        if (got > limit) { ok = false; error = "too_large"; break; }
+        if (!take(chunk, static_cast<std::size_t>(n), error)) { ok = false; break; }
       }
     }
   } else {
@@ -119,16 +122,39 @@ bool get_bounded_once(const std::string& url, const char* accept, std::string& o
 
 // A connection that fails is tried again: the node may be answering a browser at the same moment, and a handshake that finds no memory left for a moment is not a lost network. Each
 // attempt starts from nothing (the client is made and freed inside), and the wait lets the other connection finish and give its memory back.
-bool get_bounded(const std::string& url, const char* accept, std::string& out, std::string& error) {
+// `fresh` empties what an attempt that failed had gathered.
+template <typename Fresh, typename Take>
+bool get_retried(const std::string& url, const char* accept, std::size_t limit, Fresh fresh, Take take, std::string& error) {
   for (int attempt = 1; attempt <= 3; ++attempt) {
-    out.clear();
+    fresh();
     error.clear();
-    if (get_bounded_once(url, accept, out, error)) return true;
+    if (get_once(url, accept, limit, take, error)) return true;
     if (error != "connect_failed" && error != "read_error") return false;
     ESP_LOGW(kTag, "the connection to GitHub failed (attempt %d of 3, %u bytes of internal memory free)", attempt, static_cast<unsigned>(esp_get_free_internal_heap_size()));
     if (attempt < 3) vTaskDelay(pdMS_TO_TICKS(2500));
   }
   return false;
+}
+
+// A small file of the release, whole.
+bool get_small(const std::string& url, std::string& out, std::string& error) {
+  return get_retried(url, nullptr, kMaxSmallFile, [&out]() { out.clear(); },
+                     [&out](const char* data, std::size_t n, std::string&) { out.append(data, n); return true; }, error);
+}
+
+// The release's own JSON: only its tag and its files are kept as it arrives, so a release with many files or long notes does not run into a size.
+bool get_release(const std::string& url, std::string& out, std::string& error) {
+  release::ReleaseFilter filter;
+  const bool read = get_retried(url, "application/vnd.github+json", release::ReleaseFilter::kMaxAnswer, [&filter]() { filter = release::ReleaseFilter(); },
+                                [&filter](const char* data, std::size_t n, std::string& problem) {
+                                  if (filter.feed(data, n)) return true;
+                                  problem = filter.too_large() ? "too_large" : "bad_json";
+                                  return false;
+                                }, error);
+  if (!read) return false;
+  if (!filter.complete()) { error = "bad_json"; return false; }
+  out = filter.pruned();
+  return true;
 }
 
 // The 64 hex digits at the start of a `sha256sum` line (a bare hash also works), in lowercase; empty when the text does not start with one.
@@ -157,7 +183,7 @@ CheckResult check(const char* board_id) {
   CheckResult result;
   std::string body;
   const std::string url = std::string("https://api.github.com/repos/") + kRepo + "/releases/latest";
-  if (!get_bounded(url, "application/vnd.github+json", body, result.error)) return result;
+  if (!get_release(url, body, result.error)) return result;
   json::Value document;
   if (!json::parse(body, document) || !document.is_object()) { result.error = "bad_json"; return result; }
   const json::Value* tag = document.get("tag_name");
@@ -181,8 +207,8 @@ CheckResult check(const char* board_id) {
     result.error = "bad_url";
     return result;
   }
-  // The release's JSON (several assets make it 15 KB or more) and its parsed tree are no longer needed: give the memory back before the next
-  // TLS connection (the hash), which is what the node was short of when it said it could not get the checksum.
+  // What was kept of the release's JSON and its parsed tree are no longer needed: give the memory back before the next TLS connection (the hash),
+  // which is what the node was short of when it said it could not get the checksum.
   document = json::Value();
   std::string().swap(body);
   const bool release_is_newer = semver::is_newer(result.latest_version, esp_app_get_description()->version);
@@ -193,7 +219,7 @@ CheckResult check(const char* board_id) {
     // A newer release is offered only with the hash that lets the image be checked: without it the node says so instead of installing blind.
     std::string text, problem;
     if (checksum_url.empty()) { result.error = "no_checksum"; return result; }
-    if (!get_bounded(checksum_url, nullptr, text, problem)) { ESP_LOGW(kTag, "the checksum of the release could not be read: %s", problem.c_str()); result.error = release::fetch_error(problem, "checksum"); return result; }
+    if (!get_small(checksum_url, text, problem)) { ESP_LOGW(kTag, "the checksum of the release could not be read: %s", problem.c_str()); result.error = release::fetch_error(problem, "checksum"); return result; }
     result.sha256 = parse_sha256(text);
     if (result.sha256.empty()) { result.error = "no_checksum"; return result; }
     // ... and with the signature that says who published that hash: a release that is not signed is not offered (install() checks the signature again, with its own download of it).
@@ -286,7 +312,7 @@ InstallResult install(const CheckResult& offer) {
   // The hash is the one the release publishes. What the image says about itself (its project and its version) is read once it is complete, and then the signature of the manifest -
   // project, board, version and hash - says it was published by whoever holds the private key of the A.R.M.O.R. releases. Nothing is set to boot before all of it holds.
   std::string signature_text, problem;
-  if (!get_bounded(offer.signature_url, nullptr, signature_text, problem)) {
+  if (!get_small(offer.signature_url, signature_text, problem)) {
     esp_ota_abort(handle);
     ESP_LOGE(kTag, "the signature of the release could not be read (%s): refused", problem.c_str());
     result.error = release::fetch_error(problem, "signature");

@@ -93,6 +93,7 @@ td input, td select { padding: .35rem .4rem; font-size: .78rem; }
 pre.log { margin: 0; max-height: 380px; overflow: auto; padding: .7rem; border: 1px solid var(--line); border-radius: 10px; background: #050d13; color: #b9d8de; font: 500 .68rem/1.45 var(--mono); white-space: pre-wrap; word-break: break-word; }
 .big { font-size: 1.9rem; color: var(--strong); font-weight: 600; }
 .bar { position: fixed; left: 220px; right: 0; bottom: 0; z-index: 10; display: flex; gap: .6rem; align-items: center; justify-content: flex-end; padding: .6rem 1.2rem; border-top: 1px solid var(--line); background: rgba(5, 11, 18, .94); backdrop-filter: blur(10px); }
+.bar[hidden] { display: none; }   /* "display: flex" above would otherwise show an empty strip over the bottom of every page */
 .bar .msg { margin-right: auto; font-size: .8rem; }
 .bar .msg.ok { color: #8ff2d8; } .bar .msg.bad { color: #ffafb0; } .bar .msg.warn { color: #ffe0a0; }
 .progress { height: 8px; border-radius: 6px; background: #0b202a; overflow: hidden; border: 1px solid var(--line); }

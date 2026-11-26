@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The look for a new version no longer answers "the request is too large":** GitHub's answer about a release grows with its files and its notes and passed the 24 kB the node kept. It is now read piece by piece as it arrives and only the tag and the names and addresses of the files are kept, so its length no longer matters (up to 512 kB). Tested on a computer with a real answer; not tried on a board.
+- **The memory Bluetooth keeps when it is not used is given back to the node:** with Bluetooth off, or after its set-up window has closed, until the next restart. The log says the internal memory before and after. Not tried on a board.
+- **The panel no longer shows an empty strip at the bottom of every page:** the bar for unsaved changes was visible even when it was hidden.
+- **A file the panel asks for and the server does not register is now a test failure** (`tests/check_routes.py`).
+
 ## [0.8.1.5] - An HMAC-SHA256 Bluetooth PIN and current contracts
 
 - **The shared project tool is the current one:** the copy follows the shared repository, which now knows the new solar panel node.

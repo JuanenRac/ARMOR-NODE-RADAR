@@ -6,7 +6,9 @@
 // A release that predates that naming has only `armor_radar.bin`: the image of the project's DEFAULT board (s3-eth, or lcd7box for the touch panel). A node finds the image built for
 // its own board; the plain name is accepted only on the default board, and a node of any other board never installs an image that is not its own.
 #pragma once
+#include <cstddef>
 #include <string>
+#include <vector>
 
 #include "json.hpp"
 
@@ -81,5 +83,107 @@ inline Picked pick(const json::Value* assets, const char* board_id) {
   else if (!legacy_url.empty()) { picked.image_url = legacy_url; picked.checksum_url = legacy_sum; picked.signature_url = legacy_sig; picked.legacy = true; }
   return picked;
 }
+
+// GitHub's answer about a release is long and grows with it (every file carries its uploader, and the notes are in it): a release with a dozen files and long notes passed the 24 kB
+// the node used to keep, and the look for a new version answered "too large". This reads the answer piece by piece as it arrives and keeps only what a node needs - the tag and, for
+// every file, its name and address - so the memory it takes does not grow with the notes. `pruned()` is that, as a small JSON document for json::parse and pick(). It follows the
+// strings and the brackets; what it hands over is then parsed strictly.
+class ReleaseFilter {
+ public:
+  static constexpr std::size_t kMaxAnswer = 512 * 1024;   // anything bigger is not trusted
+  static constexpr std::size_t kMaxAssets = 64;
+  static constexpr std::size_t kMaxKept = 512;            // one tag, name or address
+  static constexpr std::size_t kMaxDepth = 16;
+
+  // False when the answer cannot be a release's (not an object, brackets that do not match, too long, too many files, a value that is wanted and too long): it is then given up.
+  bool feed(const char* data, std::size_t length) {
+    if (failed_) return false;
+    if (length > kMaxAnswer - total_) { too_large_ = true; return fail(); }
+    total_ += length;
+    for (std::size_t i = 0; i < length; ++i) if (!take(data[i])) return fail();
+    return true;
+  }
+  bool complete() const { return !failed_ && closed_; }
+  bool too_large() const { return too_large_; }
+  std::string pruned() const {
+    std::string out = "{";
+    if (has_tag_) out += "\"tag_name\":\"" + tag_ + "\",";
+    out += "\"assets\":[";
+    for (std::size_t i = 0; i < assets_.size(); ++i) {
+      out += std::string(i != 0 ? "," : "") + "{\"name\":\"" + assets_[i].name + "\",\"browser_download_url\":\"" + assets_[i].url + "\"}";
+    }
+    return out + "]}";
+  }
+
+ private:
+  struct Asset { std::string name, url; };
+
+  bool fail() { failed_ = true; return false; }
+
+  bool take(char c) {
+    if (in_string_) {
+      if (!escaped_ && c == '"') { in_string_ = false; return string_ended(); }
+      escaped_ = !escaped_ && c == '\\';
+      if (text_.size() < kMaxKept) text_ += c; else cut_ = true;   // the escapes stay as they came: json::parse reads them later
+      return true;
+    }
+    if (c == ' ' || c == '\t' || c == '\r' || c == '\n') return true;
+    if (closed_) return false;
+    if (depth_ == 0) return c == '{' && open('{');
+    switch (c) {
+      case '"': in_string_ = true; escaped_ = false; cut_ = false; text_.clear(); return true;
+      case '{': case '[': return open(c);
+      case '}': case ']':
+        if (stack_[depth_ - 1] != (c == '}' ? '{' : '[')) return false;
+        if (--depth_ == 0) closed_ = true;
+        key_next_ = false;
+        return true;
+      case ',': key_next_ = stack_[depth_ - 1] == '{'; return true;
+      case ':': key_next_ = false; return true;
+      default: return true;   // numbers and true, false, null: nothing the node needs
+    }
+  }
+
+  bool open(char bracket) {
+    if (depth_ >= kMaxDepth) return false;
+    if (bracket == '{' && depth_ == 2 && in_assets()) {
+      if (assets_.size() >= kMaxAssets) return false;
+      assets_.emplace_back();
+      asset_key_.clear();
+    }
+    stack_[depth_++] = bracket;
+    key_next_ = bracket == '{';
+    return true;
+  }
+
+  bool in_assets() const { return depth_ >= 2 && stack_[1] == '[' && root_key_ == "assets"; }
+
+  bool string_ended() {
+    if (key_next_) {   // the name of a member
+      if (depth_ == 1) root_key_ = cut_ ? std::string() : text_;
+      else if (depth_ == 3) asset_key_ = cut_ ? std::string() : text_;
+      return true;
+    }
+    if (depth_ == 1 && root_key_ == "tag_name") {
+      if (cut_ || has_tag_) return false;
+      tag_ = text_;
+      has_tag_ = true;
+    } else if (depth_ == 3 && stack_[2] == '{' && in_assets() && !assets_.empty()) {
+      std::string* wanted = asset_key_ == "name" ? &assets_.back().name : asset_key_ == "browser_download_url" ? &assets_.back().url : nullptr;
+      if (wanted != nullptr) {
+        if (cut_ || !wanted->empty()) return false;
+        *wanted = text_;
+      }
+    }
+    return true;
+  }
+
+  std::size_t total_ = 0;
+  char stack_[kMaxDepth] = {};
+  std::size_t depth_ = 0;
+  bool in_string_ = false, escaped_ = false, cut_ = false, key_next_ = false, closed_ = false, failed_ = false, too_large_ = false, has_tag_ = false;
+  std::string text_, root_key_, asset_key_, tag_;
+  std::vector<Asset> assets_;
+};
 
 }  // namespace armor::release
