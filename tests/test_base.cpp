@@ -183,6 +183,7 @@ static void test_fw_trust() {
 static void test_ble_passkey() {
   const std::uint32_t a = armor::auth::ble_passkey_from("ABCDEFGH23"), b = armor::auth::ble_passkey_from("ABCDEFGH24");
   CHECK(a < 1000000 && b < 1000000);
+  CHECK(a == 770508u && b == 997553u);   // HMAC-SHA256 of "armor-ble-passkey" under the code, first four bytes, modulo one million (worked out outside the firmware)
   CHECK(a == armor::auth::ble_passkey_from("ABCDEFGH23"));   // the same code, the same PIN: the node keeps nothing more
   CHECK(a != b);                                              // another code, another PIN
   int different = 0;

@@ -14,6 +14,7 @@
 #include <string_view>
 #include <vector>
 
+#include "hmac_sha256.hpp"
 #include "json.hpp"
 
 namespace armor::auth {
@@ -114,13 +115,13 @@ inline SetupCodeChoice choose_setup_code(std::string_view fleet_secret, std::str
 }
 
 // The passkey of Bluetooth pairing: six digits that depend on this node's setup code and on nothing else, so the node needs to keep nothing more and whoever has the label or the USB
-// console has the PIN. The node shows it where it shows the setup code; the phone asks for it when it pairs. It is a one-way mix: the PIN does not give the setup code back.
+// console has the PIN. The node shows it where it shows the setup code; the phone asks for it when it pairs. It is the first four bytes (big endian) of HMAC-SHA256 with the setup code
+// as the key and "armor-ble-passkey" as the message, modulo one million: one way, so the PIN does not give the setup code back.
 inline std::uint32_t ble_passkey_from(const std::string& setup_code) {
-  std::uint64_t h = 1469598103934665603ULL;
-  const std::string salted = "armor-ble-passkey:" + setup_code;
-  for (const char c : salted) { h ^= static_cast<std::uint8_t>(c); h *= 1099511628211ULL; }
-  h ^= h >> 29; h *= 0xbf58476d1ce4e5b9ULL; h ^= h >> 32;
-  return static_cast<std::uint32_t>(h % 1000000ULL);
+  const hash::Digest digest = hash::hmac_sha256(reinterpret_cast<const std::uint8_t*>(setup_code.data()), setup_code.size(), "armor-ble-passkey");
+  std::uint32_t head = 0;
+  for (std::size_t i = 0; i < 4; ++i) head = (head << 8) | digest[i];
+  return head % 1000000u;
 }
 
 // The PIN of a pairing in the mode `fixed`: the operator chose it (ble.passkey_pin), exactly six digits. True and the number when the text is one; any other text is not a PIN and the

@@ -36,8 +36,9 @@ If you build the image yourself with your fleet secret (`ARMOR_WITH_FLEET_SECRET
 
 ## The Bluetooth PIN
 
-Pairing a phone over Bluetooth asks for a **six-digit PIN**. It is not a second secret kept by the node: it is **derived from the setup code and from nothing else**, with a one-way mix, so the PIN does not give the code back and the node needs to store nothing more. The consequences are worth knowing:
+Pairing a phone over Bluetooth asks for a **six-digit PIN**. It is not a second secret kept by the node: it is **derived from the setup code and from nothing else**, one way, so the PIN does not give the code back and the node needs to store nothing more. The consequences are worth knowing:
 
+* **How it is made.** The first four bytes (big endian) of HMAC-SHA256 with the setup code as the key and `armor-ble-passkey` as the message, modulo one million. A node updated from a firmware that made the PIN another way shows a **new PIN** with the same setup code: read it again (console or panel) and replace any printed note; the next pairing asks for the new one.
 * **The PIN follows the code.** A node whose code is calculated from the fleet secret (local image) has a PIN that stays the same for ever. A node on a public image has a PIN that comes from its random code: it stays the same across restarts and **changes when the flash is erased**, because the code changes.
 * **It is the same at every pairing.** The PIN is **not** random for each pairing. A random PIN for each pairing would be better against someone who has seen the PIN once, but the node would have to show it to the person pairing, and most nodes have no screen; it is a known limit, not a promise. What protects the pairing meanwhile: the link is encrypted and authenticated (LE Secure Connections), five failed pairings close the door for five minutes, and by default the pairing window is open only while the node has no user (see `docs/BLE_PROVISIONING.md`).
 * **Where to read it.** On the USB console, in the same `SETUP:` line as the code; an administrator can also read it in the node's panel once the node is set up. The PIN opens Bluetooth pairing only; it does **not** open the web panel and it is not the setup code.
@@ -62,10 +63,10 @@ A public image never shows the code anywhere but the USB console, so this is the
 3. **Wait up to 15 seconds, or restart the board** (press the RESET or EN button, or unplug and plug the USB cable). The node prints this line at start and then every 15 seconds while it has no user:
 
    ```text
-   SETUP: this node has no user yet. Open http://<its address>/ (or join the Wi-Fi "ARMOR-SETUP-56318F" and open http://192.168.4.1/) and enter the setup code U5RF38NM (to pair over Bluetooth the phone asks for the PIN 408376)
+   SETUP: this node has no user yet. Open http://<its address>/ (or join the Wi-Fi "ARMOR-SETUP-56318F" and open http://192.168.4.1/) and enter the setup code U5RF38NM (to pair over Bluetooth the phone asks for the PIN 570376)
    ```
 
-   Here the **setup code** is `U5RF38NM` and the **Bluetooth PIN** is `408376` (yours will be different).
+   Here the **setup code** is `U5RF38NM` and the **Bluetooth PIN** is `570376` (yours will be different).
 4. **Use them.** Join `ARMOR-SETUP-xxxxxx` with the code as the password (or open the node's address), open `http://192.168.4.1/` and enter the code to create the administrator; or pair the phone over Bluetooth with the PIN. The node does not need to be restarted again for the code to stay the same: it is kept in its flash.
 5. **Write it down now.** After the administrator exists the line stops appearing. The code stays valid as the password of the node's rescue network, and an administrator can read the PIN in the panel. If you lose both and the administrator password, erase the flash and flash the image again: the node then makes a new code and a new PIN, and prints them on the first start.
 

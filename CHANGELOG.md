@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The Bluetooth PIN derived from the setup code is made with HMAC-SHA256:** the first four bytes of HMAC-SHA256 (setup code as key, `armor-ble-passkey` as message), modulo one million. **The PIN of this node changes** with this firmware (the setup code does not): read it again on the USB console or in the panel. A fixed or random PIN is as before. See `docs/SETUP_CODE.md`.
 - **The contracts it says it was checked against are 0.8.1.6:** the version that the node reports as the one of the contracts follows the pin of the shared repository after its latest green run of the reverse dependencies.
 
 - **The screenshots of the README can be taken on a GitHub runner:** the manual workflow `screenshots.yml` (started by hand only, read-only token, no secrets) starts the stand-in of the node, takes the pages of the web panel with the Chromium of Playwright and keeps the pictures as an artifact; `ARMOR_SHOTS_CHANNEL=chromium` makes the script take that Chromium; `docs/SCREENSHOTS.md` says how to start it and use them.
