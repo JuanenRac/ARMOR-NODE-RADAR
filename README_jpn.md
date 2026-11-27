@@ -22,13 +22,13 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-26%20host%20programs-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.8.1.5-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.8.1.6-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**正直さのチェック - 今日動いているもの:** レーダーノードはハードウェアとして実在する唯一のノードです。そのファームウェアはレーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作して CM5 テストベンチに報告し、Web パネルと無線アップデートもその基板で使われています。ハードウェアに依存しないコア（26 のテストプログラムで 15,256 項目：LD2450・LD2461 と 4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検査、ピン表、ユーザーとセッション、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー、バージョンと署名の検査）はコンピューター上でテストされ、**Web パネル**は代替ノードに対して実際のブラウザーで動かし、**ファームウェアイメージ**は ESP-IDF 5.5.5 コンテナーでビルドできます。**まだ**証明されていないもの：LD2461 と人感センサーのデコーダーはマニュアルの計算例にしか一致せず、実モジュールがありません。アップデートの署名検査と PIN 付き Bluetooth ペアリングは実際の署名でコンピューター上で証明済みですが、基板上ではまだです。レーダーのコマンドチャネルはモジュールで確認していません。パネルの HTTPS 証明書（ノード自身が作る）はすべてのブラウザーで試していません。
+**正直さのチェック - 今日動いているもの:** レーダーノードはハードウェアとして実在する唯一のノードです。そのファームウェアはレーダー付きの実際の Waveshare ESP32-S3-ETH 基板で動作して CM5 テストベンチに報告し、Web パネルと無線アップデートもその基板で使われています。ハードウェアに依存しないコア（26 のテストプログラムで 17,525 項目：LD2450・LD2461 と 4 種の人感センサーのデコーダー、LD2450 のコマンドチャネル、設定とその検査、ピン表、ユーザーとセッション、ネットワーク計画、ARMOR-COMMON が出力を受け付けるメッセージシリアライザー、バージョンと署名の検査）はコンピューター上でテストされ、**Web パネル**は代替ノードに対して実際のブラウザーで動かし、**ファームウェアイメージ**は ESP-IDF 5.5.5 コンテナーでビルドできます。**まだ**証明されていないもの：LD2461 と人感センサーのデコーダーはマニュアルの計算例にしか一致せず、実モジュールがありません。アップデートの署名検査と PIN 付き Bluetooth ペアリングは実際の署名でコンピューター上で証明済みですが、基板上ではまだです。レーダーのコマンドチャネルはモジュールで確認していません。パネルの HTTPS 証明書（ノード自身が作る）はすべてのブラウザーで試していません。
 
 ---
 
@@ -36,7 +36,7 @@
 
 | | |
 |---|---|
-| バージョン | `0.8.1.5` |
+| バージョン | `0.8.1.6` |
 | 成熟度 | 確立 |
 | 役割 | ESP32-S3 用レーダーフィールドノード（ファミリー：Field Nodes、親：ARMOR-COMMON） |
 | 技術 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
@@ -58,7 +58,7 @@
 | 領域 | 状態 | ここでの意味 |
 |---|---|---|
 | ソフトウェア | 🟢 | ファームウェアは ESP-IDF 5.5.5 コンテナでビルドでき、実機の ESP32-S3-ETH ボードで動作しています。 |
-| テスト | 🟢 | 26 のホストプログラムで 15,256 件のチェックが通ります（`ctest`）：デコーダー、設定、ピン表、ユーザー、ネットワーク計画、メッセージのシリアライザー、バージョン確認。 |
+| テスト | 🟢 | 26 のホストプログラムで 17,525 件のチェックが通ります（`ctest`）：デコーダー、設定、ピン表、ユーザー、ネットワーク計画、メッセージのシリアライザー、バージョン確認。 |
 | プロトコルとデータ | 🟡 | LD2450 は実機のレーダーで動作しています。LD2461 と 4 種類の人感センサーのデコーダーはマニュアルの例と一致するだけで、レーダーのコマンドチャネルはモジュールでは未確認です。 |
 | インターフェース | 🟡 | Web パネルはボード上で使われており、実ブラウザーで模擬ノードに対しても試しています。ノード自身が作る HTTPS 証明書は、すべてのブラウザーでは試していません。 |
 | ハードウェア | 🟠 | ハードウェアとして存在する唯一のノードです。実機の Waveshare ESP32-S3-ETH ボードとレーダーが CM5 テストベンチに報告しています。他のセンサーモジュールは接続していません。 |
@@ -166,7 +166,7 @@ ARMOR-NODE-RADAR は境界の目です。各ノードは最大 3 台のレーダ
 |---|---|
 | MQTT | `armor/node/<id>/{telemetry,health,info,command}`、`armor/health/<id>`（遺言は `{"node_id":"..","online":false}`）、`armor/control/<id>/{command,result,maintenance}` と `armor/control/all/command`、`armor/device/<id>/<pin>/{state,set}`、`armor/radar/<id>/events`、`armor/radar/<id>/control/armed` |
 | パネル（HTTP 80、HTTPS 443） | ルート `session`、`login`、`logout`、`setup`、`status`、`config`（+ export、import）、`wifi/scan`、`time`、`radars`（+ command）、`perimeter`（+ armed、learn、zone）、`pins`（+ command）、`bridge`（+ open、close、io）、`ota`（+ check、install、progress、copy、switch）、`account`、`ble-pin`、`log`、`coredump`、`factory-reset`、`reboot`。管理者向けの `/metrics` と WebSocket `/ws/radar-map`。`tests/check_routes.py` がパネルの呼ぶルートがすべて存在することを検査します |
-| パネルの文言 | 8 言語の文言つきエラーコード 76 個（`panel/text.js` に 832 行）。`tests/check_panel_text.py` が検査 |
+| パネルの文言 | 8 言語の文言つきエラーコード 78 個（`panel/text.js` に 884 行）。`tests/check_panel_text.py` が検査 |
 | ハードウェア | LD2450、LD2461、LD2410、LD2412、LD2410S、MR24HPC1 用の UART 3 本（RX 16、17、18、TX 15、21、38）、SPI の W5500（MOSI 11、MISO 12、SCLK 13、CS 14、INT 10、RST 9、20 MHz）、I2C の VEML7700（GPIO 1 と 2）、BOOT ボタン |
 
 ## ⚙️ 設定
@@ -230,7 +230,7 @@ python -I tools/armor_ci_validate.py
 | `test_node`, `test_base`, `test_shared`, `test_board_wifi` | 設定とその検査、ピンテーブル、ユーザーとセッション、ネットワーク計画、共通基盤、Wi-Fi 基板 |
 | `test_logic`, `test_perimeter`, `test_control`, `test_diag` | ピンのロジック、境界エンジン、2 段階の制御命令、診断 |
 | `test_mqtt_tls`, `test_release` | ブローカーへの TLS 接続（ホストのみ）とリリース・署名の検査 |
-| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python：8 言語のパネル文言（832 行）、タスク、保存パス、ロック下の Bluetooth セッション、ルート、シリアルブリッジのクライアント |
+| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python：8 言語のパネル文言（884 行）、タスク、保存パス、ロック下の Bluetooth セッション、ルート、シリアルブリッジのクライアント |
 
 Web パネルは、代役ノード（`tools/panel_mock.mjs`）を相手に実際のブラウザでも検証します。LD2461 と人感センサーのデコーダーはマニュアルの例とだけ一致しています。
 

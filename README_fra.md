@@ -22,13 +22,13 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Langage">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-26%20host%20programs-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.8.1.5-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.8.1.6-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturité">
 </p>
 
 ---
 
-**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (15,256 vérifications dans 26 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.5.5. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
+**Vérification d'honnêteté - ce qui fonctionne aujourd'hui :** Le nœud radar est le seul nœud qui existe en matériel : son firmware tourne sur une vraie carte Waveshare ESP32-S3-ETH avec un radar et rapporte au banc de test CM5, et son panneau web et ses mises à jour par radio y sont utilisés. Le cœur indépendant du matériel (17,525 vérifications dans 26 programmes de test : les décodeurs du LD2450, du LD2461 et de quatre capteurs de présence, le canal de commande du LD2450, les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, le sérialiseur de messages dont la sortie est acceptée par ARMOR-COMMON, et les contrôles de version et de signature) est testé sur un ordinateur, le **panneau web** a été exercé dans un vrai navigateur contre un nœud factice et l'**image du firmware se compile** dans le conteneur ESP-IDF 5.5.5. Ce qui n'est **pas** encore prouvé : les décodeurs du LD2461 et des capteurs de présence ne correspondent qu'aux exemples détaillés de leurs manuels, sans module derrière ; le contrôle de signature des mises à jour et l'appairage Bluetooth avec PIN sont prouvés sur ordinateur avec de vraies signatures mais pas encore sur la carte ; le canal de commande du radar n'est pas vérifié contre un module ; et le certificat HTTPS du panneau (fait par le nœud lui-même) n'est pas essayé dans tous les navigateurs.
 
 ---
 
@@ -36,7 +36,7 @@
 
 | | |
 |---|---|
-| Version | `0.8.1.5` |
+| Version | `0.8.1.6` |
 | Maturité | Établi |
 | Rôle | Nœud de terrain radar pour ESP32-S3 (famille : Field Nodes, parent : ARMOR-COMMON) |
 | Technologie | C++17, ESP-IDF 5.5.5, ESP32-S3 |
@@ -58,7 +58,7 @@ Chaque ligne est une partie de ce dépôt et le feu dit où elle en est aujourd'
 | Domaine | État | Ce que cela veut dire ici |
 |---|---|---|
 | Logiciel | 🟢 | Le firmware compile dans le conteneur ESP-IDF 5.5.5 et tourne sur une vraie carte ESP32-S3-ETH. |
-| Tests | 🟢 | 15 256 vérifications dans 26 programmes d'hôte réussissent (`ctest`) : les décodeurs, les réglages, la table des broches, les utilisateurs, le plan réseau, le sérialiseur de messages et les contrôles de version. |
+| Tests | 🟢 | 17 525 vérifications dans 26 programmes d'hôte réussissent (`ctest`) : les décodeurs, les réglages, la table des broches, les utilisateurs, le plan réseau, le sérialiseur de messages et les contrôles de version. |
 | Protocoles et données | 🟡 | Le LD2450 tourne avec un vrai radar ; les décodeurs du LD2461 et des quatre capteurs de présence ne correspondent qu'aux exemples de leurs notices, et le canal de commandes du radar n'a pas été vérifié avec un module. |
 | Interface | 🟡 | Le panneau web est utilisé sur la carte et essayé dans un vrai navigateur contre un nœud simulé ; son certificat HTTPS, créé par le nœud lui-même, n'a pas été essayé dans tous les navigateurs. |
 | Matériel | 🟠 | C'est le seul nœud qui existe en matériel : une vraie carte Waveshare ESP32-S3-ETH avec un radar rend compte au banc d'essai CM5 ; aucun autre module de capteur n'est branché. |
@@ -166,7 +166,7 @@ Lisez [SECURITY.md](SECURITY.md) pour signaler une vulnérabilité. Il n'y a pas
 |---|---|
 | MQTT | `armor/node/<id>/{telemetry,health,info,command}`, `armor/health/<id>` (son testament est `{"node_id":"..","online":false}`), `armor/control/<id>/{command,result,maintenance}` et `armor/control/all/command`, `armor/device/<id>/<pin>/{state,set}`, `armor/radar/<id>/events`, `armor/radar/<id>/control/armed` |
 | Panneau (HTTP 80, HTTPS 443) | Routes `session`, `login`, `logout`, `setup`, `status`, `config` (+ export, import), `wifi/scan`, `time`, `radars` (+ command), `perimeter` (+ armed, learn, zone), `pins` (+ command), `bridge` (+ open, close, io), `ota` (+ check, install, progress, copy, switch), `account`, `ble-pin`, `log`, `coredump`, `factory-reset`, `reboot` ; `/metrics` pour les administrateurs et le WebSocket `/ws/radar-map` ; `tests/check_routes.py` vérifie que toute route appelée par le panneau existe |
-| Textes du panneau | 76 codes d'erreur avec texte en huit langues (832 lignes dans `panel/text.js`), vérifiés par `tests/check_panel_text.py` |
+| Textes du panneau | 78 codes d'erreur avec texte en huit langues (884 lignes dans `panel/text.js`), vérifiés par `tests/check_panel_text.py` |
 | Matériel | 3 UART pour LD2450, LD2461, LD2410, LD2412, LD2410S et MR24HPC1 (RX 16, 17, 18 ; TX 15, 21, 38) ; W5500 en SPI (MOSI 11, MISO 12, SCLK 13, CS 14, INT 10, RST 9, 20 MHz) ; VEML7700 en I2C (GPIO 1 et 2) ; bouton BOOT |
 
 ## ⚙️ Configuration
@@ -230,7 +230,7 @@ python -I tools/armor_ci_validate.py
 | `test_node`, `test_base`, `test_shared`, `test_board_wifi` | Les réglages et leurs contrôles, la table des broches, utilisateurs et sessions, le plan réseau, la base partagée et la carte Wi-Fi |
 | `test_logic`, `test_perimeter`, `test_control`, `test_diag` | La logique des broches, le moteur de périmètre, les ordres de contrôle en deux étapes et le diagnostic |
 | `test_mqtt_tls`, `test_release` | Le lien TLS avec le broker (hôte seulement) et les contrôles de version et de signature |
-| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python : les textes du panneau en huit langues (832 lignes), les tâches, les chemins de sauvegarde, la session Bluetooth sous son verrou, les routes et le client du pont série |
+| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python : les textes du panneau en huit langues (884 lignes), les tâches, les chemins de sauvegarde, la session Bluetooth sous son verrou, les routes et le client du pont série |
 
 Le panneau web est aussi exercé dans un vrai navigateur contre un nœud de substitution (`tools/panel_mock.mjs`). Les décodeurs LD2461 et de présence ne correspondent qu'aux exemples de leurs manuels.
 
