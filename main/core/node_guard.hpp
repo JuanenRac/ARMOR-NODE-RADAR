@@ -176,11 +176,13 @@ inline bool bluetooth_may_start(const BootInfo& info) { return !info.by_guard; }
 // ---- the gate at the door of the panel -------------------------------------------------------------------------------------------------------------------------
 // While the internal memory is short, a new connection to the panel is refused before anything is allocated for it (the socket is closed at once): a browser that opens six tabs must not take the
 // last bytes from the MQTT link and the node's own work. Connections already open, the broker link and the sensors are not touched. It closes under 28 KB free or a biggest block under 12 KB and
-// opens again over 40 KB and 16 KB (the gap keeps it from flapping). Starting values, to be compared with a real board.
+// opens again over 40 KB and 16 KB (the gap keeps it from flapping). A memory that settles BETWEEN the two pairs of levels would keep it shut for ever (and the guard restarts only under 16 KB),
+// so it also opens after about a minute over both closing levels. Starting values, to be compared with a real board.
 constexpr std::uint32_t kGateCloseFreeBytes = 28u * 1024u;
 constexpr std::uint32_t kGateCloseBlockBytes = 12u * 1024u;
 constexpr std::uint32_t kGateOpenFreeBytes = 40u * 1024u;
 constexpr std::uint32_t kGateOpenBlockBytes = 16u * 1024u;
+constexpr std::uint32_t kGateSettledLooks = 30;   // looks in a row over the closing levels (one every 2 s) after which a closed gate opens anyway
 
 struct GateThresholds {
   std::uint32_t close_free = kGateCloseFreeBytes, close_block = kGateCloseBlockBytes, open_free = kGateOpenFreeBytes, open_block = kGateOpenBlockBytes;
@@ -196,15 +198,18 @@ struct GateThresholds {
 struct Gate {
   bool closed = false;
   std::uint32_t transitions = 0;
+  std::uint32_t settled = 0;   // looks in a row, while closed, with the memory over both closing levels
   // True when the state changed. A heap that could not be read (both 0) leaves the gate as it is.
   bool step(std::uint32_t internal_free, std::uint32_t internal_largest, const GateThresholds& levels = GateThresholds{}) {
     if (internal_free == 0 && internal_largest == 0) return false;
     const GateThresholds t = levels.sane();
     const bool low = internal_free < t.close_free || internal_largest < t.close_block;
     const bool recovered = internal_free >= t.open_free && internal_largest >= t.open_block;
-    const bool now_closed = closed ? !recovered : low;
+    settled = closed && !low ? settled + 1 : 0;
+    const bool now_closed = closed ? !(recovered || settled >= kGateSettledLooks) : low;
     if (now_closed == closed) return false;
     closed = now_closed;
+    settled = 0;
     ++transitions;
     return true;
   }

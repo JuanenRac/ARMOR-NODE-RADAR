@@ -1048,6 +1048,17 @@ static void test_node_guard_gate_and_streams() {
   CHECK(gate.step(60 * kb, 11 * kb) && gate.closed);       // a heap in pieces closes it although the sum looks fine
   CHECK(gate.transitions == 3);
   CHECK(!gate.step(0, 0) && gate.closed);
+  // memory that settles between the two pairs of levels does not keep the door shut for ever: after kGateSettledLooks looks in a row over both closing levels it opens
+  Gate settled;
+  CHECK(settled.step(27 * kb, 30 * kb) && settled.closed);
+  for (std::uint32_t look = 1; look < kGateSettledLooks; ++look) CHECK(!settled.step(35 * kb, 14 * kb) && settled.closed);
+  CHECK(settled.step(35 * kb, 14 * kb) && !settled.closed);
+  // one look under a closing level starts the count again
+  CHECK(settled.step(27 * kb, 30 * kb) && settled.closed);
+  for (std::uint32_t look = 1; look < kGateSettledLooks; ++look) CHECK(!settled.step(35 * kb, 30 * kb));
+  CHECK(!settled.step(27 * kb, 30 * kb) && settled.closed);
+  for (std::uint32_t look = 1; look < kGateSettledLooks; ++look) CHECK(!settled.step(35 * kb, 30 * kb) && settled.closed);
+  CHECK(settled.step(35 * kb, 30 * kb) && !settled.closed);
   GateThresholds odd;
   odd.open_free = 1;       // opens "below" where it closes: put right, the gate must still close and open
   odd.open_block = 1;
