@@ -46,11 +46,11 @@ inline const char* detail_name(Detail detail) { return detail == Detail::kPackag
 constexpr std::uint64_t kPackageGapMs = 15000;
 enum class Action { kArm, kExecute };
 enum class Mode { kNow, kRolling };
-enum class Busy { kNone, kUpdate, kUpload, kSlotCopy, kBattery };
+enum class Busy { kNone, kUpdate, kUpload, kSlotCopy, kBattery, kGuarding };   // kGuarding: an alarm panel armed, counting down or ringing
 enum class State { kRunning, kPaused, kStandby };
 enum class Refusal {
   kNone, kNotArmed, kInvalidToken, kTokenExpired, kRateLimited, kAlreadyRestarting, kAlreadyInState,
-  kBusyUpdate, kBusyUpload, kBusySlotCopy, kBusyBattery, kUnavailable
+  kBusyUpdate, kBusyUpload, kBusySlotCopy, kBusyBattery, kBusyGuarding, kUnavailable
 };
 
 inline const char* operation_name(Operation operation) {
@@ -90,6 +90,7 @@ inline const char* refusal_name(Refusal refusal) {
     case Refusal::kBusyUpload: return "busy_upload";
     case Refusal::kBusySlotCopy: return "busy_slot_copy";
     case Refusal::kBusyBattery: return "busy_battery";
+    case Refusal::kBusyGuarding: return "busy_guarding";
     case Refusal::kUnavailable: return "unavailable";
   }
   return "unavailable";
@@ -101,6 +102,7 @@ inline Refusal refusal_for(Busy busy) {
     case Busy::kUpload: return Refusal::kBusyUpload;
     case Busy::kSlotCopy: return Refusal::kBusySlotCopy;
     case Busy::kBattery: return Refusal::kBusyBattery;
+    case Busy::kGuarding: return Refusal::kBusyGuarding;
     case Busy::kNone: break;
   }
   return Refusal::kNone;
@@ -110,6 +112,8 @@ inline const char* mode_name(Mode mode) { return mode == Mode::kRolling ? "rolli
 
 // Restart, pause and standby stop what the node is in the middle of; the others are always allowed.
 inline bool refused_while_busy(Operation operation) { return operation == Operation::kRestart || operation == Operation::kPause || operation == Operation::kStandby; }
+// A node that is guarding may restart (what was armed survives it) but not stop its watch: pause and standby are refused.
+inline bool refused_by(Operation operation, Busy busy) { return busy != Busy::kNone && refused_while_busy(operation) && !(busy == Busy::kGuarding && operation == Operation::kRestart); }
 
 // The seconds an operation lasts when the order names none, and the range the order may name (all zero: the operation takes no duration).
 struct Span { std::uint32_t low, high, fallback; };
@@ -312,7 +316,7 @@ class Gate {
   Armed arm(std::uint64_t now_ms, std::uint64_t uptime_s, Operation operation, Busy busy, const Situation& now, const std::string& fresh_token) {
     if (scheduled_) return {operation == Operation::kRestart ? Refusal::kAlreadyRestarting : Refusal::kUnavailable, {}};
     if (operation == Operation::kRestart && uptime_s < kMinUptimeS) return {Refusal::kRateLimited, {}};
-    if (busy != Busy::kNone && refused_while_busy(operation)) { token_.clear(); return {refusal_for(busy), {}}; }
+    if (refused_by(operation, busy)) { token_.clear(); return {refusal_for(busy), {}}; }
     if (already_in_state(operation, now)) return {Refusal::kAlreadyInState, {}};
     if (operation == Operation::kRestart && armed_before_ && now_ms - last_arm_ms_ < kMinArmGapMs) return {Refusal::kRateLimited, {}};
     if (operation == Operation::kRestart) { armed_before_ = true; last_arm_ms_ = now_ms; }
@@ -334,7 +338,7 @@ class Gate {
     if (expired) return Refusal::kTokenExpired;
     if (!right || !bound) return Refusal::kInvalidToken;
     if (operation == Operation::kRestart && uptime_s < kMinUptimeS) return Refusal::kRateLimited;
-    if (busy != Busy::kNone && refused_while_busy(operation)) return refusal_for(busy);
+    if (refused_by(operation, busy)) return refusal_for(busy);
     if (already_in_state(operation, now)) return Refusal::kAlreadyInState;
     if (operation == Operation::kRestart) scheduled_ = true;
     return Refusal::kNone;
