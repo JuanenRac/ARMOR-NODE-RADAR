@@ -222,12 +222,12 @@ static void test_the_answers_are_the_ones_of_the_vectors(const std::string& dir)
     const json::Value* names = list != nullptr ? list->get("enum") : nullptr;
     CHECK(names != nullptr);
     for (const Refusal r : {Refusal::kNone, Refusal::kNotArmed, Refusal::kInvalidToken, Refusal::kTokenExpired, Refusal::kRateLimited, Refusal::kAlreadyRestarting, Refusal::kAlreadyInState,
-                            Refusal::kBusyUpdate, Refusal::kBusyUpload, Refusal::kBusySlotCopy, Refusal::kBusyBattery, Refusal::kUnavailable}) {
+                            Refusal::kBusyUpdate, Refusal::kBusyUpload, Refusal::kBusySlotCopy, Refusal::kBusyBattery, Refusal::kBusyGuarding, Refusal::kUnavailable}) {
       bool found = false;
       if (names != nullptr) for (const json::Value& item : names->items) found = found || item.text == control::refusal_name(r);
       CHECK(found);
     }
-    CHECK(names != nullptr && names->items.size() == 12);
+    CHECK(names != nullptr && names->items.size() == 13);
   }
   // and the operations of the command schema are exactly the ones of the node
   json::Value command_schema;
@@ -483,6 +483,22 @@ static void test_the_rate_limit_is_for_a_restart() {
   control::Gate quick;
   CHECK(quick.arm(1000, kUp, Operation::kIdentify, Busy::kNone, kRunning, kToken).refusal == Refusal::kNone);
   CHECK(quick.arm(1100, kUp, Operation::kIdentify, Busy::kNone, kRunning, kOther).refusal == Refusal::kNone);
+}
+
+// A node that guards (an alarm panel): it may restart, what was armed survives it, but it does not stop watching.
+static void test_a_guarding_panel_refuses_to_stop_watching() {
+  CHECK(std::string(control::refusal_name(Refusal::kBusyGuarding)) == "busy_guarding");
+  for (const Operation o : kAll) {
+    const bool refused = o == Operation::kPause || o == Operation::kStandby;
+    CHECK(control::refused_by(o, Busy::kGuarding) == refused);
+    const control::Situation fits = (o == Operation::kResume) ? control::Situation{State::kPaused, false} : control::Situation{State::kRunning, o == Operation::kMaintenanceOff};
+    control::Gate gate;
+    const control::Gate::Armed armed = gate.arm(1000, kUp, o, Busy::kGuarding, fits, kToken);
+    CHECK(armed.refusal == (refused ? Refusal::kBusyGuarding : Refusal::kNone));
+    control::Gate later;
+    later.arm(1000, kUp, o, Busy::kNone, fits, kToken);
+    CHECK(later.execute(3000, kUp, o, Busy::kGuarding, fits, kToken) == (refused ? Refusal::kBusyGuarding : Refusal::kNone));
+  }
 }
 
 static void test_a_busy_node_says_what_it_is_doing() {
@@ -1167,6 +1183,7 @@ int main(int argc, char** argv) {
   test_a_new_arm_replaces_the_old_token();
   test_a_token_from_random_bytes();
   test_the_rate_limit_is_for_a_restart();
+  test_a_guarding_panel_refuses_to_stop_watching();
   test_a_busy_node_says_what_it_is_doing();
   test_already_in_state();
   test_a_pause_ends_by_itself();
