@@ -22,13 +22,13 @@
   <img src="https://img.shields.io/badge/Language-C%2B%2B17-00599c.svg" alt="Language">
   <img src="https://img.shields.io/badge/Target-ESP32--S3-e7352c.svg" alt="Target">
   <img src="https://img.shields.io/badge/Tests-26%20host%20programs-2ea44f.svg" alt="Tests">
-  <img src="https://img.shields.io/badge/Version-0.8.1.5-0f6cbd.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.8.1.6-0f6cbd.svg" alt="Version">
   <img src="https://img.shields.io/badge/Maturity-established-2EA44F.svg" alt="Maturity">
 </p>
 
 ---
 
-**诚实性检查 - 今天真正能运行的部分：** 雷达节点是目前唯一真正存在的硬件节点：它的固件运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告，其网页面板和无线更新也在该板上使用。与硬件无关的核心（26 个测试程序中的 15,256 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户和会话、网络方案、ARMOR-COMMON 接受其输出的消息序列化器，以及版本和签名检查）在计算机上测试，**网页面板**已在真实浏览器中对照替身节点验证，**固件镜像**可在 ESP-IDF 5.5.5 容器中构建。**尚未**证明的是：LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块；更新的签名检查和带 PIN 的蓝牙配对已在计算机上用真实签名验证，但尚未在板上验证；雷达命令通道没有对照真实模块检查；面板的 HTTPS 证书（由节点自己生成）没有在所有浏览器中试过。
+**诚实性检查 - 今天真正能运行的部分：** 雷达节点是目前唯一真正存在的硬件节点：它的固件运行在带雷达的真实 Waveshare ESP32-S3-ETH 板上，向 CM5 测试台报告，其网页面板和无线更新也在该板上使用。与硬件无关的核心（26 个测试程序中的 17,525 项检查：LD2450、LD2461 和四种存在传感器的解码器、LD2450 命令通道、设置及其检查、引脚表、用户和会话、网络方案、ARMOR-COMMON 接受其输出的消息序列化器，以及版本和签名检查）在计算机上测试，**网页面板**已在真实浏览器中对照替身节点验证，**固件镜像**可在 ESP-IDF 5.5.5 容器中构建。**尚未**证明的是：LD2461 和存在传感器的解码器只与其手册中的示例吻合，背后没有真实模块；更新的签名检查和带 PIN 的蓝牙配对已在计算机上用真实签名验证，但尚未在板上验证；雷达命令通道没有对照真实模块检查；面板的 HTTPS 证书（由节点自己生成）没有在所有浏览器中试过。
 
 ---
 
@@ -36,7 +36,7 @@
 
 | | |
 |---|---|
-| 版本 | `0.8.1.5` |
+| 版本 | `0.8.1.6` |
 | 成熟度 | 成熟 |
 | 角色 | ESP32-S3 雷达现场节点（家族：Field Nodes，上级：ARMOR-COMMON） |
 | 技术栈 | C++17, ESP-IDF 5.5.5, ESP32-S3 |
@@ -58,7 +58,7 @@
 | 领域 | 状态 | 在这里的含义 |
 |---|---|---|
 | 软件 | 🟢 | 固件可在 ESP-IDF 5.5.5 容器中构建，并在真实的 ESP32-S3-ETH 板上运行。 |
-| 测试 | 🟢 | 26 个主机程序中的 15,256 项检查通过（`ctest`）：解码器、设置、引脚表、用户、网络方案、消息序列化器和版本检查。 |
+| 测试 | 🟢 | 26 个主机程序中的 17,525 项检查通过（`ctest`）：解码器、设置、引脚表、用户、网络方案、消息序列化器和版本检查。 |
 | 协议与数据 | 🟡 | LD2450 已在真实雷达上运行；LD2461 和四种人体存在传感器的解码器只与其手册中的示例一致，雷达命令通道尚未对照模块检查。 |
 | 界面 | 🟡 | 网页面板已在板子上使用，并在真实浏览器中对模拟节点做过测试；由节点自己生成的 HTTPS 证书尚未在所有浏览器中试过。 |
 | 硬件 | 🟠 | 这是唯一实际存在的硬件节点：一块真实的 Waveshare ESP32-S3-ETH 板带着雷达向 CM5 测试台上报；没有连接其他传感器模块。 |
@@ -166,7 +166,7 @@ ARMOR-NODE-RADAR 是周界的眼睛。每个节点读取最多三个雷达或存
 |---|---|
 | MQTT | `armor/node/<id>/{telemetry,health,info,command}`、`armor/health/<id>`（遗嘱为 `{"node_id":"..","online":false}`）、`armor/control/<id>/{command,result,maintenance}` 和 `armor/control/all/command`、`armor/device/<id>/<pin>/{state,set}`、`armor/radar/<id>/events`、`armor/radar/<id>/control/armed` |
 | 面板（HTTP 80、HTTPS 443） | 路由 `session`、`login`、`logout`、`setup`、`status`、`config`（+ export、import）、`wifi/scan`、`time`、`radars`（+ command）、`perimeter`（+ armed、learn、zone）、`pins`（+ command）、`bridge`（+ open、close、io）、`ota`（+ check、install、progress、copy、switch）、`account`、`ble-pin`、`log`、`coredump`、`factory-reset`、`reboot`；面向管理员的 `/metrics` 和 WebSocket `/ws/radar-map`；`tests/check_routes.py` 检查面板调用的每条路由都存在 |
-| 面板文字 | 76 个带八种语言文字的错误码（`panel/text.js` 中 832 行），由 `tests/check_panel_text.py` 检查 |
+| 面板文字 | 78 个带八种语言文字的错误码（`panel/text.js` 中 884 行），由 `tests/check_panel_text.py` 检查 |
 | 硬件 | 用于 LD2450、LD2461、LD2410、LD2412、LD2410S 和 MR24HPC1 的 3 个 UART（RX 16、17、18；TX 15、21、38）；SPI 接口的 W5500（MOSI 11、MISO 12、SCLK 13、CS 14、INT 10、RST 9、20 MHz）；I2C 上的 VEML7700（GPIO 1 和 2）；BOOT 按钮 |
 
 ## ⚙️ 配置
@@ -230,7 +230,7 @@ python -I tools/armor_ci_validate.py
 | `test_node`, `test_base`, `test_shared`, `test_board_wifi` | 设置及其检查、引脚表、用户与会话、网络方案、共享基础和 Wi-Fi 电路板 |
 | `test_logic`, `test_perimeter`, `test_control`, `test_diag` | 引脚逻辑、周界引擎、两步控制命令和诊断 |
 | `test_mqtt_tls`, `test_release` | 与代理的 TLS 连接（仅主机）以及发布和签名检查 |
-| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python：八种语言的面板文字（832 行）、任务、保存路径、受锁保护的蓝牙会话、路由和串口桥客户端 |
+| `check_panel_text`, `check_task_safety`, `check_save_paths`, `check_ble_session`, `check_routes`, `check_bridge_client` | Python：八种语言的面板文字（884 行）、任务、保存路径、受锁保护的蓝牙会话、路由和串口桥客户端 |
 
 网页面板还会在真实浏览器中对着模拟节点（`tools/panel_mock.mjs`）进行验证。LD2461 和存在传感器的解码器只与其手册中的示例相符。
 
