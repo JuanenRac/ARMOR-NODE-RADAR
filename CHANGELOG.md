@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **The shared tools read the output of processes as UTF-8:** `tools/status_lights.py`, `tools/sync_manifests.py` and `tools/universal_readme_check.py` are the current copies; on Windows a character outside the code page no longer breaks a check.
 - **The memory gate of the panel cannot stay shut for ever:** when the internal memory settled between the levels that close it and the levels that open it, new panel connections were refused until the node was restarted by hand, although the node kept reporting. It now also opens after about a minute over the closing levels. Tested on a computer; not tried on a board.
 - **A web request that does not end is said:** when the panel's server has been on the same request for 20 seconds, one error line names it, with the internal memory at that moment, and the health report takes it to the server although the panel does not answer. A request that took 5 seconds or more is a warning in the log. The firmware upload and the core dump download are left out. Tested on a computer; not tried on a board.
 - **No answer of the panel is sent while the sessions are locked** (a refused sign-in, a changed password): a slow browser could hold up the requests of everybody who was signed in. Tested on a computer; not tried on a board.
