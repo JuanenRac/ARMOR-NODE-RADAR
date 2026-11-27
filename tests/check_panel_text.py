@@ -49,6 +49,14 @@ def check_help_and_frames(table, problems):
         problems.append("style.css has no .kv.framed rule")
 
 
+def check_flat_line(table, problems):
+    """The panel tells a flat line apart by the start of the state text the firmware sends."""
+    app = (ROOT / "panel" / "app.js").read_text(encoding="utf-8")
+    health = (ROOT / "main" / "core" / "radar_health.hpp").read_text(encoding="utf-8")
+    if 'kFlatText = "flat line' not in health or 'startsWith("flat line")' not in app or "state_flat" not in table:
+        problems.append("the panel does not tell a flat line apart (kFlatText, lineState, state_flat)")
+
+
 def check_panel_features(table, problems):
     """The Broker page can load the certificate of the broker from a file (and refuses a key), and the System page has the node's limit on wrong passwords per minute, with their texts."""
     app = (ROOT / "panel" / "app.js").read_text(encoding="utf-8")
@@ -87,6 +95,7 @@ def main():
         problems.append("e_http is missing (the download's HTTP status)")
     check_help_and_frames(table, problems)
     check_panel_features(table, problems)
+    check_flat_line(table, problems)
     if problems:
         print("PANEL_TEXT=FAIL")
         for problem in problems:

@@ -306,8 +306,10 @@ function formatUptime(seconds) {
 }
 const reasonText = code => (L["reason" + code.charAt(0).toUpperCase() + code.slice(1)] ? t("reason" + code.charAt(0).toUpperCase() + code.slice(1)) : t("reasonOther"));
 
+// A line nothing drives is still "garbled" for the node; only its state text tells it apart.
+function lineState(r) { return r.state === "garbled" && String(r.state_text || "").startsWith("flat line") ? "flat" : r.state; }
 function radarStateText(state) { return t("state_" + state); }
-function statePill(state) { return el("span", { class: "pill " + (state === "reporting" ? "ok" : state === "disabled" ? "" : state === "silent" || state === "garbled" || state === "bridge" ? "warn" : "bad") }, radarStateText(state).split(":")[0]); }
+function statePill(state) { return el("span", { class: "pill " + (state === "reporting" ? "ok" : state === "disabled" ? "" : state === "silent" || state === "garbled" || state === "flat" || state === "bridge" ? "warn" : "bad") }, radarStateText(state).split(":")[0]); }
 
 function overviewPage() {
   const s = S.status;
@@ -337,7 +339,7 @@ function overviewPage() {
       n.ap_active && n.sta_connected && !n.ap_setup ? note(t("apStaWarning")) : null),
     card(t("ovBroker"), kvf([[t("navBroker"), !m.enabled ? t("notConfigured") : m.connected ? t("connected") : t("notConnected")], [t("clock"), m.clock_set ? t("clockSet") : t("clockNotSet")], [t("messages"), m.published]]),
       m.withheld === "light" ? note(t("withheldLight")) : m.withheld === "radars" ? note(t("withheldRadars")) : null),
-    card(t("radarsTitle"), el("div", { class: "row" }, s.radars.map(r => el("div", {}, el("h3", {}, t("sensorN", r.radar), r.enabled && r.model ? " · " + modelOf(r.model).label : "", r.enabled && r.name ? " · " + r.name : ""), statePill(r.enabled ? r.state : "disabled"),
+    card(t("radarsTitle"), el("div", { class: "row" }, s.radars.map(r => el("div", {}, el("h3", {}, t("sensorN", r.radar), r.enabled && r.model ? " · " + modelOf(r.model).label : "", r.enabled && r.name ? " · " + r.name : ""), statePill(r.enabled ? lineState(r) : "disabled"),
       r.enabled ? el("p", { class: "muted" }, presenceText(r) ? presenceText(r) + " · " : "", t("framesRate", r.fps), " · ", t("counters", r.bytes, r.frames, r.bad_frames)) : null,
       r.enabled ? el("p", { class: "muted mono" }, (r.firmware_known ? r.firmware : t("fwUnknown").split(" (")[0]) + (r.bluetooth && r.bluetooth !== "none" ? " · Bluetooth " : ""), r.bluetooth && r.bluetooth !== "none" ? btPill(r.bluetooth) : null) : null)))),
     s.perimeter ? card(t("ovPerimeter"), kvf([[t("ovPerimeter"), s.perimeter.enabled ? t("yes") : t("perimOff")],
@@ -620,7 +622,7 @@ function presenceText(r) {
 }
 function liveText(r) {
   const presence = presenceText(r);
-  return (presence ? presence + " · " : "") + radarStateText(r.state) + " · " + t("framesRate", r.fps) + " · " + t("counters", r.bytes, r.frames, r.bad_frames);
+  return (presence ? presence + " · " : "") + radarStateText(lineState(r)) + " · " + t("framesRate", r.fps) + " · " + t("counters", r.bytes, r.frames, r.bad_frames);
 }
 // The numbers a model adds to its report: the zones of an LD2461, the energies of an LD2410, the flags of an MR24.
 function detailText(r) {
@@ -667,7 +669,7 @@ function radarCard(index) {
       model.id === "ld2412" ? [el("h3", {}, t("gatesTitle")),
         el("div", { class: "row" }, field("gateMin", base + "gate_min", { type: "number", min: 1, max: 13 }), field("gateMax", base + "gate_max", { type: "number", min: 0, max: 13 }), field("unmannedS", base + "unmanned_s", { type: "number", min: 0, max: 65535 })),
         el("p", { class: "hint" }, t("gatesHint"))] : null] : null,
-    status.enabled ? el("div", { class: "actions" }, statePill(status.state), el("span", { class: "muted", id: "radar-live-" + index }, liveText(status)), status.bridge ? el("span", { class: "pill warn" }, t("bridgeInUse")) : null) : null,
+    status.enabled ? el("div", { class: "actions" }, statePill(lineState(status)), el("span", { class: "muted", id: "radar-live-" + index }, liveText(status)), status.bridge ? el("span", { class: "pill warn" }, t("bridgeInUse")) : null) : null,
     status.enabled ? [
       el("p", { class: "muted", id: "radar-detail-" + index }, detailText(status)),
       status.model === "ld2461" && status.state === "reporting" && status.detail && status.detail.coordinates === false ? note(t("zonesOnly")) : null,
