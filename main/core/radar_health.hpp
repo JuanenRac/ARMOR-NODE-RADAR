@@ -20,6 +20,7 @@ enum class RadarState : std::uint8_t {
 
 struct RadarCounters {
   std::uint32_t bytes = 0;
+  std::uint32_t flat_bytes = 0;   // of those, how many were 0x00 or 0xFF
   std::uint32_t frames = 0;
   std::uint32_t bad_frames = 0;
   std::uint64_t last_frame_ms = 0;
@@ -30,6 +31,25 @@ class RadarHealth {
   explicit RadarHealth(std::uint32_t silent_after_ms = 3000) : silent_after_ms_(silent_after_ms) {}
 
   void bytes_received(std::uint8_t radar, std::size_t count) { if (valid(radar)) counters_[radar - 1].bytes += static_cast<std::uint32_t>(count); }
+  // The same, with the bytes themselves, to tell a line nothing drives from a noisy one.
+  void bytes_received(std::uint8_t radar, const std::uint8_t* data, std::size_t count) {
+    if (!valid(radar) || data == nullptr) return;
+    bytes_received(radar, count);
+    for (std::size_t i = 0; i < count; ++i)
+      if (data[i] == 0x00 || data[i] == 0xFF) ++counters_[radar - 1].flat_bytes;
+  }
+  // Garbled, and at least nine bytes of ten are 0x00 or 0xFF (the same rule as the solar node).
+  bool flat(std::uint8_t radar, std::uint64_t now_ms) const {
+    if (state(radar, now_ms) != RadarState::kGarbled) return false;
+    const RadarCounters& counters = counters_[radar - 1];
+    return std::uint64_t{counters.flat_bytes} * 10 >= std::uint64_t{counters.bytes} * 9;
+  }
+  // The state in words, with the flat line told apart.
+  const char* describe_line(std::uint8_t radar, std::uint64_t now_ms) const {
+    return flat(radar, now_ms) ? kFlatText : describe(state(radar, now_ms));
+  }
+  static constexpr const char* kFlatText = "flat line, only 00 or FF bytes (nothing drives RX: a loose wire, no common level or the sensor off)";
+
   void frame_ok(std::uint8_t radar, std::uint64_t now_ms) {
     if (!valid(radar)) return;
     RadarCounters& counters = counters_[radar - 1];
