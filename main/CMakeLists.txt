@@ -1,6 +1,6 @@
 # The board profile (Kconfig, sdkconfig.board.<board>): the W5500 driver file is built only for the s3-eth board. The REQUIRES cannot depend on it: ESP-IDF reads them
 # before sdkconfig is loaded, so esp_eth is always required (an unused component costs nothing in the image).
-set(ARMOR_SOURCES "api_shared.cpp" "app_main.cpp" "armor_radar.cpp" "ble_provision.cpp" "clock_sync.cpp" "entropy.cpp" "github_update.cpp" "gpio_manager.cpp" "light_sensor.cpp" "log_buffer.cpp" "node_guard.cpp" "psram_mem.cpp" "task_health.cpp" "node_health.cpp" "node_control.cpp" "node_diag.cpp" "improv_serial.cpp"
+set(ARMOR_SOURCES "api_shared.cpp" "app_main.cpp" "armor_radar.cpp" "ble_provision.cpp" "clock_sync.cpp" "entropy.cpp" "github_update.cpp" "gpio_manager.cpp" "light_sensor.cpp" "log_buffer.cpp" "node_guard.cpp" "psram_mem.cpp" "req_watch.cpp" "task_health.cpp" "node_health.cpp" "node_control.cpp" "node_diag.cpp" "improv_serial.cpp"
                   "mqtt_link.cpp" "network.cpp" "node_store.cpp" "secret_vault.cpp" "radar_manager.cpp" "tls_cert.cpp" "web_server.cpp"
                   "chip_temp.cpp" "metrics_page.cpp" "perimeter_rt.cpp" "sensor_bridge.cpp")
 set(ARMOR_REQUIRES driver esp_driver_gpio esp_driver_ledc esp_driver_spi esp_driver_i2c esp_driver_uart esp_adc esp_event esp_netif esp_timer

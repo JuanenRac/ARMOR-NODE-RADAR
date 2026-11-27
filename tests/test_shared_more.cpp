@@ -20,6 +20,7 @@
 #include "../core/fw_trust.hpp"
 #include "../core/json.hpp"
 #include "../core/node_health.hpp"
+#include "../core/slow_req.hpp"
 #include "../core/stored_load.hpp"
 #else
 #include "../main/core/armor_wire.hpp"
@@ -32,6 +33,7 @@
 #include "../main/core/fw_trust.hpp"
 #include "../main/core/json.hpp"
 #include "../main/core/node_health.hpp"
+#include "../main/core/slow_req.hpp"
 #include "../main/core/stored_load.hpp"
 #endif
 // the topic matcher is not part of every node (the radar has none)
@@ -787,6 +789,37 @@ static void test_backoff() {
   CHECK(long_run.failures() == 63);
 }
 
+static void test_slow_requests() {
+  namespace slowreq = armor::slowreq;
+  CHECK(slowreq::label("GET", "/api/v1/status") == "GET status");
+  CHECK(slowreq::label("GET", "/api/v1/readings?port=3") == "GET readings");   // no query
+  CHECK(slowreq::label("DELETE", "/api/v1/users/somebody") == "DELETE users/*");   // no name of a person
+  CHECK(slowreq::label("GET", "/api/v1/a\r\nb") == "GET a??b");
+  CHECK(slowreq::label("GET", "/api/v1/" + std::string(200, 'x')).size() == 36);
+  CHECK(slowreq::may_be_long("POST ota") && slowreq::may_be_long("GET coredump"));
+  CHECK(!slowreq::may_be_long("GET status") && !slowreq::may_be_long("GET ota/check"));
+
+  slowreq::Slot slot;
+  CHECK(!slot.stuck(100000) && slot.end(100000) == 0);   // nothing runs
+  slot.begin("GET status", 1000);
+  CHECK(!slot.stuck(1000 + slowreq::kStuckMs - 1));
+  CHECK(slot.stuck(1000 + slowreq::kStuckMs));
+  CHECK(!slot.stuck(1000 + 10 * slowreq::kStuckMs));   // said once
+  CHECK(slot.end(1000 + 70000) == 70000);
+  CHECK(!slot.stuck(1000000));   // it ended
+  slot.begin("GET ports", 2000);
+  CHECK(slot.stuck(2000 + slowreq::kStuckMs));   // the next request is watched again
+  slot.begin("POST ota", 3000);
+  CHECK(!slot.stuck(3000 + 10 * slowreq::kStuckMs));   // an upload takes as long as the link does
+  slot.begin("GET log", 5000);
+  CHECK(!slot.stuck(4000) && slot.end(4000) == 0);   // a clock that is behind is not a stuck request
+
+  CHECK(slowreq::line("GET status", 25400, true, 120u * 1024u, 31u * 1024u) == "web stuck 25 s: GET status (internal 120/31 KB)");
+  CHECK(slowreq::line("POST login", 6000, false, 0, 0) == "web slow 6 s: POST login (internal 0/0 KB)");
+  // the health report keeps 96 characters of the last error
+  CHECK(slowreq::line(slowreq::label("DELETE", "/api/v1/" + std::string(200, 'x')), 99999000, true, 512u * 1024u, 512u * 1024u).size() <= 96);
+}
+
 int main() {
   test_health_words();
   test_link_choice();
@@ -812,6 +845,7 @@ int main() {
 #endif
   test_ble_frames_and_requests();
   test_backoff();
+  test_slow_requests();
   std::printf("shared more: %d checks, %d failures\n", checks, failures);
   return failures == 0 ? 0 : 1;
 }

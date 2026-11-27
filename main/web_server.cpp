@@ -60,6 +60,7 @@ extern "C" {
 #include "psram_mem.hpp"
 #include "node_control.hpp"
 #include "node_store.hpp"
+#include "req_watch.hpp"
 #include "radar_manager.hpp"
 #include "tls_cert.hpp"
 
@@ -297,17 +298,24 @@ esp_err_t post_setup(httpd_req_t* r) {
   json::Value in;
   if (!read_json(r, in)) return ESP_OK;
   const std::uint32_t source = source_of(r);
+  bool address_blocked = false;
+  unsigned minute_wait = 0;
   {
+    // only the counting is done under the lock: the answer is sent after it, or a slow browser would hold up everybody who has a session
     std::lock_guard<std::mutex> guard(g_lock);
-    if (!g_throttle.allowed(source, now_ms())) return send_error(r, 429, "too_many_attempts");
+    address_blocked = !g_throttle.allowed(source, now_ms());
     g_throttle.set_minute_limit(login_limit());
-    if (!g_throttle.minute_allowed(now_ms())) return send_minute_wait(r, g_throttle.minute_wait_s(now_ms()));
+    if (!g_throttle.minute_allowed(now_ms())) minute_wait = g_throttle.minute_wait_s(now_ms());
   }
+  if (address_blocked) return send_error(r, 429, "too_many_attempts");
+  if (minute_wait != 0) return send_minute_wait(r, minute_wait);
   const std::string code = in.string_or("code", "");
   if (!auth::same_text(code, store::setup_code())) {
-    std::lock_guard<std::mutex> guard(g_lock);
-    g_throttle.failure(source, now_ms());
-    g_throttle.minute_failure(now_ms());
+    {
+      std::lock_guard<std::mutex> guard(g_lock);
+      g_throttle.failure(source, now_ms());
+      g_throttle.minute_failure(now_ms());
+    }
     return send_error(r, 403, "wrong_code");
   }
   const std::string user = in.string_or("user", ""), password = in.string_or("password", "");
@@ -371,25 +379,35 @@ esp_err_t post_login(httpd_req_t* r) {
   // Wrong passwords are counted for the person as well as for the address: a guess against one account is slowed down wherever it comes from, and behind the server's proxy (where every
   // request has the same address) one mistyped name does not stop everybody.
   const std::uint32_t person = auth::user_key(user);
+  bool blocked = false;
+  unsigned blocked_wait = 0, minute_wait = 0;
   {
     std::lock_guard<std::mutex> guard(g_lock);
     const bool address_ok = g_throttle.allowed(source, now_ms()), person_ok = g_user_throttle.allowed(person, now_ms());
     if (!address_ok || !person_ok) {
       const unsigned by_address = address_ok ? 0u : g_throttle.wait_s(source, now_ms()), by_person = person_ok ? 0u : g_user_throttle.wait_s(person, now_ms());
-      json::Writer w;
-      w.begin_object().field("error", "too_many_attempts").field("wait_s", static_cast<int>(by_address > by_person ? by_address : by_person)).end_object();
-      return send_json(r, 429, w.str());
+      blocked = true;
+      blocked_wait = by_address > by_person ? by_address : by_person;
+    } else {
+      // However many addresses and names are tried, the node as a whole lets through only so many wrong passwords per minute.
+      g_throttle.set_minute_limit(login_limit());
+      if (!g_throttle.minute_allowed(now_ms())) minute_wait = g_throttle.minute_wait_s(now_ms());
     }
-    // However many addresses and names are tried, the node as a whole lets through only so many wrong passwords per minute.
-    g_throttle.set_minute_limit(login_limit());
-    if (!g_throttle.minute_allowed(now_ms())) return send_minute_wait(r, g_throttle.minute_wait_s(now_ms()));
   }
+  if (blocked) {
+    json::Writer w;
+    w.begin_object().field("error", "too_many_attempts").field("wait_s", static_cast<int>(blocked_wait)).end_object();
+    return send_json(r, 429, w.str());
+  }
+  if (minute_wait != 0) return send_minute_wait(r, minute_wait);
   auth::Role role = auth::Role::kViewer;
   if (!store::user_verify(user, password, role)) {
-    std::lock_guard<std::mutex> guard(g_lock);
-    g_throttle.failure(source, now_ms());
-    g_throttle.minute_failure(now_ms());
-    g_user_throttle.failure(person, now_ms());
+    {
+      std::lock_guard<std::mutex> guard(g_lock);
+      g_throttle.failure(source, now_ms());
+      g_throttle.minute_failure(now_ms());
+      g_user_throttle.failure(person, now_ms());
+    }
     return send_error(r, 401, "wrong_credentials");
   }
   {
@@ -725,8 +743,10 @@ esp_err_t put_user(httpd_req_t* r, const std::string& name) {
     const auth::Result result = store::user_set_password(name, password);
     if (result != auth::Result::kOk) return answer_user_result(r, result);
   }
-  std::lock_guard<std::mutex> guard(g_lock);
-  g_sessions.end_user(name);   // a changed password or role ends that user's sessions
+  {
+    std::lock_guard<std::mutex> guard(g_lock);
+    g_sessions.end_user(name);   // a changed password or role ends that user's sessions
+  }
   return send_ok(r);
 }
 
@@ -746,14 +766,18 @@ esp_err_t put_account(httpd_req_t* r) {
   if (!read_json(r, in)) return ESP_OK;
   // The current password is a guess that a stolen session could repeat: wrong ones are counted for the person like those of a login.
   const std::uint32_t person = auth::user_key(who.user);
+  bool blocked = false;
   {
     std::lock_guard<std::mutex> guard(g_lock);
-    if (!g_user_throttle.allowed(person, now_ms())) return send_error(r, 429, "too_many_attempts");
+    blocked = !g_user_throttle.allowed(person, now_ms());
   }
+  if (blocked) return send_error(r, 429, "too_many_attempts");
   auth::Role role;
   if (!store::user_verify(who.user, in.string_or("current", ""), role)) {
-    std::lock_guard<std::mutex> guard(g_lock);
-    g_user_throttle.failure(person, now_ms());
+    {
+      std::lock_guard<std::mutex> guard(g_lock);
+      g_user_throttle.failure(person, now_ms());
+    }
     return send_error(r, 403, "wrong_password");
   }
   {
@@ -762,8 +786,10 @@ esp_err_t put_account(httpd_req_t* r) {
   }
   const auth::Result result = store::user_set_password(who.user, in.string_or("password", ""));
   if (result != auth::Result::kOk) return answer_user_result(r, result);
-  std::lock_guard<std::mutex> guard(g_lock);
-  g_sessions.end_user(who.user);
+  {
+    std::lock_guard<std::mutex> guard(g_lock);
+    g_sessions.end_user(who.user);
+  }
   return send_ok(r);
 }
 
@@ -1324,6 +1350,9 @@ esp_err_t api_handler(httpd_req_t* r) {
   return send_error(r, 404, "not_found");
 }
 
+
+// A request that does not end is said (req_watch.hpp).
+esp_err_t watched_api_handler(httpd_req_t* r) { return reqwatch::run(r, is_tls(r), api_handler); }
 esp_err_t page_handler(httpd_req_t* r) {
   const std::string uri = r->uri;
   if (uri == "/app.js") return send_asset(r, app_js_gz_start, app_js_gz_end, "text/javascript");
@@ -1357,7 +1386,7 @@ void register_handlers(httpd_handle_t server, bool redirect_only) {
     httpd_uri_t api{};
     api.uri = "/api/*";
     api.method = method;
-    api.handler = api_handler;
+    api.handler = watched_api_handler;
     httpd_register_uri_handler(server, &api);
   }
   httpd_uri_t metrics{};
@@ -1409,6 +1438,7 @@ TlsStatus tls_status() {
 
 bool start(const config::Settings& settings) {
   g_started_with = settings;
+  reqwatch::start();
   const bool tls_wanted = webpolicy::serves_https(settings.web);
   const bool redirect = webpolicy::http_redirects(settings.web);
   bool tls_ok = false;
