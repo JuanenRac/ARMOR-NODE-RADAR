@@ -4,6 +4,7 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A sensor line that nothing drives is told apart from a noisy one:** when no frame has ever arrived and at least nine bytes of ten are `00` or `FF`, the log and the state text of the sensor say so (a loose wire, no common level or the sensor off) instead of suggesting the speed or the mode. The state itself is still `garbled`. Tested on a computer; not tried on a board.
 - **The look for a new version no longer answers "the request is too large":** GitHub's answer about a release grows with its files and its notes and passed the 24 kB the node kept. It is now read piece by piece as it arrives and only the tag and the names and addresses of the files are kept, so its length no longer matters (up to 512 kB). Tested on a computer with a real answer; not tried on a board.
 - **The memory Bluetooth keeps when it is not used is given back to the node:** with Bluetooth off, or after its set-up window has closed, until the next restart. The log says the internal memory before and after. Not tried on a board.
 - **The panel no longer shows an empty strip at the bottom of every page:** the bar for unsaved changes was visible even when it was hidden.

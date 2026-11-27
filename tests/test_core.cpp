@@ -435,6 +435,22 @@ static void test_radar_health() {
   CHECK(health.counters(2).frames == 0);
   CHECK(health.state(9, 0) == RadarState::kNoData);
   for (RadarState state : {RadarState::kNoData, RadarState::kGarbled, RadarState::kSilent, RadarState::kReporting}) CHECK(RadarHealth::describe(state)[0] != '?');
+  // A line nothing drives is told apart from a noisy one: nine bytes of ten 0x00 or 0xFF, and no frame ever.
+  RadarHealth line(3000);
+  const std::uint8_t idle[10] = {0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x41};
+  CHECK(!line.flat(1, 0));
+  line.bytes_received(1, idle, sizeof idle);
+  CHECK(line.state(1, 0) == RadarState::kGarbled && line.flat(1, 0) && line.counters(1).bytes == 10 && line.counters(1).flat_bytes == 9);
+  CHECK(std::string(line.describe_line(1, 0)) == RadarHealth::kFlatText);
+  const std::uint8_t one_more = 0x55;
+  line.bytes_received(1, &one_more, 1);
+  CHECK(!line.flat(1, 0) && std::string(line.describe_line(1, 0)) == RadarHealth::describe(RadarState::kGarbled));
+  line.bytes_received(2, idle, 9);
+  line.frame_ok(2, 100);
+  CHECK(!line.flat(2, 100) && !line.flat(2, 9000) && !line.flat(3, 0) && !line.flat(9, 0));
+  line.bytes_received(9, idle, sizeof idle);
+  line.bytes_received(3, nullptr, 5);
+  CHECK(line.counters(3).bytes == 0);
 }
 
 // Three radars on one node, each looking 75 degrees from the next, cover 270 degrees: the geometry Studio's "270 degree node" uses.

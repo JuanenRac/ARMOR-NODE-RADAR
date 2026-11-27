@@ -175,7 +175,7 @@ void log_statistics(std::uint64_t now) {
     const char* model = sensors::to_text(g_lines[i].model);
     if (state == armor::RadarState::kReporting) ESP_LOGI(kTag, "sensor %u (%s): %s, %.1f frames/s, %u frames, %u bad, %u bytes", radar, model, armor::RadarHealth::describe(state), g_lines[i].fps,
                                                         static_cast<unsigned>(counters.frames), static_cast<unsigned>(counters.bad_frames), static_cast<unsigned>(counters.bytes));
-    else ESP_LOGW(kTag, "sensor %u (%s): %s (%u bytes, %u frames, %u bad)", radar, model, armor::RadarHealth::describe(state), static_cast<unsigned>(counters.bytes), static_cast<unsigned>(counters.frames), static_cast<unsigned>(counters.bad_frames));
+    else ESP_LOGW(kTag, "sensor %u (%s): %s (%u bytes, %u frames, %u bad)", radar, model, g_health.describe_line(radar, now), static_cast<unsigned>(counters.bytes), static_cast<unsigned>(counters.frames), static_cast<unsigned>(counters.bad_frames));
   }
 }
 
@@ -341,7 +341,7 @@ void reader_task(void*) {
         const std::uint8_t sensor_id = static_cast<std::uint8_t>(i + 1);
         {
           std::lock_guard<std::mutex> guard(g_data_lock);
-          g_health.bytes_received(sensor_id, static_cast<std::size_t>(read));
+          g_health.bytes_received(sensor_id, buffer, static_cast<std::size_t>(read));
         }
         const std::size_t bytes = static_cast<std::size_t>(read);
         switch (line.model) {
@@ -922,7 +922,7 @@ Status status(std::size_t index) {
   const armor::RadarState state = g_health.state(radar, monotonic_ms());
   const armor::RadarCounters counters = g_health.counters(radar);
   s.state = state == armor::RadarState::kReporting ? "reporting" : state == armor::RadarState::kNoData ? "no_data" : state == armor::RadarState::kGarbled ? "garbled" : "silent";
-  s.state_text = armor::RadarHealth::describe(state);
+  s.state_text = g_health.describe_line(radar, monotonic_ms());
   // the MR24 reports only when something changes: a quiet room is not a silent sensor
   if (line.model == sensors::Model::kMr24hpc1 && counters.frames > 0 && state == armor::RadarState::kSilent) { s.state = "reporting"; s.state_text = "reporting on change"; }
   if (line.model == sensors::Model::kLd2461 && state == armor::RadarState::kReporting && line.coordinate_frames == 0) s.state_text = "reporting zones only: no coordinates (the report format must be 1 or 3)";
