@@ -144,7 +144,9 @@ def main() -> int:
         return path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
 
     server = read("main/web_server.cpp")
-    problems = problems_of(server, read("panel/app.js"), read("tools/panel_mock.mjs")) + file_problems(server, read("panel/index.html"), read("panel/app.js"))
+    # a node may keep the pages that write to batteries in a script of their own (panel/maintenance.js), whose orders go through bmOrder("..."), which posts them
+    pages = read("panel/app.js") + re.sub(r'bmOrder\("', 'api("POST", "', read("panel/maintenance.js"))
+    problems = problems_of(server, pages, read("tools/panel_mock.mjs")) + file_problems(server, read("panel/index.html"), read("panel/app.js"))
     problems += answers_under_lock(server) + watch_problems(server)
     if problems:
         print("ROUTES=FAIL")
