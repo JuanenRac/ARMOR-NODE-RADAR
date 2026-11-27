@@ -820,7 +820,23 @@ static void test_slow_requests() {
   CHECK(slowreq::line(slowreq::label("DELETE", "/api/v1/" + std::string(200, 'x')), 99999000, true, 512u * 1024u, 512u * 1024u).size() <= 96);
 }
 
+// The generated reader and writer of the battery message keep what names a module (an INVENTED serial number), and refuse a chip that is not one of the three words.
+static void test_wire_battery_identity() {
+  const std::string text = "{\"kind\":\"battery\",\"node_id\":\"solar-1\",\"device\":\"us3000-1\",\"timestamp_ms\":1,\"modules\":1,\"stack\":[{\"n\":1,\"present\":true,"
+                           "\"serial\":\"TEST00AE20000001\",\"board\":\"NF4.E2\",\"chip\":\"newer\",\"specification\":\"48V/74AH\",\"boot_version\":\"V2.1\",\"comm_version\":\"V2.0\",\"release_date\":\"00-01-01\"}]}";
+  armor::json::Value value;
+  std::string written;
+  CHECK(armor::json::parse(text, value) && armor::wire::rewrite_message("solar_battery", value, written));
+  for (const char* part : {"\"serial\":\"TEST00AE20000001\"", "\"board\":\"NF4.E2\"", "\"chip\":\"newer\"", "\"specification\":\"48V/74AH\"", "\"boot_version\":\"V2.1\"", "\"comm_version\":\"V2.0\"", "\"release_date\":\"00-01-01\""})
+    CHECK(written.find(part) != std::string::npos);
+  std::string wrong = text;
+  wrong.replace(wrong.find("newer"), 5, "guess");
+  armor::json::Value other;
+  CHECK(armor::json::parse(wrong, other) && !armor::wire::validate_message("solar_battery", other));
+}
+
 int main() {
+  test_wire_battery_identity();
   test_health_words();
   test_link_choice();
   test_error_lines();
