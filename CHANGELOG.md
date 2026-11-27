@@ -4,6 +4,9 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+- **A web request that does not end is said:** when the panel's server has been on the same request for 20 seconds, one error line names it, with the internal memory at that moment, and the health report takes it to the server although the panel does not answer. A request that took 5 seconds or more is a warning in the log. The firmware upload and the core dump download are left out. Tested on a computer; not tried on a board.
+- **No answer of the panel is sent while the sessions are locked** (a refused sign-in, a changed password): a slow browser could hold up the requests of everybody who was signed in. Tested on a computer; not tried on a board.
+
 ## [0.8.1.6] - The flat sensor line told apart, an update check with no size limit and Bluetooth memory given back
 
 - **The web panel names the flat line too:** a sensor line that only carries `00` or `FF` bytes now reads as such, in the eight languages, instead of as a wrong speed or mode. Tested on a computer; not tried on a board.

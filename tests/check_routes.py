@@ -5,7 +5,9 @@
 #   2. the panel calls a route the server does not answer (a button that would get a 404);
 #   3. the stand-in node the panel is tried against (tools/panel_mock.mjs) does not know a route the panel calls, so a page could look right in the test and break on a node;
 #   4. the panel asks for a file (a script, a style sheet, a picture named in panel/index.html or panel/app.js) that the server does not register: the browser gets a 404 and the page comes out
-#      unstyled or dead, while a stand-in that serves the folder would never show it.
+#      unstyled or dead, while a stand-in that serves the folder would never show it;
+#   5. an answer is sent while the lock of the sessions is held (a slow browser then holds up every request that carries a session, on both servers), or the requests of the API are not
+#      watched for one that does not end (main/req_watch.hpp).
 # Copyright (C) 2026 JuanenRac (Electro Hobby 3D). GPL-3.0-or-later.
 from __future__ import annotations
 
@@ -109,6 +111,33 @@ def problems_of(server: str, app: str, mock: str) -> list[str]:
     return problems
 
 
+def answers_under_lock(server: str) -> list[str]:
+    """Every block that takes `g_lock` is read from the guard to the brace that closes it: nothing in it may send."""
+    problems: list[str] = []
+    code = re.sub(r"//[^\n]*", "", server)
+    for guard in re.finditer(r"lock_guard<std::mutex>\s+\w+\s*\(\s*g_lock\s*\)", code):
+        depth, at = 0, guard.end()
+        while at < len(code):
+            if code[at] == "{":
+                depth += 1
+            elif code[at] == "}":
+                if depth == 0:
+                    break
+                depth -= 1
+            at += 1
+        held = code[guard.end():at]
+        for call in sorted(set(re.findall(r"\b(send_\w+|answer_\w+|httpd_resp_send\w*)\s*\(", held))):
+            line = code.count("\n", 0, guard.start()) + 1
+            problems.append(f"main/web_server.cpp:{line}: {call}() is called while the lock of the sessions is held")
+    return problems
+
+
+def watch_problems(server: str) -> list[str]:
+    if "api.handler = watched_api_handler;" in server and "reqwatch::run(r, is_tls(r), api_handler)" in server and "reqwatch::start();" in server:
+        return []
+    return ["main/web_server.cpp: the requests of /api/ are not watched (watched_api_handler, reqwatch::run and reqwatch::start)"]
+
+
 def main() -> int:
     def read(relative: str) -> str:
         path = ROOT / relative
@@ -116,12 +145,13 @@ def main() -> int:
 
     server = read("main/web_server.cpp")
     problems = problems_of(server, read("panel/app.js"), read("tools/panel_mock.mjs")) + file_problems(server, read("panel/index.html"), read("panel/app.js"))
+    problems += answers_under_lock(server) + watch_problems(server)
     if problems:
         print("ROUTES=FAIL")
         for problem in problems:
             print("  " + problem)
         return 1
-    print("ROUTES=PASS the family's routes are all served, the panel calls only routes that exist, the stand-in node knows them and every file the panel asks for is registered")
+    print("ROUTES=PASS the family's routes are all served, the panel calls only routes that exist, the stand-in node knows them, every file the panel asks for is registered, no answer is sent under the lock of the sessions and the requests are watched")
     return 0
 
 
